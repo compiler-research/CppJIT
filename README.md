@@ -40,3 +40,5 @@ cmake .. -DLLVM_DIR=/path/to/llvm/lib/cmake/llvm -DCMAKE_BUILD_TYPE=Debug
 cmake --build . -j$(nproc)
 cmake --install . --prefix /path/to/install
 ```
+
+To currently set up a source build, please look at the instructions at https://github.com/compiler-research/CppInterOp

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "cppjit"
+version = "0.1.0"
+description = "CppJIT: fast and automatic Python-C++ interoperability"
+license = {text = "LBNL BSD"}
+requires-python = ">=3.8"
+authors = [
+    {name = "Aaron Jomy"},
+    {name = "Baidyanath Kundu"},
+    {name = "Jonas Rembser"},
+    {name = "Vassil Vassilev"},
+    {name = "Vipul Cariappa"},
+    {name = "Wim Lavrijsen"},
+    {name = "compiler-research"}
+]
+
+[tool.scikit-build]
+wheel.install-dir = "."
+wheel.packages = ["python/cppjit"]
+cmake.build-type = "Release"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+pythonpath = ["test"]

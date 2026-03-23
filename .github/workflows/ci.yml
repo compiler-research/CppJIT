@@ -1,0 +1,66 @@
+name: Linux x86_64
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            llvm: 20
+            python: "3.12"
+          - os: ubuntu-24.04
+            llvm: 21
+            python: "3.14"
+
+    runs-on: ${{ matrix.os }}
+    name: LLVM ${{ matrix.llvm }} / Python ${{ matrix.python }}
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install LLVM ${{ matrix.llvm }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-${{ matrix.llvm }} main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y llvm-${{ matrix.llvm }}-dev libclang-${{ matrix.llvm }}-dev clang-${{ matrix.llvm }} libpolly-${{ matrix.llvm }}-dev
+
+      - name: Install Python dev headers
+        run: sudo apt-get install -y python${{ matrix.python }}-dev || true
+
+      - name: pip install CppJIT
+        run: |
+          pip install scikit-build-core pytest
+          pip install . --config-settings=cmake.define.LLVM_DIR=/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm -v
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+
+      - name: Build test dictionaries
+        working-directory: test
+        run: make -j4
+
+      - name: Run tests
+        working-directory: test
+        run: python -m pytest -ra --tb=short -q 2>&1 | tee ../test-output.txt
+
+      - name: Post results to PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          summary=$(tail -1 test-output.txt)
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "**LLVM ${{ matrix.llvm }} / Python ${{ matrix.python }}**: \`${summary}\`"

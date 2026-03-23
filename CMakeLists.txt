@@ -56,12 +56,27 @@ if(DEFINED Clang_DIR)
 endif()
 
 message(STATUS "Found LLVM ${LLVM_VERSION} at ${LLVM_DIR}")
+if(LLVM_VERSION VERSION_LESS "20.0")
+    message(WARNING "LLVM ${LLVM_VERSION} detected. Minimum supported version is 21. Build may fail.")
+endif()
 if(Clang_FOUND)
     message(STATUS "Found Clang at ${Clang_DIR}")
 endif()
 
 # build CppInterOp, we should expose the option to use pre-installed CppInterOp for example using conda
-set(CPPINTEROP_INSTALL_DIR "${CMAKE_BINARY_DIR}/cppinterop_install")
+
+# CPPINTEROP_DIR should resolve to the final installed location at runtime.
+# ask for site-packages path; fall back to CMAKE_INSTALL_PREFIX for standalone builds.
+execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('platlib'))"
+    OUTPUT_VARIABLE _python_platlib
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+if(_python_platlib)
+    set(CPPINTEROP_INSTALL_DIR "${_python_platlib}/cppjit/cppyy_backend")
+else()
+    set(CPPINTEROP_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend")
+endif()
 
 set(_interop_cmake_args
     -DLLVM_DIR=${LLVM_DIR}
@@ -70,6 +85,7 @@ set(_interop_cmake_args
     -DCPPINTEROP_ENABLE_TESTING=${CPPJIT_ENABLE_CPPINTEROP_TESTS}
     -DBUILD_SHARED_LIBS=ON
     -DCMAKE_INSTALL_PREFIX=${CPPINTEROP_INSTALL_DIR}
+    -DCMAKE_INSTALL_LIBDIR=lib
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DCMAKE_CXX_STANDARD=17
 )
@@ -90,7 +106,7 @@ ExternalProject_Add(CppInterOp
     PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
     CMAKE_ARGS     ${_interop_cmake_args}
     BUILD_BYPRODUCTS
-        "${CPPINTEROP_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+        "${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
     LOG_DOWNLOAD   ON
     LOG_CONFIGURE  ON
     LOG_BUILD      ON
@@ -108,21 +124,9 @@ set(BACKEND_SOURCES
 add_library(cppyy SHARED ${CPYCPPYY_SOURCES} ${BACKEND_SOURCES})
 add_dependencies(cppyy CppInterOp)
 
-# CPPINTEROP_DIR should resolve to the final installed location at runtime.
-# ask for site-packages path; fall back to CMAKE_INSTALL_PREFIX for standalone builds.
-execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('platlib'))"
-    OUTPUT_VARIABLE _python_platlib
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if(_python_platlib)
-    set(_cppinterop_runtime_dir "${_python_platlib}/cppjit/cppyy_backend")
-else()
-    set(_cppinterop_runtime_dir "${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend")
-endif()
 
 target_compile_definitions(cppyy PRIVATE
-    CPPINTEROP_DIR="${_cppinterop_runtime_dir}"
+    CPPINTEROP_DIR="${CPPINTEROP_INSTALL_DIR}"
     CMAKE_SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}"
 )
 

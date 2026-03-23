@@ -79,11 +79,46 @@ jobs:
         env:
           CPPINTEROP_EXTRA_INTERPRETER_ARGS: "-std=c++${{ matrix.runtime_cxx_standard }}"
 
-      - name: Post results to PR
-        if: always() && github.event_name == 'pull_request'
-        run: |
-          summary=$(tail -1 test-output.txt)
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --body "**LLVM ${{ matrix.llvm }} / Python ${{ matrix.python }} / C++${{ matrix.runtime_cxx_standard }}**: \`${summary}\`"
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ matrix.os }}-llvm${{ matrix.llvm }}-py${{ matrix.python }}-cpp${{ matrix.runtime_cxx_standard }}
+          path: test-output.txt
+
+  report:
+    if: always() && github.event_name == 'pull_request'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: result-*
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- cppjit-ci -->';
+
+            const rows = fs.readdirSync('.').filter(d => d.startsWith('result-')).sort().map(d => {
+              const cfg = d.replace('result-', '');
+              const file = `${d}/test-output.txt`;
+              const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim().split('\n') : [];
+              const result = lines.length ? lines.at(-1) : 'no output';
+              return `| ${cfg} | \`${result}\` |`;
+            });
+
+            const body = [marker, '## Test Results', '| Configuration | Result |', '|---|---|', ...rows].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }

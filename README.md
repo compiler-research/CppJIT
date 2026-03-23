@@ -1,38 +1,21 @@
 # CppJIT
 
-CppJIT is the consolidated monorepo packaging of the compiler-research forks of the [cppyy](https://github.com/wlav/cppyy) package, a Python-C++ interoperability package based on LLVM, with [CppInterOp](https://github.com/compiler-research/CppInterOp) as the
-interpreter backend and Compiler-as-a-Service facilities. Star us and stay tuned for pip releases this summer.
+CppJIT is the consolidated monorepo packaging of the compiler-research forks of the [cppyy](https://github.com/wlav/cppyy) package, a Python-C++ interoperability package based on LLVM, leveraging [CppInterOp](https://github.com/compiler-research/CppInterOp) for the Clang-REPL interpreter backend and Compiler-as-a-Service facilities. Star us and stay tuned for pip releases coming summer 2026.
 
 ## Build requirements
 
-- LLVM/Clang 19–21 (21 recommended)
-- Python 3.8+ with development headers
+- LLVM/Clang 21
+    -  Installed system-wide (e.g. `apt install llvm-21-dev clang-21`)
+    -  Installed via your favourite package manager (e.g. `conda install -c conda-forge "llvmdev=21" "clangdev=21"`)
+    -  To use a source build of LLVM, pass the path to pip like `pip install . --config-settings=cmake.define.LLVM_DIR=/path/to/build/lib/cmake/llvm`
+- Python 3.12+ with development headers (e.g. `apt install python3.14 python3.14-dev`)
 - CMake 3.16+
 
-## Installation
+### Standard installation:
 
-### Option 1: System LLVM
+Run `pip install .`
 
-If LLVM is installed system-wide (e.g. `apt install llvm-21-dev clang-21`):
-
-```bash
-pip install .
-```
-
-### Option 2: Conda LLVM
-
-```bash
-conda install -c conda-forge llvmdev clangdev
-pip install .
-```
-
-### Option 3: Custom LLVM build
-
-```bash
-pip install . --config-settings=cmake.define.LLVM_DIR=/path/to/llvm/lib/cmake/llvm
-```
-
-### Direct CMake build (development)
+### Development build with CMake:
 
 ```bash
 mkdir build && cd build

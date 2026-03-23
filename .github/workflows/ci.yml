@@ -1,4 +1,4 @@
-name: Linux x86_64
+name: GitHub-hosted
 
 on:
   push:
@@ -20,13 +20,19 @@ jobs:
             runtime_cxx_standard: 17
           - os: ubuntu-24.04
             llvm: 21
+            python: "3.13"
+            runtime_cxx_standard: 20
+          - os: ubuntu-24.04
+            llvm: 21
             python: "3.14"
+            runtime_cxx_standard: 20
+          - os: macos-15
+            llvm: 20
+            python: "3.12"
             runtime_cxx_standard: 20
 
     runs-on: ${{ matrix.os }}
-    name: LLVM ${{ matrix.llvm }} / Python ${{ matrix.python }} / C++${{ matrix.runtime_cxx_standard }}
-    permissions:
-      pull-requests: write
+    name: ${{ matrix.os }} / LLVM ${{ matrix.llvm }} / Py ${{ matrix.python }} / C++${{ matrix.runtime_cxx_standard }}
 
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +41,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install LLVM ${{ matrix.llvm }}
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-${{ matrix.llvm }} main" \
@@ -47,15 +54,20 @@ jobs:
             clang-${{ matrix.llvm }} \
             libpolly-${{ matrix.llvm }}-dev \
             libboost-dev libeigen3-dev
-          sudo apt-get install -y python${{ matrix.python }}-dev || true
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm@${{ matrix.llvm }} boost eigen
 
       - name: pip install CppJIT
         run: |
-          pip install pytest numba numpy psutil
-          pip install . -v \
-            --config-settings=cmake.define.LLVM_DIR=/usr/lib/llvm-${{ matrix.llvm }}/lib/cmake/llvm
-        env:
-          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+          pip install pytest numpy psutil
+          pip install numba || true
+          pip install . -v --config-settings=cmake.define.LLVM_DIR=${{
+            runner.os == 'macOS'
+            && format('/opt/homebrew/opt/llvm@{0}/lib/cmake/llvm', matrix.llvm)
+            || format('/usr/lib/llvm-{0}/lib/cmake/llvm', matrix.llvm)
+          }}
 
       - name: Build test dictionaries
         run: make -j4

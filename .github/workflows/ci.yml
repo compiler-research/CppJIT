@@ -26,6 +26,18 @@ jobs:
             llvm: 21
             python: "3.14"
             runtime_cxx_standard: 20
+          - os: ubuntu-24.04-arm
+            llvm: 20
+            python: "3.12"
+            runtime_cxx_standard: 17
+          - os: ubuntu-24.04-arm
+            llvm: 21
+            python: "3.13"
+            runtime_cxx_standard: 20
+          - os: ubuntu-24.04-arm
+            llvm: 21
+            python: "3.14"
+            runtime_cxx_standard: 20
           - os: macos-15
             llvm: 20
             python: "3.12"

@@ -26,7 +26,7 @@ jobs:
             llvm: 21
             python: "3.14"
             runtime_cxx_standard: 20
-          - os: macos-15
+          - os: macos-26
             llvm: 20
             python: "3.12"
             runtime_cxx_standard: 20
@@ -57,7 +57,9 @@ jobs:
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install llvm@${{ matrix.llvm }} boost eigen
+        run: |
+          brew install llvm@${{ matrix.llvm }} boost eigen
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
       - name: pip install CppJIT
         run: |
@@ -111,7 +113,10 @@ jobs:
               return `| ${cfg} | \`${result}\` |`;
             });
 
-            const body = [marker, '## Test Results', '| Configuration | Result |', '|---|---|', ...rows].join('\n');
+            const sha = context.payload.pull_request.head.sha.slice(0, 7);
+            const time = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+            const header = `## Test Results\n\`${sha}\` — ${time}`;
+            const body = [marker, header, '| Configuration | Result |', '|---|---|', ...rows].join('\n');
             const { data: comments } = await github.rest.issues.listComments({
               ...context.repo, issue_number: context.issue.number,
             });

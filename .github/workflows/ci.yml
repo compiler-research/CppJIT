@@ -26,7 +26,7 @@ jobs:
             llvm: 21
             python: "3.14"
             runtime_cxx_standard: 20
-          - os: macos-15
+          - os: macos-26
             llvm: 20
             python: "3.12"
             runtime_cxx_standard: 20
@@ -57,7 +57,9 @@ jobs:
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install llvm@${{ matrix.llvm }} boost eigen
+        run: |
+          brew install llvm@${{ matrix.llvm }} boost eigen
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
 
       - name: pip install CppJIT
         run: |
@@ -74,7 +76,7 @@ jobs:
         working-directory: test
 
       - name: Run tests
-        run: python -m pytest -ra --tb=short -q 2>&1 | tee ../test-output.txt
+        run: python -m pytest -ra --tb=short --junitxml=../results.xml
         working-directory: test
         env:
           CPPINTEROP_EXTRA_INTERPRETER_ARGS: "-std=c++${{ matrix.runtime_cxx_standard }}"
@@ -84,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: result-${{ matrix.os }}-llvm${{ matrix.llvm }}-py${{ matrix.python }}-cpp${{ matrix.runtime_cxx_standard }}
-          path: test-output.txt
+          path: results.xml
 
   report:
     if: always() && github.event_name == 'pull_request'
@@ -105,13 +107,23 @@ jobs:
 
             const rows = fs.readdirSync('.').filter(d => d.startsWith('result-')).sort().map(d => {
               const cfg = d.replace('result-', '');
-              const file = `${d}/test-output.txt`;
-              const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim().split('\n') : [];
-              const result = lines.length ? lines.at(-1) : 'no output';
-              return `| ${cfg} | \`${result}\` |`;
+              const file = `${d}/results.xml`;
+              if (!fs.existsSync(file)) return `| ${cfg} | ⚠️ no results |`;
+              const xml = fs.readFileSync(file, 'utf8');
+              const attr = (name) => xml.match(new RegExp(`${name}="(\\d+)"`))?.[1] || '0';
+              const [tests, fail, skip, err, time] = ['tests', 'failures', 'skipped', 'errors', 'time'].map(attr);
+              const passed = tests - fail - skip - err;
+              const status = (Number(fail) + Number(err)) > 0 ? '❌' : '✅';
+              return `| ${status} ${cfg} | ${passed} passed, ${fail} failed, ${skip} skipped, ${err} errors (${time}s) |`;
             });
 
-            const body = [marker, '## Test Results', '| Configuration | Result |', '|---|---|', ...rows].join('\n');
+            const sha = context.payload.pull_request.head.sha;
+            const shortSha = sha.slice(0, 7);
+            const commitUrl = `${context.payload.repository.html_url}/commit/${sha}`;
+            const time = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+            const body = [marker, `## Test Results`, `[\`${shortSha}\`](${commitUrl}) — ${time}\n`,
+              '| Configuration | Result |', '|---|---|', ...rows].join('\n');
+
             const { data: comments } = await github.rest.issues.listComments({
               ...context.repo, issue_number: context.issue.number,
             });

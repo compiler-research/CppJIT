@@ -187,7 +187,6 @@ class TestTEMPLATES:
         assert issubclass(select_template_arg[0, int, float].argument, int)
         assert issubclass(select_template_arg[1, int, float].argument, float)
 
-    @mark.xfail
     def test08_using_of_static_data(self):
         """Derived class using static data of base"""
 
@@ -443,7 +442,7 @@ class TestTEMPLATES:
         assert f_T[int]() is None
         assert cppyy.gbl.T_WithEmptyBody.side_effect == "side effect"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X, related to symbol dispatch. Common with Linux LLVM18 dispatch builds")
+    @mark.xfail(condition=IS_MAC and IS_CLING, reason="Fails on OSX Cling")
     def test18_greedy_overloads(self):
         """void*/void** should not pre-empt template instantiations"""
 
@@ -1108,7 +1107,7 @@ class TestTEMPLATES:
                         run_n = getattr(cppyy.gbl, 'TNaRun_%d' % n)
                         getattr(run_n, t)
 
-    @mark.xfail(run=not(IS_MAC and IS_CLING), reason="Crashes on OS X + Cling")
+    @mark.xfail(run = False, condition=IS_MAC and IS_CLING, reason="Crashes on OS X + Cling")
     def test33_using_template_argument(self):
         """`using` type as template argument"""
 
@@ -1120,7 +1119,7 @@ class TestTEMPLATES:
         using testptr = Test*;
 
         template<typename T>
-        bool testfun(T const& x) { return !(bool)x; }
+        bool testfun(T x) { return !(bool)x; }
         }""")
 
         ns = cppyy.gbl.UsingPtr
@@ -1129,7 +1128,7 @@ class TestTEMPLATES:
 
         # TODO: raises TypeError; the problem is that the type is resolved
         # from UsingPtr::Test*const& to UsingPtr::Test*& (ie. `const` is lost)
-        # assert ns.testfun["UsingPtr::testptr"](cppyy.nullptr)
+        assert ns.testfun["UsingPtr::testptr"](cppyy.nullptr)
 
         assert ns.testptr.__name__     == "Test"
         assert ns.testptr.__cpp_name__ == "UsingPtr::Test*"
@@ -1313,6 +1312,28 @@ class TestTEMPLATES:
         a = ns.S(1, 2)
         assert a.m_a == 1
 
+    def test39_monkey_patching_template_proxy(self):
+        """Monkey patching Template Proxy"""
+        import cppyy
+        from cppyy import gbl
+
+        cppyy.cppdef(r"""
+            struct MyMonkey {
+                template <typename... Ts>
+                bool m(std::vector<int> v) { return true; }
+        
+                template <typename T = void>
+                bool m(int i) { return false; }
+            };
+        """)
+
+        gbl.MyMonkey._m = gbl.MyMonkey.m
+        gbl.MyMonkey.m = lambda self, x: gbl.MyMonkey._m(self, x)
+        a = gbl.MyMonkey()
+        assert not a.m(42)
+        assert a.m([1, 2, 3])
+        assert not a.m(42)
+
 
 @mark.skipif((IS_MAC and IS_CLING), reason="setup class fails with OS X cling")
 class TestTEMPLATED_TYPEDEFS:
@@ -1467,7 +1488,6 @@ class TestTEMPLATE_TYPE_REDUCTION:
         import cppyy
         cls.templates = cppyy.load_reflection_info(cls.test_dct)
 
-    @mark.xfail
     def test01_reduce_binary(self):
         """Squash template expressions for binary operations (like in gmpxx)"""
 

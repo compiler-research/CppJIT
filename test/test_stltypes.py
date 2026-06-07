@@ -723,7 +723,7 @@ class TestSTLVECTOR:
         assert ns.test[0] == "hello"
         assert ns.test[1] == "world"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X, related to symbol dispatch. Common with Linux LLVM18 dispatch builds")
+    @mark.xfail(condition=IS_MAC and IS_CLING, reason="Fails on OSX Cling")
     def test21_vector_of_structs_data(self):
         """Vector of structs data() should return array-like"""
 
@@ -759,7 +759,6 @@ class TestSTLVECTOR:
         assert mv.itemsize == cppyy.sizeof(cppyy.gbl.ArrayLike.Vector3f)
         assert mv.nbytes   == cppyy.sizeof(cppyy.gbl.ArrayLike.Vector3f) * len(v)
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X, related to symbol dispatch. Common with Linux LLVM18 dispatch builds")
     def test22_polymorphic(self):
         """Vector of polymorphic types should auto-cast"""
 
@@ -1316,8 +1315,13 @@ class TestSTLMAP:
                 a[str(i)] = i
                 assert a[str(i)] == i
             assert a
+            assert len(a) == self.N
 
-        assert len(a) == self.N
+            itercount = 0
+            for key, value in a:
+                assert int(str(key)) == value
+                itercount += 1
+            assert itercount == len(a)
 
     def test03_empty_maptype(self):
         """Test behavior of empty map<int,int>"""
@@ -1629,14 +1633,19 @@ class TestSTLARRAY:
 
         a = std.array[gbl.ArrayTest.Point, 4]()
         assert len(a) == 4
+        pxsum = 0
         for i in range(len(a)):
             a[i].px = i
+            pxsum += a[i].px
             assert a[i].px == i
             a[i].py = i**2
             assert a[i].py == i**2
 
+        assert sum([v.px for v in a]) == pxsum
+
         if ispypy:
             raise RuntimeError("test fails with crash")
+
         # test assignment
         assert a[2]
         a[2] = gbl.ArrayTest.Point(6, 7)
@@ -1687,6 +1696,20 @@ class TestSTLARRAY:
 
         with raises(TypeError):
             cppyy.gbl.std.array["double",3](['a', 1.0, 1.0])
+
+    @mark.xfail(reason="std::array<nanoseconds> iteration fails")
+    def test05_array_of_chrono_types_should_be_iterable(self):
+        import cppyy
+        cppyy.cppdef("""
+        #include <chrono>
+        using namespace std::chrono_literals;
+        std::vector<std::chrono::nanoseconds>   vtimes  = {10ns, 500ns, 1us};
+        std::array<std::chrono::nanoseconds, 3> atimes = {10ns, 500ns, 1us};
+        """)
+        # this works normally...
+        assert sum([v.count() for v in cppyy.gbl.vtimes]) == 1510
+        # ... but this doesn't, fails complaining about not being able to iterate
+        assert sum([v.count() for v in cppyy.gbl.atimes]) == 1510
 
 
 class TestSTLSTRING_VIEW:
@@ -2195,3 +2218,73 @@ class TestSTLSPAN:
         # Check that the iteration also works, which uses begin() and end()
         # internally.
         assert [b for b in s] == l1
+
+    def test02_span_argument_conversions(self):
+        """
+        Test conversion of various Python objects to std::span arguments.
+
+        Covers:
+        1) Python proxy spans
+        2) NumPy arrays
+        3) array.array
+        4) Type mismatch errors
+        5) std::vector implicit conversion
+        6) const std::span behavior
+        """
+        import cppyy
+        import numpy as np
+        import array
+        import pytest
+
+        cppyy.cppdef("""
+        #include <span>
+        #include <vector>
+
+        template<class T>
+        size_t sum_span(std::span<T> s) {
+            size_t total = 0;
+            for (size_t i = 0; i < s.size(); ++i)
+                total += (size_t)s[i];
+            return total;
+        }
+
+        template<class T>
+        size_t sum_span_const(std::span<const T> s) {
+            size_t total = 0;
+            for (size_t i = 0; i < s.size(); ++i)
+                total += (size_t)s[i];
+            return total;
+        }
+        """)
+
+        data = [1., 2., 3.]
+        expected = sum(data)
+
+        # 1) Python proxy span
+        v = cppyy.gbl.std.vector["double"](data)
+        s = cppyy.gbl.std.span["double"](v)
+        assert cppyy.gbl.sum_span["double"](s) == expected
+        assert cppyy.gbl.sum_span_const["double"](s) == expected
+
+        # 2) NumPy array
+        np_arr = np.array(data, dtype=np.float64)
+        assert cppyy.gbl.sum_span["double"](np_arr) == expected
+        assert cppyy.gbl.sum_span_const["double"](np_arr) == expected
+
+        # 3) array.array
+        arr = array.array('d', data)
+        assert cppyy.gbl.sum_span["double"](arr) == expected
+        assert cppyy.gbl.sum_span_const["double"](arr) == expected
+
+        # 4) Type mismatch → should raise TypeError
+        np_double = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+        with pytest.raises(TypeError):
+            cppyy.gbl.sum_span["double"](np_double)
+
+        # 5) std::vector implicit conversion
+        v2 = cppyy.gbl.std.vector["double"](data)
+        assert cppyy.gbl.sum_span["double"](v2) == expected
+        assert cppyy.gbl.sum_span_const["double"](v2) == expected
+
+        # 6) const span behaves the same (already checked above, but explicit case)
+        assert cppyy.gbl.sum_span_const["double"](np_arr) == expected

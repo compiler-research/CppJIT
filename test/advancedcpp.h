@@ -336,7 +336,7 @@ public:
         return (intptr_t)*((long**)obj);
     }
 
-    intptr_t gime_address_ptr_ref(void*& obj) {
+    intptr_t gime_address_ptr_ref(const void*& obj) {
         return (intptr_t)obj;
     }
 
@@ -345,7 +345,7 @@ public:
         return 42;
     }
 
-    static intptr_t set_address_ptr_ref(void*& obj) {
+    static intptr_t set_address_ptr_ref(const void*& obj) {
         obj = (void*)0x1234;
         return 21;
     }

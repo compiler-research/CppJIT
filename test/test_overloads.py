@@ -382,3 +382,21 @@ class TestOVERLOADS:
         # though implicit construction of the test class is forbidden.
         assert cppyy.gbl.test12_foo(1) == cppyy.gbl.call_test12_foo()
         assert cppyy.gbl.test12_bar(1) == cppyy.gbl.call_test12_bar()
+
+    def test15_disallow_mutable_pointer_references(self):
+        """Verify that mutable pointer references (T*&) are not allowed as arguments.
+        """
+
+        import cppyy
+
+        cppyy.cppdef("""
+        struct MyClass {
+           int val = 0;
+        };
+
+        void changePtr(MyClass *& ptr) {}
+        """)
+
+        ptr = cppyy.gbl.MyClass()
+
+        raises(TypeError, cppyy.gbl.changePtr, ptr)

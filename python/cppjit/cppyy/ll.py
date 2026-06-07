@@ -52,33 +52,33 @@ for _name in ['addressof', 'as_cobject', 'as_capsule', 'as_ctypes', 'as_memoryvi
         pass
 del _name
 
+# create low-level helpers once
+if not hasattr(cppyy.gbl, "__cppyy_internal") or \
+   not hasattr(cppyy.gbl.__cppyy_internal, "cppyy_cast"):
+    cppyy.cppdef("""namespace __cppyy_internal {
+    // type casting
+      template<typename T, typename U>
+      T cppyy_cast(U val) { return (T)val; }
 
-# create low-level helpers
-cppyy.cppdef("""namespace __cppyy_internal {
-// type casting
-    template<typename T, typename U>
-    T cppyy_cast(U val) { return (T)val; }
+      template<typename T, typename U>
+      T cppyy_static_cast(U val) { return static_cast<T>(val); }
 
-    template<typename T, typename U>
-    T cppyy_static_cast(U val) { return static_cast<T>(val); }
+      template<typename T, typename U>
+      T cppyy_reinterpret_cast(U val) { return reinterpret_cast<T>(val); }
 
-    template<typename T, typename U>
-    T cppyy_reinterpret_cast(U val) { return reinterpret_cast<T>(val); }
+      template<typename T, typename S>
+      T* cppyy_dynamic_cast(S* obj) { return dynamic_cast<T*>(obj); }
 
-    template<typename T, typename S>
-    T* cppyy_dynamic_cast(S* obj) { return dynamic_cast<T*>(obj); }
+    // memory allocation/free-ing
+      template<typename T>
+      T* cppyy_malloc(size_t count=1) { return (T*)malloc(sizeof(T*)*count); }
 
-// memory allocation/free-ing
-    template<typename T>
-    T* cppyy_malloc(size_t count=1) { return (T*)malloc(sizeof(T*)*count); }
+      template<typename T>
+      T* cppyy_array_new(size_t count) { return new T[count]; }
 
-    template<typename T>
-    T* cppyy_array_new(size_t count) { return new T[count]; }
-
-    template<typename T>
-    void cppyy_array_delete(T* ptr) { delete[] ptr; }
-}""")
-
+      template<typename T>
+      void cppyy_array_delete(T* ptr) { delete[] ptr; }
+    }""")
 
 # helper for sizing arrays
 class ArraySizer(object):

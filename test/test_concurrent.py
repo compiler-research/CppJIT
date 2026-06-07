@@ -307,3 +307,24 @@ class TestCONCURRENT:
         assert State.c1 == 1000
         assert State.c2 == State.c3
 
+    def test08_python_callabcks_with_release_gil(self):
+        """Test release GIL, when the C++ func calls back into Python"""
+        import cppyy
+        from cppyy import gbl
+
+        cppyy.cppdef(r"""
+            namespace NS1 {
+            int callback(int(*fn)(int, int), int x, int y) {
+              return fn(x, y);
+            }
+            };
+        """)
+
+
+        def add(x: int, y: int) -> int:
+            return x + y
+
+
+        callback = gbl.NS1.callback
+        callback.__release_gil__ = True
+        assert callback(add, 1, 2) == 3

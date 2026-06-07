@@ -264,7 +264,7 @@ class TestREGRESSION:
         a = cppyy.gbl.CObjA()
         co = cppyy.ll.as_cobject(a)
 
-        assert a == cppyy.bind_object(co, 'CObjA')
+        assert a is cppyy.bind_object(co, 'CObjA')
         assert a.m_int == 42
         assert cppyy.bind_object(co, 'CObjA').m_int == 42
 
@@ -1123,9 +1123,13 @@ class TestREGRESSION:
             len(ai.name) == 6
             assert ai.name[:len(s)] == s
 
-        with warnings.catch_warnings(record=True) as w:
-            ai.name = u'hellowd'
-            assert 'too long' in str(w[-1].message)
+      # isolate the warning configuration
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")  # turn warnings into errors
+
+            with raises(RuntimeWarning) as exc:
+                ai.name = u'hellowd'
+            assert 'too long' in str(exc.value)
 
         # vector of objects
         va = cppyy.gbl.std.vector[ns.AxisInformation](N)
@@ -1149,7 +1153,7 @@ class TestREGRESSION:
             assert ai.name[:5] == u'hello'
         cppyy.ll.array_delete(aa)
 
-    @mark.xfail(condition=IS_CLING or IS_MAC, reason="Fails on Cling and OSX")
+    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test39_vector_of_pointers_conversion(self):
         """vector<T*>'s const T*& used to be T**, now T*"""
 
@@ -1424,3 +1428,18 @@ class TestREGRESSION:
         (out, err) = capfd.readouterr()
         assert out == ""
         assert err == ""
+
+    def test48_templated_using_with_const(self):
+        """Test parsing of template arguments mixed with using clause and constants"""
+
+        import cppyy
+        from cppyy import gbl
+
+        cppyy.cppdef("""
+            template <typename T, int N>
+            struct NN {
+              bool F = true;
+            };
+        """)
+
+        assert gbl.NN["std::vector<int>::value_type, 5"]().F is True

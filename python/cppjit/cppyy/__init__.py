@@ -235,8 +235,12 @@ def cppexec(stmt):
 
     return True
 
-def evaluate(input, HadError = _backend.nullptr):
-    return gbl.Cpp.Evaluate(input, HadError)
+def evaluate(input):
+    box = gbl.Cpp.Evaluate(input)
+    # Truthy sentinel: skips Box::convertTo's UB-on-K_Unspecified arm.
+    if box.getKind() == gbl.CppImpl.Box.K_Unspecified:
+        return ~0
+    return box.convertTo['long']()
 
 def macro(cppm):
     """Attempt to evalute a C/C++ pre-processor macro as a constant"""
@@ -414,7 +418,17 @@ def sizeof(tt):
         try:
             sz = ctypes.sizeof(tt)
         except TypeError:
-            sz = gbl.Cpp.Evaluate("sizeof(%s)" % (_get_name(tt),), _backend.nullptr)
+            # Route through evaluate() so the Box-returning Cpp::Evaluate
+            # is unboxed in one place (see the shim above). Cpp::SizeOf
+            # would be faster but its sibling Cpp::GetNamed does not
+            # traverse `Foo::Bar`-style qualified names, so handing it a
+            # nested `tt.__cpp_name__` resolves to a null scope and the
+            # subsequent SizeOf hangs/aborts. Stick with the legacy
+            # interpreter round-trip until we add a qualified-name
+            # resolver (or an overload of SizeOf that takes a name).
+            sz = evaluate("sizeof(%s)" % (_get_name(tt),))
+            #scope = gbl.Cpp.GetNamed(_get_name(tt))
+            #sz = gbl.Cpp.SizeOf(scope)
         _sizes[tt] = sz
         return sz
 

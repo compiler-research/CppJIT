@@ -451,10 +451,10 @@ class TestADVANCEDCPP:
         #assert o == cppyy.bind_object(cobj, o.__class__)
         #assert o == cppyy.bind_object(cobj, "some_concrete_class")
         assert cppyy.addressof(o) == cppyy.addressof(cppyy.bind_object(addr, some_concrete_class))
-        assert o == cppyy.bind_object(addr, some_concrete_class)
-        assert o == cppyy.bind_object(addr, type(o))
-        assert o == cppyy.bind_object(addr, o.__class__)
-        assert o == cppyy.bind_object(addr, "some_concrete_class")
+        assert o is cppyy.bind_object(addr, some_concrete_class)
+        assert o is cppyy.bind_object(addr, type(o))
+        assert o is cppyy.bind_object(addr, o.__class__)
+        assert o is cppyy.bind_object(addr, "some_concrete_class")
         raises(TypeError, cppyy.bind_object, addr, "does_not_exist")
         raises(TypeError, cppyy.bind_object, addr, 1)
 
@@ -537,13 +537,13 @@ class TestADVANCEDCPP:
         b = base_class()
         d = derived_class()
 
-        assert b == b.cycle(b)
+        assert b is b.cycle(b)
         assert id(b) == id(b.cycle(b))
-        assert b == d.cycle(b)
+        assert b is d.cycle(b)
         assert id(b) == id(d.cycle(b))
-        assert d == b.cycle(d)
+        assert d is b.cycle(d)
         assert id(d) == id(b.cycle(d))
-        assert d == d.cycle(d)
+        assert d is d.cycle(d)
         assert id(d) == id(d.cycle(d))
 
         assert isinstance(b.cycle(b), base_class)
@@ -591,7 +591,7 @@ class TestADVANCEDCPP:
         """Verify that class-level overloaded new/delete are called"""
 
         import cppyy
-
+        cppyy.include("new")
         assert cppyy.gbl.new_overloader.s_instances == 0
         nl = cppyy.gbl.new_overloader()
         assert cppyy.gbl.new_overloader.s_instances == 1
@@ -688,7 +688,7 @@ class TestADVANCEDCPP:
         assert cppyy.gbl.overload_one_way().gime() == 1
         assert cppyy.gbl.overload_the_other_way().gime() == "aap"
 
-    @mark.xfail(run=not IS_VALGRIND, condition =(IS_LINUX and IS_CLING), reason="Fails on Linux Cling")
+    @mark.xfail(run=not IS_VALGRIND)
     def test21_access_to_global_variables(self):
         """Access global_variables_and_pointers"""
 

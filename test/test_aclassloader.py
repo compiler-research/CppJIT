@@ -1,6 +1,6 @@
 import py, os, sys
 from pytest import raises, mark
-from support import setup_make, IS_MAC
+from .support import setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("example01Dict"))
@@ -15,7 +15,6 @@ class TestACLASSLOADER:
         import cppyy
         cls.example01 = cppyy.load_reflection_info(cls.test_dct)
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X, related to symbol dispatch. Common with Linux LLVM18 dispatch builds")
     def test01_class_autoloading(self):
         """Test whether a class can be found"""
         import cppyy

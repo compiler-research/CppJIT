@@ -1,7 +1,6 @@
 """ cppyy extensions for numba
 """
 
-import sys
 from cppjit import cppyy
 from cppjit.cppyy import types as cpp_types
 from cppjit.cppyy import reflex as cpp_refl
@@ -33,9 +32,7 @@ class Qualified:
 ir_byte     = ir.IntType(8)
 ir_voidptr  = ir.PointerType(ir_byte)                 # by convention
 ir_byteptr  = ir_voidptr                              # for clarity
-# FIXME: Revert this to only use cppyy.sizeof once Cpp::Evaluate on macOS is fixed
-sz = 64 if 'darwin' in sys.platform else cppyy.sizeof('void*') * 8
-ir_intptr_t = ir.IntType(sz)
+ir_intptr_t = ir.IntType(cppyy.sizeof('void*')*8)
 
 # special case access to unboxing/boxing APIs
 cppyy_as_voidptr   = cppyy.addressof('Instance_AsVoidPtr')

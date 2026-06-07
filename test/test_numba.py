@@ -1,7 +1,7 @@
 import py, os, sys
 import math, time
 from pytest import mark, raises
-from support import setup_make, IS_LINUX_ARM, IS_MAC
+from .support import setup_make, IS_LINUX_ARM, IS_VALGRIND
 
 try:
     import numba
@@ -9,6 +9,8 @@ try:
 except ImportError:
     has_numba = False
 
+if IS_LINUX_ARM and IS_VALGRIND:
+    has_numba = False
 
 class TestREFLEX:
     def setup_class(cls):
@@ -26,7 +28,6 @@ class TestREFLEX:
         with raises(TypeError):
             cppyy.addressof('doesnotexist')
 
-    @mark.xfail
     def test02_method_reflection(self):
         """Method reflection tooling"""
 
@@ -51,7 +52,6 @@ class TestREFLEX:
         assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.AS_TYPE)   == ns.MyData_m1
         assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.AS_STRING) == 'ReflexTest::MyData_m1'
 
-    @mark.xfail
     def test03_datamember_reflection(self):
         """Data member reflection tooling"""
 
@@ -119,7 +119,6 @@ class TestNUMBA:
         assert (go_fast(x) == go_slow(x)).all()
         assert self.compare(go_slow, go_fast, 300000, x)
 
-    @mark.xfail
     def test02_JITed_template_free_func(self):
         """Numba-JITing of Cling-JITed templated free function"""
 
@@ -153,7 +152,6 @@ class TestNUMBA:
         assert (go_fast(x) == go_slow(x)).all()
         assert self.compare(go_slow, go_fast, 100000, x)
 
-    @mark.xfail
     def test03_proxy_argument_for_field(self):
         """Numba-JITing of a free function taking a proxy argument for field access"""
 
@@ -187,7 +185,6 @@ class TestNUMBA:
         assert((go_fast(x, d) == go_slow(x, d)).all())
         assert self.compare(go_slow, go_fast, 10000, x, d)
 
-    @mark.xfail
     def test04_proxy_argument_for_method(self):
         """Numba-JITing of a free function taking a proxy argument for method access"""
 
@@ -272,7 +269,6 @@ class TestNUMBA:
 
         assert sum == tma(x)
 
-    @mark.xfail
     def test07_datatype_mapping(self):
         """Numba-JITing of various data types"""
 
@@ -306,7 +302,6 @@ class TestNUMBA:
                 val = getattr(nl[ntype], m)()
                 assert access_field(getattr(ns, 'M%d'%i)(val)) == val
 
-    @mark.xfail
     def test08_object_returns(self):
         """Numba-JITing of a function that returns an object"""
 
@@ -730,7 +725,6 @@ class TestNUMBA_DOC:
         import cppyy
         import cppyy.numba_ext
 
-    @mark.xfail
     def test01_templated_freefunction(self):
         """Numba support documentation example: free templated function"""
 
@@ -759,7 +753,6 @@ class TestNUMBA_DOC:
         assert type(tsa(a)) == int
         assert tsa(a) == 285
 
-    @mark.xfail(run=not IS_MAC, reason="Crashes on Mac with dispatch build")
     def test02_class_features(self):
         """Numba support documentation example: class features"""
 

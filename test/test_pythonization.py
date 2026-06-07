@@ -271,6 +271,20 @@ class TestClassPYTHONIZATION:
         assert w.GetInt() == 4*17
 
         assert cppyy.gbl.pyzables.WithCallback2.klass_name == 'pyzables::WithCallback3'
+    
+    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
+    def test10_shared_ptr_reset(self):
+        """Checks that smart pointer types are Pythonized with the special
+        __smartptr__ member that can also be used to reset the underlying smart
+        pointer."""
+
+        import cppyy
+
+        optr = cppyy.gbl.std.make_shared["std::string"]("hello smart pointer")
+        o2 = cppyy.gbl.std.string()
+        cppyy._backend.SetOwnership(o2, False)  # This object will be owned by the smart pointer
+        optr.__smartptr__().reset(o2)
+        assert optr == o2
 
 
 ## actual test run

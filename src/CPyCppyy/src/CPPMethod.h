@@ -51,7 +51,7 @@ public:
 
 public:
     PyObject* GetSignature(bool show_formalargs = true) override;
-    PyObject* GetSignatureNames() override; 
+    PyObject* GetSignatureNames() override;
     PyObject* GetSignatureTypes() override;
     PyObject* GetPrototype(bool show_formalargs = true) override;
     PyObject* GetTypeName() override;

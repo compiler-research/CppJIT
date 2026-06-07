@@ -565,6 +565,16 @@ bool Cppyy::IsClassType(TCppType_t type) {
     return Cpp::IsRecordType(type);
 }
 
+bool Cppyy::IsIntegerType(TCppType_t type, bool* is_signed /*= nullptr*/) {
+  if (is_signed) {
+    Cpp::Signedness sign;
+    bool res = Cpp::IsIntegerType(type, &sign);
+    *is_signed = (sign == Cpp::Signedness::kSigned);
+    return res;
+  }
+  return Cpp::IsIntegerType(type, nullptr);
+}
+
 bool Cppyy::IsPointerType(TCppType_t type) {
     return Cpp::IsPointerType(type);
 }
@@ -588,14 +598,14 @@ bool split_comma_saparated_types(const std::string& name,
   std::string trimed_name = trim(name);
   size_t start_pos = 0;
   size_t end_pos = 0;
-  size_t appended_count = 0;
   int matching_angular_brackets = 0;
   while (end_pos < trimed_name.size()) {
     switch (trimed_name[end_pos]) {
     case ',': {
       if (!matching_angular_brackets) {
-        types.push_back(
-            trim(trimed_name.substr(start_pos, end_pos - start_pos)));
+        if(end_pos > start_pos)
+          types.push_back(
+              trim(trimed_name.substr(start_pos, end_pos - start_pos)));
         start_pos = end_pos + 1;
       }
       break;
@@ -605,16 +615,6 @@ bool split_comma_saparated_types(const std::string& name,
       break;
     }
     case '>': {
-      if (matching_angular_brackets > 0) {
-        types.push_back(
-            trim(trimed_name.substr(start_pos, end_pos - start_pos + 1)));
-        start_pos = end_pos + 1;
-      } else if (matching_angular_brackets < 1) {
-        types.clear();
-        return false;
-      }
-      start_pos++;
-      end_pos++;
       matching_angular_brackets--;
       break;
     }
@@ -638,6 +638,17 @@ Cpp::TCppScope_t GetEnumFromCompleteName(const std::string &name) {
   }
   return Cpp::GetNamed(name.substr(start, end), curr_scope);
 }
+static bool is_identifier(std::string_view s) {
+  if (s.empty()) return false;
+  auto is_valid_start = [](unsigned char c) {
+    return std::isalpha(c) || c == '_';
+  };
+  auto is_valid_body = [](unsigned char c) {
+    return std::isalnum(c) || c == '_';
+  };
+  return is_valid_start(s[0]) &&
+    std::all_of(s.begin() + 1, s.end(), is_valid_body);
+};
 
 // returns true if no new type was added.
 bool Cppyy::AppendTypesSlow(const std::string& name,
@@ -645,6 +656,10 @@ bool Cppyy::AppendTypesSlow(const std::string& name,
 
   // Add no new type if string is empty
   if (name.empty())
+    return true;
+
+  // The ast printer gave us garbage.
+  if (name == "<unnamed>")
     return true;
 
   auto replace_all = [](std::string& str, const std::string& from, const std::string& to) {
@@ -660,6 +675,22 @@ bool Cppyy::AppendTypesSlow(const std::string& name,
   std::string resolved_name = name;
   replace_all(resolved_name, "std::initializer_list<", "std::vector<"); // replace initializer_list with vector
 
+  // If we have a single identifier, we don't need anything complicated.
+  // Try scoped lookup first (catches type aliases / nested types declared
+  // inside `parent`), then fall back to TU (catches typedefs declared
+  // outside the query scope, e.g. `typedef Foo Bar;` at TU consulted
+  // from a method on Foo).
+  if (is_identifier(name)) {
+    TCppType_t type = parent ? Cpp::GetType(name, parent) : nullptr;
+    if (!type)
+      type = Cpp::GetType(name);
+    if (type) {
+      types.emplace_back(type);
+      return false;
+    }
+    return true;
+  }
+
   std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
 
   // We might have an entire expression such as int, double.
@@ -669,8 +700,7 @@ bool Cppyy::AppendTypesSlow(const std::string& name,
     Cpp::Declare(code.c_str(), /*silent=*/true); // initialize the trampoline
 
   std::string var = "__Cppyy_s" + std::to_string(struct_count++);
-  // FIXME: We cannot use silent because it erases our error code from Declare!
-  if (!Cpp::Declare(("__Cppyy_AppendTypesSlow<" + resolved_name + "> " + var +";\n").c_str(), /*silent=*/false)) {
+  if (!Cpp::Declare(("__Cppyy_AppendTypesSlow<" + resolved_name + "> " + var +";\n").c_str(), /*silent=*/true)) {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
     TCppType_t varN =
         Cpp::GetVariableType(Cpp::GetNamed(var.c_str(), /*parent=*/nullptr));
@@ -716,11 +746,30 @@ bool Cppyy::AppendTypesSlow(const std::string& name,
 }
 
 Cppyy::TCppType_t Cppyy::GetType(const std::string &name, bool enable_slow_lookup /* = false */) {
+    // The ast printer gave us garbage.
+    if (name == "<unnamed>")
+      return nullptr;
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
-    static unsigned long long var_count = 0;
 
     if (auto type = Cpp::GetType(name))
         return type;
+
+    // Plain identifiers don't need the heavy __typeof__ trampoline:
+    // Cpp::GetType above already covers builtin types and named
+    // scopes. Exception: the three identifier-shaped C++ value-
+    // literals -- `true`, `false`, `nullptr` -- aren't reachable by
+    // name (no type called "false") but appear as non-type template
+    // args in libstdc++ types like _Node_iterator<..., false, false>;
+    // map them to their underlying type directly so the per-chunk
+    // fallback in AppendTypesSlow gets a real type without paying
+    // the trampoline cost.
+    if (is_identifier(name)) {
+      if (name == "true" || name == "false")
+        return Cpp::GetType("bool");
+      if (name == "nullptr")
+        return Cpp::GetType("nullptr_t", Cpp::GetNamed("std"));
+      return nullptr;
+    }
 
     if (!enable_slow_lookup) {
         if (name.find("::") != std::string::npos)
@@ -731,6 +780,7 @@ Cppyy::TCppType_t Cppyy::GetType(const std::string &name, bool enable_slow_looku
 
     // Here we might need to deal with integral types such as 3.14.
 
+    static unsigned long long var_count = 0;
     std::string id = "__Cppyy_GetType_" + std::to_string(var_count++);
     std::string using_clause = "using " + id + " = __typeof__(" + name + ");\n";
 
@@ -1733,9 +1783,16 @@ bool Cppyy::IsTemplatedMethod(TCppMethod_t method)
 
 bool Cppyy::IsStaticTemplate(TCppScope_t scope, const std::string& name)
 {
-    if (Cpp::TCppFunction_t tf = GetMethodTemplate(scope, name, ""))
-        return Cpp::IsStaticMethod(tf);
-    return false;
+    std::vector<TCppMethod_t> candidate_methods;
+    Cpp::GetClassTemplatedMethods(name, scope, candidate_methods);
+    bool is_static = true;
+    for (auto i: candidate_methods) {
+        if (!Cpp::IsStaticMethod(i)) {
+            is_static = false;
+            break;
+        }
+    }
+    return is_static;
 }
 
 Cppyy::TCppMethod_t Cppyy::GetMethodTemplate(
@@ -1822,19 +1879,24 @@ Cppyy::TCppMethod_t Cppyy::GetGlobalOperator(
     std::vector<TCppScope_t> overloads;
     Cpp::GetOperator(scope, Cpp::GetOperatorFromSpelling(opname), overloads,
                      /*kind=*/Cpp::OperatorArity::kBoth);
+
+    // Avoid pushing nullptr into arg_types which would crash
+    // BestOverloadFunctionMatch when it dereferences each entry's QualType.
+    auto resolve_arg_type = [](const std::string& name) -> Cppyy::TCppType_t {
+        if (auto s = Cppyy::GetScope(name, 0))
+            if (auto t = Cppyy::GetTypeFromScope(s))
+                return Cppyy::GetReferencedType(t);
+        return Cppyy::GetType(name, /*enable_slow_lookup=*/true);
+    };
     
     std::vector<Cpp::TemplateArgInfo> arg_types;
-    if (auto l = Cppyy::GetScope(lc_type, 0))
-        arg_types.emplace_back(Cppyy::GetReferencedType(Cppyy::GetTypeFromScope(l)));
-    else if (auto l = Cppyy::GetType(lc_type))
+    if (auto l = resolve_arg_type(lc_type))
         arg_types.emplace_back(l);
     else
         return nullptr;
 
     if (!rc_type.empty()) {
-        if (auto r = Cppyy::GetScope(rc_type, 0))
-            arg_types.emplace_back(Cppyy::GetReferencedType(Cppyy::GetTypeFromScope(r)));
-        else if (auto r = Cppyy::GetType(rc_type))
+        if (auto r = resolve_arg_type(rc_type))
             arg_types.emplace_back(r);
         else
             return nullptr;

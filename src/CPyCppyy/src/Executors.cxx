@@ -533,6 +533,7 @@ CPPYY_IMPL_ARRAY_EXEC(LLong,    long long,               )
 CPPYY_IMPL_ARRAY_EXEC(ULLong,   unsigned long long,      )
 CPPYY_IMPL_ARRAY_EXEC(Float,    float,                   )
 CPPYY_IMPL_ARRAY_EXEC(Double,   double,                  )
+CPPYY_IMPL_ARRAY_EXEC(LDouble,  long double,             )
 CPPYY_IMPL_ARRAY_EXEC(ComplexF, std::complex<float>,     )
 CPPYY_IMPL_ARRAY_EXEC(ComplexD, std::complex<double>,    )
 CPPYY_IMPL_ARRAY_EXEC(ComplexI, std::complex<int>,       )
@@ -779,8 +780,12 @@ PyObject* CPyCppyy::FunctionPointerExecutor::Execute(
     void* address = (void*)GILCallR(method, self, ctxt);
     if (address)
         return Utility::FuncPtr2StdFunction(fRetType, fSignature, address);
-    PyErr_SetString(PyExc_TypeError, "can not convert null function pointer");
-    return nullptr;
+
+// There's currently now way to return a typed function nullptr, but given that
+// this is a return value (thus can not be set) and overloading function based
+// on function pointer return type is likely uncommon ...
+    Py_INCREF(gNullPtrObject);
+    return gNullPtrObject;
 }
 
 //- factories ----------------------------------------------------------------
@@ -1167,6 +1172,7 @@ public:
         gf["unsigned long long ptr"] =      (ef_t)+[](cdims_t d) { return new ULLongArrayExecutor{d};   };
         gf["float ptr"] =                   (ef_t)+[](cdims_t d) { return new FloatArrayExecutor{d};    };
         gf["double ptr"] =                  (ef_t)+[](cdims_t d) { return new DoubleArrayExecutor{d};   };
+        gf["long double ptr"] =             (ef_t)+[](cdims_t d) { return new LDoubleArrayExecutor{d};  };
         gf["std::complex<float> ptr"] =     (ef_t)+[](cdims_t d) { return new ComplexFArrayExecutor{d}; };
         gf["std::complex<double> ptr"] =    (ef_t)+[](cdims_t d) { return new ComplexDArrayExecutor{d}; };
         gf["std::complex<int> ptr"] =       (ef_t)+[](cdims_t d) { return new ComplexIArrayExecutor{d}; };
@@ -1179,6 +1185,7 @@ public:
         gf["std::byte"] =                   gf["uint8_t"];
         gf["std::byte&"] =                  gf["uint8_t&"];
         gf["const std::byte&"] =            gf["const uint8_t&"];
+        gf["const byte&"] =                 gf["const uint8_t&"];
         gf["std::int8_t"] =                 gf["int8_t"];
         gf["std::int8_t&"] =                gf["int8_t&"];
         gf["const std::int8_t&"] =          gf["const int8_t&"];
@@ -1199,6 +1206,17 @@ public:
         gf[CCOMPLEX_D "&"] =                gf["std::complex<double>&"];
         gf[CCOMPLEX_F " ptr"] =             gf["std::complex<float> ptr"];
         gf[CCOMPLEX_D " ptr"] =             gf["std::complex<double> ptr"];
+
+        // We always need these executors when cppyy is based on an unpatched
+        // ROOT, because the "long long" types are always converted to Long64_t
+        // and ULong64_t already at the ROOT Meta level.
+        // See https://github.com/root-project/root/issues/15872#issuecomment-2174092763
+        gf["Long64_t"] =                    gf["long long"];
+        gf["Long64_t&"] =                   gf["long long&"];
+        gf["Long64_t ptr"] =                gf["long long ptr"];
+        gf["ULong64_t"] =                   gf["unsigned long long"];
+        gf["ULong64_t&"] =                  gf["unsigned long long&"];
+        gf["ULong64_t ptr"] =               gf["unsigned long long ptr"];
 
     // factories for special cases
         gf["const char*"] =                 (ef_t)+[](cdims_t) { static CStringExecutor e{};     return &e; };

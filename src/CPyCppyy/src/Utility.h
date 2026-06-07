@@ -13,7 +13,6 @@ namespace CPyCppyy {
 class PyCallable;
 
 #if PY_VERSION_HEX < 0x030b0000
-extern dict_lookup_func gDictLookupOrg;
 extern bool gDictLookupActive;
 #endif
 
@@ -49,7 +48,11 @@ inline PyObject* CT2CppName(PyObject* pytc, const char* cpd, bool allow_voidp)
     const std::string& name = CT2CppNameS(pytc, allow_voidp);
     if (!name.empty()) {
         if (name == "const char*") cpd = "";
-        return CPyCppyy_PyText_FromString((std::string{name}+cpd).c_str());
+#if PY_VERSION_HEX < 0x03000000
+        return PyString_FromString((std::string{name}+cpd).c_str());
+#else
+        return PyUnicode_FromString((std::string{name}+cpd).c_str());
+#endif
     }
     return nullptr;
 }
@@ -64,6 +67,8 @@ PyObject* FuncPtr2StdFunction(const std::string& retType, const std::string& sig
 
 // initialize proxy type objects
 bool InitProxy(PyObject* module, PyTypeObject* pytype, const char* name);
+
+std::map<std::string, char> const &TypecodeMap();
 
 // retrieve the memory buffer from pyobject, return buflength, tc (optional) is python
 // array.array type code, size is type size, buf will point to buffer, and if check is

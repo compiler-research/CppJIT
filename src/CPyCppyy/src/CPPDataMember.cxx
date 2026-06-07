@@ -361,7 +361,8 @@ void CPyCppyy::CPPDataMember::Set(Cppyy::TCppScope_t scope, Cppyy::TCppScope_t d
             fFlags |= kIsConstData;
     }
 
-    std::vector<dim_t> dims = Cppyy::GetDimensions(type);
+    auto ldims = Cppyy::GetDimensions(type);
+    std::vector<dim_t> dims(ldims.begin(), ldims.end());
 
     if (!dims.empty())
         fFlags |= kIsArrayType;

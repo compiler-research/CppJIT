@@ -533,7 +533,7 @@ static int meta_setattro(PyObject* pyclass, PyObject* pyname, PyObject* pyval)
 // for such data as necessary. The many checks to narrow down the specific case
 // are needed to prevent unnecessary lookups and recursion.
     // skip if the given pyval is a descriptor already, or an unassignable class
-    if (((CPPScope*)pyclass)->fFlags & CPPScope::kIsNamespace 
+    if (((CPPScope*)pyclass)->fFlags & CPPScope::kIsNamespace
         && !CPyCppyy::CPPDataMember_Check(pyval)
         && !CPyCppyy::CPPScope_Check(pyval)) {
         std::string name = CPyCppyy_PyText_AsString(pyname);

@@ -400,6 +400,21 @@ static PySequenceMethods op_as_sequence = {
     0,                             // sq_inplace_repeat
 };
 
+PyCFunction &CPPInstance::ReduceMethod() {
+   static PyCFunction reducer = nullptr;
+   return reducer;
+}
+
+PyObject *op_reduce(PyObject *self, PyObject *args)
+{
+   auto &reducer = CPPInstance::ReduceMethod();
+   if (!reducer) {
+      PyErr_SetString(PyExc_NotImplementedError, "");
+      return nullptr;
+   }
+   return reducer(self, args);
+}
+
 
 //----------------------------------------------------------------------------
 static PyMethodDef op_methods[] = {
@@ -409,6 +424,8 @@ static PyMethodDef op_methods[] = {
       (char*)"dispatch to selected overload"},
     {(char*)"__smartptr__", (PyCFunction)op_get_smartptr, METH_NOARGS,
       (char*)"get associated smart pointer, if any"},
+    {(char*)"__reduce__",  (PyCFunction)op_reduce, METH_NOARGS,
+        (char*)"reduce method for serialization"},
     {(char*)"__reshape__",  (PyCFunction)op_reshape, METH_O,
         (char*)"cast pointer to 1D array type"},
     {(char*)nullptr, nullptr, 0, nullptr}
@@ -555,8 +572,17 @@ static PyObject* op_richcompare(CPPInstance* self, PyObject* other, int op)
     if (op == Py_EQ || op == Py_NE) {
     // special case for None to compare True to a null-pointer
         if ((PyObject*)other == Py_None && !self->fObject) {
-            if (op == Py_EQ) { Py_RETURN_TRUE; }
-            Py_RETURN_FALSE;
+            const char *msg =
+                "\nComparison of C++ nullptr objects with `None` is no longer supported."
+                "\n\nPreviously, `None` was treated as equivalent to a null C++ pointer, "
+                "but this led to confusing behavior where `x == None` could be True even though `x is None` was False."
+                "\n\nTo test whether a C++ object is null or not, check its truth value instead:"
+                "\n    if not x: ..."
+                "\nor use `x is None` to explicitly check for Python None."
+                "\n";
+
+            PyErr_SetString(PyExc_TypeError, msg);
+            return NULL;  // stop execution, raise TypeError
         }
 
     // use C++-side operators if available
@@ -597,7 +623,7 @@ static PyObject* op_richcompare(CPPInstance* self, PyObject* other, int op)
             CPYCPPYY_ORDERED_OPERATOR_STUB(<,  klass->fOperators->fLt, __lt__)
             break;
         case Py_LE:
-            CPYCPPYY_ORDERED_OPERATOR_STUB(<=, klass->fOperators->fLe, __ge__)
+            CPYCPPYY_ORDERED_OPERATOR_STUB(<=, klass->fOperators->fLe, __le__)
             break;
         case Py_GT:
             CPYCPPYY_ORDERED_OPERATOR_STUB(>,  klass->fOperators->fGt, __gt__)

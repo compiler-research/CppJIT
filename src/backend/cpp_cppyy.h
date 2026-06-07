@@ -84,6 +84,8 @@ namespace Cppyy {
     RPY_EXPORTED
     bool IsClassType(TCppType_t type);
     RPY_EXPORTED
+    bool IsIntegerType(TCppType_t type, bool* is_signed = nullptr);
+    RPY_EXPORTED
     bool IsPointerType(TCppType_t type);
     RPY_EXPORTED
     bool IsFunctionPointerType(TCppType_t type);

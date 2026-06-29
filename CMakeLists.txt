@@ -78,41 +78,9 @@ else()
     set(CPPINTEROP_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend")
 endif()
 
-set(_interop_cmake_args
-    -DLLVM_DIR=${LLVM_DIR}
-    -DCPPINTEROP_USE_REPL=ON
-    -DCPPINTEROP_USE_CLING=OFF
-    -DCPPINTEROP_ENABLE_TESTING=${CPPJIT_ENABLE_CPPINTEROP_TESTS}
-    -DBUILD_SHARED_LIBS=ON
-    -DCMAKE_INSTALL_PREFIX=${CPPINTEROP_INSTALL_DIR}
-    -DCMAKE_INSTALL_LIBDIR=lib
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_CXX_STANDARD=17
-)
-if(Clang_DIR)
-    list(APPEND _interop_cmake_args -DClang_DIR=${Clang_DIR})
-endif()
-if(CMAKE_C_COMPILER)
-    list(APPEND _interop_cmake_args -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER})
-endif()
-if(CMAKE_CXX_COMPILER)
-    list(APPEND _interop_cmake_args -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER})
-endif()
-
-ExternalProject_Add(CppInterOp
-    GIT_REPOSITORY https://github.com/compiler-research/CppInterOp.git
-    GIT_TAG        ${CPPINTEROP_GIT_TAG}
-    GIT_SHALLOW    ON
-    PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
-    CMAKE_ARGS     ${_interop_cmake_args}
-    BUILD_BYPRODUCTS
-        "${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    LOG_DOWNLOAD   ON
-    LOG_CONFIGURE  ON
-    LOG_BUILD      ON
-    LOG_INSTALL    ON
-    LOG_OUTPUT_ON_FAILURE ON
-)
+# Include cmake for CppInterOp config and build using ExternalProject.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddCppInterOp.cmake)
+cppjit_add_cppinterop()
 
 # this libcppyy.so merges both CPyCppyy and clingwrapper
 file(GLOB CPYCPPYY_SOURCES CONFIGURE_DEPENDS src/CPyCppyy/src/*.cxx)

@@ -28,16 +28,24 @@
 #define CPYCPPYY_VERSION_HEX 0x011200
 
 // Cppyy types
-namespace Cppyy {
-    typedef void*       TCppScope_t;
-    typedef TCppScope_t TCppType_t;
-    typedef void*       TCppEnum_t;
-    typedef void*       TCppObject_t;
-    typedef void*       TCppMethod_t;
+#ifndef CPYCPPYY_INTERNAL
 
-    typedef size_t      TCppIndex_t;
-    typedef void*       TCppFuncAddr_t;
+namespace Cpp {
+struct DeclRef;
+struct TypeRef;
+struct FuncRef;
+struct ObjectRef;
+}  // namespace Cpp
+
+namespace Cppyy {
+typedef Cpp::DeclRef TCppScope_t;
+typedef Cpp::TypeRef TCppType_t;
+typedef Cpp::ObjectRef TCppObject_t;
+typedef Cpp::FuncRef TCppMethod_t;
+typedef size_t TCppIndex_t;
+typedef void* TCppFuncAddr_t;
 } // namespace Cppyy
+#endif
 
 // Bindings
 #include "CPyCppyy/CommonDefs.h"

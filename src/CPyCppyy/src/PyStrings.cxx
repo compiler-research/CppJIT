@@ -92,11 +92,7 @@ bool CPyCppyy::CreatePyStrings() {
     CPPYY_INITIALIZE_STRING(gBase,           __base__);
     CPPYY_INITIALIZE_STRING(gContains,       contains);
     CPPYY_INITIALIZE_STRING(gCopy,           copy);
-#if PY_VERSION_HEX < 0x03000000
-    CPPYY_INITIALIZE_STRING(gCppBool,        __cpp_nonzero__);
-#else
     CPPYY_INITIALIZE_STRING(gCppBool,        __cpp_bool__);
-#endif
     CPPYY_INITIALIZE_STRING(gCppName,        __cpp_name__);
     CPPYY_INITIALIZE_STRING(gAnnotations,    __annotations__);
     CPPYY_INITIALIZE_STRING(gCastCpp,        __cast_cpp__);

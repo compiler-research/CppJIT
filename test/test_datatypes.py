@@ -2442,3 +2442,35 @@ class TestDATATYPES:
         assert ns54.teu8.value_or(ns54.Teu8.TWO) == ns54.Teu8.TWO
         ns54.teu8 = ns54.Teu8.TWO
         assert ns54.teu8 == ns54.Teu8.TWO
+
+    def test55_qt_cache_alias_collision(self):
+        """`unsigned char` and `uint8_t` share a canonical type but cppyy
+        wires them to different converters (str vs int). Locks in the
+        QT-keyed cache's alias-collision skip in Converters.cxx."""
+
+        import cppyy
+
+        cppyy.cppdef("""
+        #include <cstdint>
+        namespace ns55 {
+            void take_uchar(unsigned char) {}
+            void take_uint8(uint8_t)       {}
+            void take_schar(signed char)   {}
+            void take_int8(int8_t)         {}
+        }
+        """)
+        ns = cppyy.gbl.ns55
+
+        # `unsigned char`: UCharConverter -- accepts 1-char str.
+        ns.take_uchar('e')
+        ns.take_uchar(101)        # int also accepted as a char value
+        raises(TypeError, ns.take_uchar, 1.5)
+
+        # `uint8_t`: UInt8Converter -- accepts int.
+        ns.take_uint8(101)
+        raises(TypeError, ns.take_uint8, 'e')
+
+        # Symmetric for the signed pair.
+        ns.take_schar('e')
+        ns.take_int8(101)
+        raises(TypeError, ns.take_int8, 'e')

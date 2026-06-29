@@ -238,7 +238,7 @@ def cppexec(stmt):
 def evaluate(input):
     box = gbl.Cpp.Evaluate(input)
     # Truthy sentinel: skips Box::convertTo's UB-on-K_Unspecified arm.
-    if box.getKind() == gbl.CppImpl.Box.K_Unspecified:
+    if box.getKind() == gbl.Cpp.Box.K_Unspecified:
         return ~0
     return box.convertTo['long']()
 

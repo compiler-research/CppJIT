@@ -1443,3 +1443,140 @@ class TestREGRESSION:
         """)
 
         assert gbl.NN["std::vector<int>::value_type, 5"]().F is True
+
+    def test50_using_decl_base_this_offset(self):
+        """A using-declaration-imported method from a non-zero-offset base must
+        adjust the `this` pointer to that base's subobject.
+
+        When a derived class pulls a base method into its own overload set with
+        `using Base::method;` (typically to merge it with a same-named local
+        overload), the method is still declared in the base. If that base is not
+        the first one, its subobject sits at a non-zero offset in the derived
+        object. The `this` offset used to be computed against the class the
+        method was bound on (the derived class) rather than its declaring base,
+        yielding a zero offset; the call then wrote through an unadjusted
+        pointer, corrupting memory and crashing on destruction.
+        """
+
+        import cppyy
+
+        cppyy.cppdef(r"""
+        namespace UsingDeclThisOffset {
+
+        // Fat first base so that SecondBase lands at a non-zero offset in Derived.
+        struct FirstBase {
+            long long a, b, c, d, e, f, g, h;
+            FirstBase() : a(11), b(22), c(33), d(44), e(55), f(66), g(77), h(88) {}
+            long long get_a() const { return a; }
+            long long get_h() const { return h; }
+        };
+
+        struct SecondBase {
+            int value;
+            SecondBase() : value(-1) {}
+            void set_value(int v) { value = v; }   // 1-arg setter in a non-zero-offset base
+            int  get_value() const { return value; }
+        };
+
+        struct Derived : public FirstBase, public SecondBase {
+            int extra;
+            Derived() : extra(0) {}
+            using SecondBase::set_value;                // import the 1-arg overload
+            void set_value(int v, int w) { value = v + w; extra = w; }  // local 2-arg overload
+        };
+
+        std::ptrdiff_t secondbase_offset() {
+            Derived* d = new Derived();
+            std::ptrdiff_t off = (char*)static_cast<SecondBase*>(d) - (char*)d;
+            delete d;
+            return off;
+        }
+
+        } """)
+
+        ns = cppyy.gbl.UsingDeclThisOffset
+
+        # the bug only manifests when SecondBase is at a non-zero offset
+        assert ns.secondbase_offset() != 0
+
+        d = ns.Derived()
+
+        # the 1-arg call resolves to the using-imported SecondBase::set_value(int)
+        d.set_value(42)
+
+        # the value lands in the correct SecondBase subobject ...
+        assert d.get_value() == 42
+        # ... and the FirstBase subobject (at offset 0) is left untouched; with a
+        # wrong (zero) `this` offset the write would have clobbered FirstBase::a.
+        assert d.get_a() == 11
+        assert d.get_h() == 88
+
+        # the local 2-arg overload still works and likewise leaves FirstBase intact
+        d.set_value(10, 5)
+        assert d.get_value() == 15
+        assert d.extra == 5
+        assert d.get_a() == 11
+
+        # destruction must not crash (heap integrity preserved)
+        del d
+
+    def test51_nontype_enum_template_arg(self):
+        """Regression test for a class template with a non-type enum parameter
+
+
+        clang prints such an argument as a C-style cast, e.g.
+        ``NonTypeEnumTmpl::Impl<float, (NonTypeEnumTmpl::EOp)0>``. Resolving
+        that name (as happens when a base pointer is auto-downcast to its
+        actual derived type) used to either fail to instantiate the template
+        ("non-type template parameter must be an expression") or leave the
+        interpreter in an error state that broke the next, unrelated JIT call
+        wrapper ("failed to resolve function").
+        """
+
+        import cppyy
+
+        cppyy.cppdef(r"""
+        namespace NonTypeEnumTmpl {
+            enum class EOp { Add = 0, Sub = 1, Mul = 2 };
+
+            struct Base {
+                virtual ~Base() {}
+                virtual int code() const = 0;
+            };
+
+            template <typename T, EOp Op>
+            struct Impl : public Base {
+                int code() const override { return (int)Op; }
+            };
+
+            // Factory returning a *raw* base pointer whose dynamic type carries
+            // a non-type enum template argument. Auto-downcasting it back to
+            // Python makes cppyy resolve the actual type by name, i.e. the
+            // cast-form "Impl<float, (EOp)0>".
+            Base* get(int which) {
+                static Impl<float, EOp::Add> a;
+                static Impl<float, EOp::Sub> s;
+                static Impl<float, EOp::Mul> m;
+                if (which == 0) return &a;
+                if (which == 1) return &s;
+                return &m;
+            }
+
+            // Called after the downcast to detect interpreter poisoning: its
+            // call wrapper is JIT-compiled only on first use.
+            int probe(int x) { return x + 1; }
+        }
+        """)
+
+        ns = cppyy.gbl.NonTypeEnumTmpl
+
+        # resolving the derived template type during the auto-downcast must not
+        # crash and must yield the actual (derived) class...
+        op = ns.get(0)
+        assert op.code() == 0
+        assert 'Impl<float' in type(op).__cpp_name__
+        assert ns.get(1).code() == 1
+        assert ns.get(2).code() == 2
+
+        # ...nor leave the interpreter unable to compile a later call wrapper
+        assert ns.probe(41) == 42

@@ -241,12 +241,15 @@ class TestFRAGILE:
         #else
         #define CPPYY_IMPORT extern
         #endif
+        
+        namespace Cpp {
+        struct DeclRef;
+        }  // namespace Cpp
 
         namespace Cppyy {
+        typedef Cpp::DeclRef TCppScope_t;
 
-        typedef void* TCppScope_t;
-
-        CPPYY_IMPORT TCppScope_t GetScope(const std::string& scope_name, TCppScope_t parent_scope = nullptr);
+        CPPYY_IMPORT TCppScope_t GetScope(const std::string& scope_name, TCppScope_t parent_scope = TCppScope_t());
         CPPYY_IMPORT void GetAllCppNames(TCppScope_t scope, std::set<std::string>& cppnames);
 
         }""")

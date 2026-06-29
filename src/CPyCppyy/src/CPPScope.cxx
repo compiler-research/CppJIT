@@ -5,6 +5,7 @@
 #include "CPPEnum.h"
 #include "CPPFunction.h"
 #include "CPPOverload.h"
+#include "Cppyy.h"
 #include "CustomPyTypes.h"
 #include "Dispatcher.h"
 #include "ProxyWrappers.h"
@@ -202,8 +203,14 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
     subtype->tp_dealloc = (destructor)meta_dealloc;
 
 // creation of the python-side class; extend the size if this is a smart ptr
-    Cppyy::TCppType_t raw{0}; Cppyy::TCppMethod_t deref{0};
-    if (CPPScope_CheckExact(subtype)) {
+//
+// A namespace can never be a smart pointer, so skip the check for namespaces.
+// This matters beyond performance: GetSmartPtrInfo() resolves the scope name
+// through a slow interpreter lookup that triggers autoloading of the library
+// providing the scope, which we don't want to do unnecessarily.
+    Cppyy::TCppScope_t raw;
+    Cppyy::TCppMethod_t deref;
+    if (CPPScope_CheckExact(subtype) && !Cppyy::IsNamespace(((CPPScope*)subtype)->fCppType)) {
         if (Cppyy::GetSmartPtrInfo(Cppyy::GetScopedFinalName(((CPPScope*)subtype)->fCppType), &raw, &deref))
             subtype->tp_basicsize = sizeof(CPPSmartClass);
     }
@@ -274,7 +281,7 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds)
 
 // maps for using namespaces and tracking objects
     if (!Cppyy::IsNamespace(result->fCppType)) {
-        static Cppyy::TCppType_t exc_type = (Cppyy::TCppType_t)Cppyy::GetScope("exception", Cppyy::GetScope("std"));
+        static Cppyy::TCppScope_t exc_type = Cppyy::GetScope("exception", Cppyy::GetScope("std"));
         if (Cppyy::IsSubclass(result->fCppType, exc_type))
             result->fFlags |= CPPScope::kIsException;
         if (!(result->fFlags & CPPScope::kIsPython))
@@ -365,7 +372,7 @@ static PyObject* meta_getattro(PyObject* pyclass, PyObject* pyname)
         if ((klass->fFlags & CPPScope::kIsNamespace) || 
                 scope == Cppyy::GetGlobalScope()) {
         // tickle lazy lookup of functions
-            const std::vector<Cppyy::TCppScope_t> methods =
+            const std::vector<Cppyy::TCppMethod_t> methods =
                 Cppyy::GetMethodsFromName(scope, name);
             if (!methods.empty()) {
             // function exists, now collect overloads
@@ -663,11 +670,7 @@ PyTypeObject CPPScope_Type = {
     (getattrofunc)meta_getattro,   // tp_getattro
     (setattrofunc)meta_setattro,   // tp_setattro
     0,                             // tp_as_buffer
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE
-#if PY_VERSION_HEX >= 0x03040000
-        | Py_TPFLAGS_TYPE_SUBCLASS
-#endif
-        ,                          // tp_flags
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_TYPE_SUBCLASS, // tp_flags
     (char*)"CPyCppyy metatype (internal)",        // tp_doc
     0,                             // tp_traverse
     0,                             // tp_clear
@@ -692,25 +695,12 @@ PyTypeObject CPPScope_Type = {
     0,                             // tp_mro
     0,                             // tp_cache
     0,                             // tp_subclasses
-    0                              // tp_weaklist
-#if PY_VERSION_HEX >= 0x02030000
-    , 0                            // tp_del
-#endif
-#if PY_VERSION_HEX >= 0x02060000
-    , 0                            // tp_version_tag
-#endif
-#if PY_VERSION_HEX >= 0x03040000
-    , 0                            // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    , 0                           // tp_vectorcall
-#endif
-#if PY_VERSION_HEX >= 0x030c0000
-    , 0                           // tp_watched
-#endif
-#if PY_VERSION_HEX >= 0x030d0000
-    , 0                           // tp_versions_used
-#endif
+    0,                             // tp_weaklist
+    0,                             // tp_del
+    0,                             // tp_version_tag
+    0,                             // tp_finalize
+    0                              // tp_vectorcall
+    CPYCPPYY_PYTYPE_TAIL
 };
 
 } // namespace CPyCppyy

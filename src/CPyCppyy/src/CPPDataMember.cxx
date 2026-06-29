@@ -1,6 +1,7 @@
 // Bindings
 #include "CPyCppyy.h"
 #include "CPyCppyy/Reflex.h"
+#include "Cppyy.h"
 #include "PyStrings.h"
 #include "CPPDataMember.h"
 #include "CPPInstance.h"
@@ -193,7 +194,7 @@ static CPPDataMember* dm_new(PyTypeObject* pytype, PyObject*, PyObject*)
     dm->fOffset         = 0;
     dm->fFlags          = 0;
     dm->fConverter      = nullptr;
-    dm->fEnclosingScope = 0;
+    dm->fEnclosingScope = nullptr;
     dm->fDescription    = nullptr;
     dm->fDoc            = nullptr;
 
@@ -297,25 +298,12 @@ PyTypeObject CPPDataMember_Type = {
     0,                             // tp_mro
     0,                             // tp_cache
     0,                             // tp_subclasses
-    0                              // tp_weaklist
-#if PY_VERSION_HEX >= 0x02030000
-    , 0                            // tp_del
-#endif
-#if PY_VERSION_HEX >= 0x02060000
-    , 0                            // tp_version_tag
-#endif
-#if PY_VERSION_HEX >= 0x03040000
-    , 0                            // tp_finalize
-#endif
-#if PY_VERSION_HEX >= 0x03080000
-    , 0                           // tp_vectorcall
-#endif
-#if PY_VERSION_HEX >= 0x030c0000
-    , 0                           // tp_watched
-#endif
-#if PY_VERSION_HEX >= 0x030d0000
-    , 0                           // tp_versions_used
-#endif
+    0,                             // tp_weaklist
+    0,                             // tp_del
+    0,                             // tp_version_tag
+    0,                             // tp_finalize
+    0                              // tp_vectorcall
+    CPYCPPYY_PYTYPE_TAIL
 };
 
 } // namespace CPyCppyy
@@ -416,7 +404,7 @@ void* CPyCppyy::CPPDataMember::GetAddress(CPPInstance* pyobj)
 
 // the proxy's internal offset is calculated from the enclosing class
     ptrdiff_t offset = 0;
-    Cppyy::TCppType_t oisa = pyobj->ObjectIsA();
+    Cppyy::TCppScope_t oisa = pyobj->ObjectIsA();
     if (oisa != fEnclosingScope)
         offset = Cppyy::GetBaseOffset(oisa, fEnclosingScope, obj, 1 /* up-cast */);
 

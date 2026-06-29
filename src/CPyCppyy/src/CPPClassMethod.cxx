@@ -5,11 +5,8 @@
 
 
 //- public members --------------------------------------------------------------
-PyObject* CPyCppyy::CPPClassMethod::Call(CPPInstance*&
-#if PY_VERSION_HEX >= 0x03080000
-    self
-#endif
-    , CPyCppyy_PyArgs_t args, size_t nargsf, PyObject* kwds, CallContext* ctxt)
+PyObject *CPyCppyy::CPPClassMethod::Call(CPPInstance *&self, CPyCppyy_PyArgs_t args,
+                                         size_t nargsf, PyObject *kwds, CallContext *ctxt)
 {
 // preliminary check in case keywords are accidently used (they are ignored otherwise)
     if (kwds && ((PyDict_Check(kwds) && PyDict_Size(kwds)) ||
@@ -23,7 +20,6 @@ PyObject* CPyCppyy::CPPClassMethod::Call(CPPInstance*&
         return nullptr;
 
 // translate the arguments
-#if PY_VERSION_HEX >= 0x03080000
 // TODO: The following is not robust and should be revisited e.g. by making CPPOverloads
 // that have only CPPClassMethods be true Python classmethods? Note that the original
 // implementation wasn't 100% correct either (e.g. static size() mapped to len()).
@@ -40,7 +36,6 @@ PyObject* CPyCppyy::CPPClassMethod::Call(CPPInstance*&
             nargsf -= 1;
         }
     }
-#endif
 
     if (!this->ConvertAndSetArgs(args, nargsf, ctxt))
         return nullptr;

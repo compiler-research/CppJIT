@@ -27,7 +27,7 @@
 //- data and local helpers ---------------------------------------------------
 namespace CPyCppyy {
     extern PyObject* gThisModule;
-    std::map<std::string, std::vector<PyObject*>> &pythonizations();
+    std::unordered_map<std::string, std::vector<PyObject*>> &pythonizations();
 }
 
 namespace {
@@ -214,9 +214,6 @@ PyObject* NullCheckBool(PyObject* self)
 }
 
 //- vector behavior as primitives ----------------------------------------------
-#if PY_VERSION_HEX < 0x03040000
-#define PyObject_LengthHint _PyObject_LengthHint
-#endif
 
 // TODO: can probably use the below getters in the InitializerListConverter
 struct ItemGetter {
@@ -610,7 +607,7 @@ static PyObject* vector_iter(PyObject* v) {
         vi->vi_data      = nullptr;
         vi->vi_stride    = 0;
         vi->vi_converter = nullptr;
-        vi->vi_klass     = 0;
+        vi->vi_klass     = nullptr;
         vi->vi_flags     = 0;
     }
 
@@ -658,7 +655,7 @@ PyObject* VectorGetItem(CPPInstance* self, PySliceObject* index)
 }
 
 
-static Cppyy::TCppType_t sVectorBoolTypeID = (Cppyy::TCppType_t)0;
+static Cppyy::TCppScope_t sVectorBoolTypeID;
 
 PyObject* VectorBoolGetItem(CPPInstance* self, PyObject* idx)
 {
@@ -850,13 +847,8 @@ PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
     if (PyTuple_GET_SIZE(args) == 1 && PyMapping_Check(PyTuple_GET_ITEM(args, 0)) && \
            !(PyTuple_Check(PyTuple_GET_ITEM(args, 0)) || PyList_Check(PyTuple_GET_ITEM(args, 0)))) {
         PyObject* assoc = PyTuple_GET_ITEM(args, 0);
-#if PY_VERSION_HEX < 0x03000000
-    // to prevent warning about literal string, expand macro
-        PyObject* items = PyObject_CallMethod(assoc, (char*)"items", nullptr);
-#else
     // in p3, PyMapping_Items isn't a macro, but a function that short-circuits dict
         PyObject* items = PyMapping_Items(assoc);
-#endif
         if (items && PySequence_Check(items)) {
             PyObject* result = MapFromPairs(self, items);
             Py_DECREF(items);
@@ -884,7 +876,6 @@ PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
     return nullptr;
 }
 
-#if __cplusplus <= 202002L
 PyObject* STLContainsWithFind(PyObject* self, PyObject* obj)
 {
 // Implement python's __contains__ for std::map/std::set
@@ -911,7 +902,6 @@ PyObject* STLContainsWithFind(PyObject* self, PyObject* obj)
 
     return result;
 }
-#endif
 
 
 //- set behavior as primitives ------------------------------------------------
@@ -1117,12 +1107,10 @@ PyObject* SmartPtrInit(PyObject* self, PyObject* args, PyObject* /* kwds */)
 
 
 //- string behavior as primitives --------------------------------------------
-#if PY_VERSION_HEX >= 0x03000000
 // TODO: this is wrong, b/c it doesn't order
 static int PyObject_Compare(PyObject* one, PyObject* other) {
     return !PyObject_RichCompareBool(one, other, Py_EQ);
 }
-#endif
 static inline
 PyObject* CPyCppyy_PyString_FromCppString(std::string_view s, bool native=true) {
     if (native)
@@ -1254,7 +1242,6 @@ PyObject* STLStringDecode(CPPInstance* self, PyObject* args, PyObject* kwds)
     return PyUnicode_Decode(obj->data(), obj->size(), encoding, errors);
 }
 
-#if __cplusplus <= 202302L
 PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
 {
     std::string* obj = GetSTLString(self);
@@ -1271,7 +1258,6 @@ PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj)
 
     Py_RETURN_FALSE;
 }
-#endif
 
 PyObject* STLStringReplace(CPPInstance* self, PyObject* args, PyObject* /*kwds*/)
 {
@@ -1628,11 +1614,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
 
 // for pre-check of nullptr for boolean types
     if (HasAttrDirect(pyclass, PyStrings::gCppBool)) {
-#if PY_VERSION_HEX >= 0x03000000
         const char* pybool_name = "__bool__";
-#else
-        const char* pybool_name = "__nonzero__";
-#endif
         Utility::AddToClass(pyclass, pybool_name, (PyCFunction)NullCheckBool, METH_NOARGS);
     }
 
@@ -1741,7 +1723,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
 
     if (Cppyy::IsAggregate(((CPPClass*)pyclass)->fCppType) && name.compare(0, 5, "std::", 5) != 0) {
     // create a pseudo-constructor to allow initializer-style object creation
-        Cppyy::TCppType_t kls = ((CPPClass*)pyclass)->fCppType;
+        Cppyy::TCppScope_t kls = ((CPPClass*)pyclass)->fCppType;
         std::vector<Cppyy::TCppScope_t> datamems;
         Cppyy::GetDatamembers(kls, datamems);
         if (!datamems.empty()) {
@@ -1821,7 +1803,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     if (IsTemplatedSTLClass(name, "vector")) {
 
     // std::vector<bool> is a special case in C++
-        if (!sVectorBoolTypeID) sVectorBoolTypeID = (Cppyy::TCppType_t)Cppyy::GetScope("std::vector<bool>");
+        if (!sVectorBoolTypeID) sVectorBoolTypeID = Cppyy::GetScope("std::vector<bool>");
         if (klass->fCppType == sVectorBoolTypeID) {
             Utility::AddToClass(pyclass, "__getitem__", (PyCFunction)VectorBoolGetItem, METH_O);
             Utility::AddToClass(pyclass, "__setitem__", (PyCFunction)VectorBoolSetItem);
@@ -1853,7 +1835,7 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
             Cppyy::TCppType_t value_type = Cppyy::GetTypeFromScope(Cppyy::GetNamed("value_type", scope));
             Cppyy::TCppType_t vtype = Cppyy::ResolveType(value_type);
             if (vtype) {    // actually resolved?
-                PyObject* pyvalue_type = PyLong_FromVoidPtr(vtype);
+                PyObject* pyvalue_type = PyLong_FromVoidPtr(vtype.data);
                 PyObject_SetAttr(pyclass, PyStrings::gValueTypePtr, pyvalue_type);
                 Py_DECREF(pyvalue_type);
                 pyvalue_type = PyUnicode_FromString(Cppyy::GetTypeAsString(vtype).c_str());
@@ -1880,20 +1862,24 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
     // constructor that takes python associative collections
         Utility::AddToClass(pyclass, "__real_init", "__init__");
         Utility::AddToClass(pyclass, "__init__", (PyCFunction)MapInit, METH_VARARGS | METH_KEYWORDS);
-#if __cplusplus <= 202002L
-    // From C++20, std::map and std::unordered_map already implement a contains() method.
-        Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
-#endif
+    // From C++20, std::map/unordered_map have a native contains() that the generic
+    // contains->__contains__ mapping above will pick up. Strong-types reflection
+    // does not always expose it, so fall back to a find()-based __contains__ when
+    // none was reflected (still O(log n)/O(1), never iterating).
+        if (!HasAttrDirect(pyclass, PyStrings::gContains))
+            Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
     }
 
     else if (IsTemplatedSTLClass(name, "set")) {
     // constructor that takes python associative collections
         Utility::AddToClass(pyclass, "__real_init", "__init__");
         Utility::AddToClass(pyclass, "__init__", (PyCFunction)SetInit, METH_VARARGS | METH_KEYWORDS);
-#if __cplusplus <= 202002L
-    // From C++20, std::set already implements a contains() method.
-        Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
-#endif
+    // From C++20, std::set has a native contains() that the generic
+    // contains->__contains__ mapping above will pick up. Strong-types reflection
+    // does not always expose it, so fall back to a find()-based __contains__ when
+    // none was reflected (still O(log n), never iterating).
+        if (!HasAttrDirect(pyclass, PyStrings::gContains))
+            Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLContainsWithFind, METH_O);
     }
 
     else if (IsTemplatedSTLClass(name, "pair")) {
@@ -1923,10 +1909,11 @@ bool CPyCppyy::Pythonize(PyObject* pyclass, Cppyy::TCppScope_t scope)
         Utility::AddToClass(pyclass, "__cmp__",       (PyCFunction)STLStringCompare,    METH_O);
         Utility::AddToClass(pyclass, "__eq__",        (PyCFunction)STLStringIsEqual,    METH_O);
         Utility::AddToClass(pyclass, "__ne__",        (PyCFunction)STLStringIsNotEqual, METH_O);
-#if __cplusplus <= 202302L
-    // From C++23, std::string already implements a contains() method.
+    // Python's `in` operator needs __contains__ on the proxy regardless of the
+    // C++ standard CPyCppyy is built with; it never dispatches to C++'s
+    // std::string::contains (C++23+). The old `__cplusplus <= 202302L` guard
+    // wrongly dropped it when built with -std=c++2c (__cplusplus == 202400L).
         Utility::AddToClass(pyclass, "__contains__",  (PyCFunction)STLStringContains,   METH_O);
-#endif
         Utility::AddToClass(pyclass, "decode",        (PyCFunction)STLStringDecode,     METH_VARARGS | METH_KEYWORDS);
         Utility::AddToClass(pyclass, "__cpp_find",    "find");
         Utility::AddToClass(pyclass, "find",          (PyCFunction)STLStringFind,       METH_VARARGS | METH_KEYWORDS);

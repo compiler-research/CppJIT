@@ -1,5 +1,6 @@
 // Bindings
 #include "CPyCppyy.h"
+#include "Cppyy.h"
 #define CPYCPPYY_INTERNAL 1
 #include "CPyCppyy/API.h"
 #undef CPYCPPYY_INTERNAL
@@ -47,22 +48,10 @@ static bool Initialize()
 
     if (!Py_IsInitialized()) {
     // this happens if Cling comes in first
-#if PY_VERSION_HEX < 0x03020000
-        PyEval_InitThreads();
-#endif
-#if PY_VERSION_HEX < 0x03080000
-        Py_Initialize();
-#else
         PyConfig config;
         PyConfig_InitPythonConfig(&config);
         PyConfig_SetString(&config, &config.program_name, L"cppyy");
         Py_InitializeFromConfig(&config);
-#endif
-#if PY_VERSION_HEX >= 0x03020000
-#if PY_VERSION_HEX < 0x03090000
-        PyEval_InitThreads();
-#endif
-#endif
 
     // try again to see if the interpreter is initialized
         if (!Py_IsInitialized()) {
@@ -70,16 +59,6 @@ static bool Initialize()
             std::cerr << "Error: python has not been initialized; returning." << std::endl;
             return false;
         }
-
-   // set the command line arguments on python's sys.argv
-#if PY_VERSION_HEX < 0x03000000
-        char* argv[] = {const_cast<char*>("cppyy")};
-#elif PY_VERSION_HEX < 0x03080000
-        wchar_t* argv[] = {const_cast<wchar_t*>(L"cppyy")};
-#endif
-#if PY_VERSION_HEX < 0x03080000
-        PySys_SetArgv(sizeof(argv)/sizeof(argv[0]), argv);
-#endif
 
     // force loading of the cppyy module
         PyRun_SimpleString(const_cast<char*>("import cppyy"));
@@ -112,7 +91,7 @@ std::string CPyCppyy::Instance_GetScopedFinalName(PyObject* pyobject)
        return "";
    }
 
-   Cppyy::TCppType_t pyobjectClass = ((CPPInstance *)pyobject)->ObjectIsA();
+   Cppyy::TCppScope_t pyobjectClass = ((CPPInstance *)pyobject)->ObjectIsA();
    return Cppyy::GetScopedFinalName(pyobjectClass);
 }
 

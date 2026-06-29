@@ -12,6 +12,7 @@
 #include "CPPOperator.h"
 #include "CPPOverload.h"
 #include "CPPScope.h"
+#include "Cppyy.h"
 #include "MemoryRegulator.h"
 #include "PyStrings.h"
 #include "Pythonize.h"
@@ -24,7 +25,7 @@
 #include <algorithm>
 #include <deque>
 #include <map>
-#include <set>
+#include <unordered_set>
 #include <string>
 #include <vector>
 
@@ -33,11 +34,11 @@
 namespace CPyCppyy {
     extern PyObject* gThisModule;
     extern PyObject* gPyTypeMap;
-    extern std::set<Cppyy::TCppType_t> gPinnedTypes;
+    extern std::unordered_set<Cppyy::TCppScope_t> gPinnedTypes;
 }
 
 // to prevent having to walk scopes, track python classes by C++ class
-typedef std::map<Cppyy::TCppScope_t, PyObject*> PyClassMap_t;
+typedef std::unordered_map<Cppyy::TCppScope_t, PyObject*> PyClassMap_t;
 static PyClassMap_t gPyClasses;
 
 
@@ -169,11 +170,11 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     bool isNamespace = Cppyy::IsNamespace(scope);
     bool isComplete = Cppyy::IsComplete(scope);
     bool hasConstructor = false;
-    Cppyy::TCppMethod_t potGetItem = (Cppyy::TCppMethod_t)0;
+    Cppyy::TCppMethod_t potGetItem = nullptr;
 
 // load all public methods and data members
     typedef std::vector<PyCallable*> Callables_t;
-    typedef std::map<std::string, Callables_t> CallableCache_t;
+    typedef std::unordered_map<std::string, Callables_t> CallableCache_t;
     CallableCache_t cache;
 
 // bypass custom __getattr__ for efficiency
@@ -192,7 +193,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
             continue;
 
     // process the method based on its name
-        std::string mtCppName = Cppyy::GetMethodName(method);
+        std::string mtCppName = Cppyy::GetName(Cppyy::TCppScope_t(method.data));
 
     // special case trackers
         bool setupSetItem = false;
@@ -307,7 +308,7 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
     std::vector<Cppyy::TCppMethod_t> templ_methods;
     Cppyy::GetTemplatedMethods(scope, templ_methods);
     for (auto &method : templ_methods) {
-        const std::string mtCppName = Cppyy::GetMethodName(method);
+        const std::string mtCppName = Cppyy::GetName(Cppyy::TCppScope_t(method.data));
     // the number of arguments isn't known until instantiation and as far as C++ is concerned, all
     // same-named operators are simply overloads; so will pre-emptively add both names if with and
     // without arguments differ, letting the normal overload mechanism resolve on call
@@ -330,13 +331,13 @@ static int BuildScopeProxyDict(Cppyy::TCppScope_t scope, PyObject* pyclass, cons
         PyCallable* defctor = nullptr;
         if (!isComplete) {
             ((CPPScope*)pyclass)->fFlags |= CPPScope::kIsInComplete;
-            defctor = new CPPIncompleteClassConstructor(scope, (Cppyy::TCppMethod_t)0);
+            defctor = new CPPIncompleteClassConstructor(scope, Cppyy::TCppMethod_t{});
         } else if (Cppyy::IsAbstract(scope)) {
-            defctor = new CPPAbstractClassConstructor(scope, (Cppyy::TCppMethod_t)0);
+            defctor = new CPPAbstractClassConstructor(scope, Cppyy::TCppMethod_t{});
         } else if (isNamespace) {
-            defctor = new CPPNamespaceConstructor(scope, (Cppyy::TCppMethod_t)0);
+            defctor = new CPPNamespaceConstructor(scope, Cppyy::TCppMethod_t{});
         } else {
-            defctor = new CPPAllPrivateClassConstructor(scope, (Cppyy::TCppMethod_t)0);
+            defctor = new CPPAllPrivateClassConstructor(scope, Cppyy::TCppMethod_t{});
         }
 
         if (defctor)
@@ -554,7 +555,7 @@ PyObject* CPyCppyy::CreateScopeProxy(const std::string& name, PyObject* parent, 
 // Build a python shadow class for the named C++ class or namespace.
 
 // determine complete scope name, if a python parent has been given
-    Cppyy::TCppScope_t parent_scope = 0;
+    Cppyy::TCppScope_t parent_scope;
     if (parent) {
         if (CPPScope_Check(parent))
             parent_scope = ((CPPScope*)parent)->fCppType;
@@ -630,7 +631,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
     std::string typedefed_name = "";
     if (Cppyy::IsTypedefed(scope)) {
         is_typedef = true;
-        typedefed_name = Cppyy::GetMethodFullName(scope);
+        typedefed_name = Cppyy::GetFullName(scope);
         Cppyy::TCppScope_t underlying_scope = Cppyy::GetUnderlyingScope(scope);
         if ((underlying_scope) && (underlying_scope != scope)) {
             scope = underlying_scope;
@@ -647,7 +648,7 @@ PyObject* CPyCppyy::CreateScopeProxy(Cppyy::TCppScope_t scope, PyObject* parent,
     if (Cppyy::IsTemplate(scope)) {
         // a "naked" templated class is requested: return callable proxy for instantiations
         PyObject* pytcl = PyObject_GetAttr(gThisModule, PyStrings::gTemplate);
-        PyObject* cppscope = PyLong_FromVoidPtr(scope);
+        PyObject* cppscope = PyLong_FromVoidPtr(scope.data);
         PyObject* pytemplate = PyObject_CallFunction(
             pytcl, const_cast<char*>("sO"),
             const_cast<char*>(Cppyy::GetScopedFinalName(scope).c_str()),
@@ -836,13 +837,35 @@ PyObject* CPyCppyy::BindCppObjectNoCast(Cppyy::TCppObject_t address,
 
     bool noReg      = flags & (CPPInstance::kNoMemReg|CPPInstance::kNoWrapConv);
     bool isRef      = flags & CPPInstance::kIsReference;
-    void* r_address = isRef ? (address ? *(void**)address : nullptr) : address;
+    void* r_address = isRef ? (address ? *(void**)address.data : nullptr) : address.data;
 
 // check whether the object to be bound is a smart pointer that needs embedding
     PyObject* smart_type = (!(flags & CPPInstance::kNoWrapConv) && \
                             (((CPPClass*)pyclass)->fFlags & CPPScope::kIsSmart)) ? pyclass : nullptr;
     if (smart_type) {
-        pyclass = CreateScopeProxy(((CPPSmartClass*)smart_type)->fUnderlyingType);
+        Cppyy::TCppScope_t underlying = ((CPPSmartClass*)smart_type)->fUnderlyingType;
+
+    // Downcast the underlying object to its actual (most derived) class, as
+    // BindCppObject does for raw pointers, but only when the cast is safe:
+    //  * the actual class must really derive from the declared one;
+    //    GetActualClass() can report a base (e.g. when the actual class has no
+    //    dictionary of its own), and such an up-cast must be rejected.
+    //  * the cast must need no pointer adjustment: the dereferencer always
+    //    returns a pointer to the declared class, so a non-zero offset could
+    //    not be applied consistently on later member access (multiple
+    //    inheritance).
+        if (address && !isRef) {
+            if (void* deref = Cppyy::CallR(
+                ((CPPSmartClass*)smart_type)->fDereferencer, address, 0, nullptr)) {
+                Cppyy::TCppScope_t clActual = Cppyy::GetActualClass(underlying, deref);
+                if (clActual && clActual != underlying &&
+                        Cppyy::IsSubclass(clActual, underlying) &&
+                        Cppyy::GetBaseOffset(clActual, underlying, deref, -1 /* down-cast */) == 0)
+                    underlying = clActual;
+            }
+        }
+
+        pyclass = CreateScopeProxy(underlying);
         if (!pyclass) {
         // simply restore and expose as the actual smart pointer class
             pyclass = smart_type;
@@ -883,7 +906,7 @@ PyObject* CPyCppyy::BindCppObjectNoCast(Cppyy::TCppObject_t address,
     if (pyobj != 0) { // fill proxy value?
         unsigned objflags = flags & \
             (CPPInstance::kIsReference | CPPInstance::kIsPtrPtr | CPPInstance::kIsValue | CPPInstance::kIsOwner | CPPInstance::kIsActual);
-        pyobj->Set(address, (CPPInstance::EFlags)objflags);
+        pyobj->Set(address.data, (CPPInstance::EFlags)objflags);
 
         if (smart_type)
             pyobj->SetSmart(smart_type);
@@ -928,14 +951,14 @@ PyObject* CPyCppyy::BindCppObject(Cppyy::TCppObject_t address,
 // TODO: optimize for final classes
     unsigned new_flags = flags;
     if (!isRef && (gPinnedTypes.empty() || gPinnedTypes.find(klass) == gPinnedTypes.end())) {
-        Cppyy::TCppType_t clActual = Cppyy::GetActualClass(klass, address);
+        Cppyy::TCppScope_t clActual = Cppyy::GetActualClass(klass, address);
 
         if (clActual) {
             if (clActual != klass) {
                 intptr_t offset = Cppyy::GetBaseOffset(
                     clActual, klass, address, -1 /* down-cast */, true /* report errors */);
                 if (offset != -1) {   // may fail if clActual not fully defined
-                    address = (void*)((intptr_t)address + offset);
+                    address = (void*)((intptr_t)address.data + offset);
                     klass = clActual;
                 }
             }

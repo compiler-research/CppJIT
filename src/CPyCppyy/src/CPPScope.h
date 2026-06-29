@@ -1,6 +1,10 @@
 #ifndef CPYCPPYY_CPPSCOPE_H
 #define CPYCPPYY_CPPSCOPE_H
 
+#include "Python.h"
+#include "Cppyy.h"
+#include <unordered_map>
+
 #if PY_MAJOR_VERSION == 2 && PY_MINOR_VERSION == 2
 
 // In p2.2, PyHeapTypeObject is not yet part of the interface
@@ -19,6 +23,7 @@ typedef struct {
 #endif
 
 // Standard
+#include <vector>
 #include <map>
 
 
@@ -31,7 +36,7 @@ namespace CPyCppyy {
       @version 2.0
  */
 
-typedef std::map<Cppyy::TCppObject_t, PyObject*> CppToPyMap_t;
+typedef std::unordered_map<Cppyy::TCppObject_t, PyObject*> CppToPyMap_t;
 namespace Utility { struct PyOperators; }
 
 class CPPScope {

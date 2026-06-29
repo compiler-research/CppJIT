@@ -2,11 +2,13 @@
 #define CPYCPPYY_UTILITY_H
 
 // Standard
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "Python.h"
+#include "Cppyy.h"
 
 namespace CPyCppyy {
 
@@ -31,9 +33,9 @@ bool AddToClass(PyObject* pyclass, const char* label, PyCallable* pyfunc);
 // helpers for dynamically constructing operators
 PyCallable* FindUnaryOperator(PyObject* pyclass, const char* op);
 PyCallable* FindBinaryOperator(PyObject* left, PyObject* right,
-    const char* op, Cppyy::TCppScope_t scope = 0);
+    const char* op, Cppyy::TCppScope_t scope = Cppyy::TCppScope_t{});
 PyCallable* FindBinaryOperator(const std::string& lcname, const std::string& rcname,
-    const char* op, Cppyy::TCppScope_t scope = 0, bool reverse = false);
+    const char* op, Cppyy::TCppScope_t scope = Cppyy::TCppScope_t{}, bool reverse = false);
 
 // helper for template classes and methods
 enum ArgPreference { kNone, kPointer, kReference, kValue };
@@ -48,11 +50,7 @@ inline PyObject* CT2CppName(PyObject* pytc, const char* cpd, bool allow_voidp)
     const std::string& name = CT2CppNameS(pytc, allow_voidp);
     if (!name.empty()) {
         if (name == "const char*") cpd = "";
-#if PY_VERSION_HEX < 0x03000000
-        return PyString_FromString((std::string{name}+cpd).c_str());
-#else
         return PyUnicode_FromString((std::string{name}+cpd).c_str());
-#endif
     }
     return nullptr;
 }
@@ -68,7 +66,7 @@ PyObject* FuncPtr2StdFunction(const std::string& retType, const std::string& sig
 // initialize proxy type objects
 bool InitProxy(PyObject* module, PyTypeObject* pytype, const char* name);
 
-std::map<std::string, char> const &TypecodeMap();
+std::unordered_map<std::string, char> const &TypecodeMap();
 
 // retrieve the memory buffer from pyobject, return buflength, tc (optional) is python
 // array.array type code, size is type size, buf will point to buffer, and if check is

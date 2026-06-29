@@ -105,6 +105,7 @@ CppyyTestData::~CppyyTestData()
 void CppyyTestData::destroy_arrays() {
     if (m_owns_arrays == true) {
         delete[] m_bool_array2;
+        delete[] m_schar_array2;
         delete[] m_uchar_array2;
         delete[] m_byte_array2;
         delete[] m_int8_array2;

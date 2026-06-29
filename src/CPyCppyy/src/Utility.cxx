@@ -28,7 +28,7 @@
 bool CPyCppyy::gDictLookupActive = false;
 #endif
 
-typedef std::map<std::string, std::string> TC2POperatorMapping_t;
+typedef std::unordered_map<std::string, std::string> TC2POperatorMapping_t;
 static TC2POperatorMapping_t gC2POperatorMapping;
 static std::set<std::string> gOpSkip;
 static std::set<std::string> gOpRemove;
@@ -114,11 +114,7 @@ namespace {
             gC2POperatorMapping["->"]  = "__follow__";      // not an actual python operator
             gC2POperatorMapping["="]   = "__assign__";      // id.
 
-#if PY_VERSION_HEX < 0x03000000
-            gC2POperatorMapping["bool"] = "__cpp_nonzero__";
-#else
             gC2POperatorMapping["bool"] = "__cpp_bool__";
-#endif
         }
     } initOperatorMapping_;
 
@@ -415,10 +411,6 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
 
     if (tn == (PyObject*)&PyInt_Type) {
         if (arg) {
-#if PY_VERSION_HEX < 0x03000000
-            long l = PyInt_AS_LONG(arg);
-            tmpl_name.append((l < INT_MIN || INT_MAX < l) ? "long" : "int");
-#else
              PY_LONG_LONG ll = PyLong_AsLongLong(arg);
              if (ll == (PY_LONG_LONG)-1 && PyErr_Occurred()) {
                  PyErr_Clear();
@@ -431,33 +423,11 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
              } else
                  tmpl_name.append((ll < INT_MIN || INT_MAX < ll) ? \
                      ((ll < LONG_MIN || LONG_MAX < ll) ? "long long" : "long") : "int");
-#endif
         } else
             tmpl_name.append("int");
 
         return true;
     }
-
-#if PY_VERSION_HEX < 0x03000000
-    if (tn == (PyObject*)&PyLong_Type) {
-        if (arg) {
-             PY_LONG_LONG ll = PyLong_AsLongLong(arg);
-             if (ll == (PY_LONG_LONG)-1 && PyErr_Occurred()) {
-                 PyErr_Clear();
-                 PY_ULONG_LONG ull = PyLong_AsUnsignedLongLong(arg);
-                 if (ull == (PY_ULONG_LONG)-1 && PyErr_Occurred()) {
-                     PyErr_Clear();
-                     tmpl_name.append("long");   // still out of range, will fail later
-                 } else
-                     tmpl_name.append("unsigned long long");    // since already failed long long
-             } else
-                 tmpl_name.append((ll < LONG_MIN || LONG_MAX < ll) ? "long long" : "long");
-        } else
-            tmpl_name.append("long");
-
-        return true;
-    }
-#endif
 
     if (tn == (PyObject*)&PyFloat_Type) {
     // special case for floats (Python-speak for double) if from argument (only)
@@ -465,11 +435,7 @@ static bool AddTypeName(std::string& tmpl_name, PyObject* tn, PyObject* arg,
         return true;
     }
 
-#if PY_VERSION_HEX < 0x03000000
-    if (tn == (PyObject*)&PyString_Type) {
-#else
     if (tn == (PyObject*)&PyUnicode_Type) {
-#endif
         tmpl_name.append("std::string");
         return true;
     }
@@ -691,63 +657,33 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
 
     if (tn == (PyObject*)&PyInt_Type) {
         if (arg) {
-#if PY_VERSION_HEX < 0x03000000
-            long l = PyInt_AS_LONG(arg);
-            types.push_back(Cppyy::GetType((l < INT_MIN || INT_MAX < l) ? "long" : "int"));
-#else
              PY_LONG_LONG ll = PyLong_AsLongLong(arg);
              if (ll == (PY_LONG_LONG)-1 && PyErr_Occurred()) {
                  PyErr_Clear();
                  PY_ULONG_LONG ull = PyLong_AsUnsignedLongLong(arg);
                  if (ull == (PY_ULONG_LONG)-1 && PyErr_Occurred()) {
                      PyErr_Clear();
-                     types.push_back(Cppyy::GetType("int"));    // still out of range, will fail later
+                     types.push_back(Cppyy::GetType("int").data);    // still out of range, will fail later
                  } else
-                     types.push_back(Cppyy::GetType("unsigned long long"));    // since already failed long long
+                     types.push_back(Cppyy::GetType("unsigned long long").data);    // since already failed long long
              } else
                  types.push_back(Cppyy::GetType((ll < INT_MIN || INT_MAX < ll) ? \
-                     ((ll < LONG_MIN || LONG_MAX < ll) ? "long long" : "long") : "int"));
-#endif
+                     ((ll < LONG_MIN || LONG_MAX < ll) ? "long long" : "long") : "int").data);
         } else {
-            types.push_back(Cppyy::GetType("int"));
+            types.push_back(Cppyy::GetType("int").data);
         }
 
         return true;
     }
 
-#if PY_VERSION_HEX < 0x03000000
-    if (tn == (PyObject*)&PyLong_Type) {
-        if (arg) {
-             PY_LONG_LONG ll = PyLong_AsLongLong(arg);
-             if (ll == (PY_LONG_LONG)-1 && PyErr_Occurred()) {
-                 PyErr_Clear();
-                 PY_ULONG_LONG ull = PyLong_AsUnsignedLongLong(arg);
-                 if (ull == (PY_ULONG_LONG)-1 && PyErr_Occurred()) {
-                     PyErr_Clear();
-                     types.push_back(Cppyy::GetType("long"));   // still out of range, will fail later
-                 } else
-                     types.push_back(Cppyy::GetType("unsigned long long"));    // since already failed long long
-             } else
-                 types.push_back(Cppyy::GetType((ll < LONG_MIN || LONG_MAX < ll) ? "long long" : "long"));
-        } else
-            types.push_back(Cppyy::GetType("long"));
-
-        return true;
-    }
-#endif
-
     if (tn == (PyObject*)&PyFloat_Type) {
     // special case for floats (Python-speak for double) if from argument (only)
-        types.push_back(Cppyy::GetType(arg ? "double" : "float"));
+        types.push_back(Cppyy::GetType(arg ? "double" : "float").data);
         return true;
     }
 
-#if PY_VERSION_HEX < 0x03000000
-    if (tn == (PyObject*)&PyString_Type) {
-#else
     if (tn == (PyObject*)&PyUnicode_Type) {
-#endif
-        types.push_back(Cppyy::GetType("std::string", /* enable_slow_lookup */ true));
+        types.push_back(Cppyy::GetType("std::string", /* enable_slow_lookup */ true).data);
         return true;
     }
 
@@ -758,7 +694,7 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
             ArgPreference subpref = pref == kValue ? kValue : kPointer;
             if (AddTypeName(subtype, (PyObject*)Py_TYPE(item), item, subpref)) {
                 subtype.append(">");
-                types.push_back(Cppyy::GetType(subtype));
+                types.push_back(Cppyy::GetType(subtype).data);
             }
             Py_DECREF(item);
         }
@@ -785,7 +721,7 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
                 }
             }
       }
-      types.push_back(cpp_type);
+      types.push_back(cpp_type.data);
       return true;
     }
 
@@ -793,7 +729,7 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
         PyObject* tpName =  arg ? \
             PyObject_GetAttr(arg, PyStrings::gCppName) : \
             CPyCppyy_PyText_FromString("void* (*)(...)");
-        types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true));
+        types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true).data);
         Py_DECREF(tpName);
 
         return true;
@@ -835,7 +771,7 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
 
         PyObject* tpName = PyObject_GetAttr(arg, PyStrings::gCppName);
         if (tpName) {
-            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true));
+            types.push_back(Cppyy::GetType(CPyCppyy_PyText_AsString(tpName), /* enable_slow_lookup */ true).data);
             Py_DECREF(tpName);
             return true;
         }
@@ -849,17 +785,17 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
             if (Cppyy::IsEnumType(type)) {
                 PyObject *value_int = PyNumber_Index(tn);
                 if (!value_int) {
-                    types.push_back(type);
+                    types.push_back(type.data);
                     PyErr_Clear();
                 } else {
                     PyObject* pystr = PyObject_Str(tn);
                     std::string num = CPyCppyy_PyText_AsString(pystr);
-                    types.push_back({type, strdup(num.c_str())});
+                    types.push_back({type.data, strdup(num.c_str())});
                     Py_DECREF(pystr);
                     Py_DECREF(value_int);
                 }
             } else {
-                types.push_back(type);
+                types.push_back(type.data);
             }
             Py_DECREF(tpName);
             return true;
@@ -877,7 +813,7 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
             num = "1";
         else if (num == "False")
             num = "0";
-        types.push_back({Cppyy::GetType("int"), strdup(num.c_str())});
+        types.push_back({Cppyy::GetType("int").data, strdup(num.c_str())});
         Py_DECREF(pystr);
         return true;
     }
@@ -1058,8 +994,8 @@ void CPyCppyy::Utility::ConstructCallbackReturn(const std::string& retType, int 
 
 
 //----------------------------------------------------------------------------
-static std::map<void*, PyObject*> sStdFuncLookup;
-static std::map<std::string, PyObject*> sStdFuncMakerLookup;
+static std::unordered_map<void*, PyObject*> sStdFuncLookup;
+static std::unordered_map<std::string, PyObject*> sStdFuncMakerLookup;
 PyObject* CPyCppyy::Utility::FuncPtr2StdFunction(
         const std::string& retType, const std::string& signature, void* address)
 {
@@ -1136,15 +1072,12 @@ bool CPyCppyy::Utility::InitProxy(PyObject* module, PyTypeObject* pytype, const 
 }
 
 //----------------------------------------------------------------------------
-std::map<std::string, char> const &CPyCppyy::Utility::TypecodeMap()
+std::unordered_map<std::string, char> const &CPyCppyy::Utility::TypecodeMap()
 {
    // See https://docs.python.org/3/library/array.html#array.array
-   static std::map<std::string, char> typecodeMap{
+   static std::unordered_map<std::string, char> typecodeMap{
        {"char",               'b'},
        {"unsigned char",      'B'},
-#if PY_VERSION_HEX < 0x03100000
-       {"wchar_t",            'u'},
-#endif
 #if PY_VERSION_HEX >= 0x030d0000
        {"Py_UCS4",            'w'},
 #endif
@@ -1234,24 +1167,15 @@ Py_ssize_t CPyCppyy::Utility::GetBuffer(PyObject* pyobject, char tc, int size, v
 
     PySequenceMethods* seqmeths = Py_TYPE(pyobject)->tp_as_sequence;
     if (seqmeths != 0 && bufprocs != 0
-#if PY_VERSION_HEX < 0x03000000
-         && bufprocs->bf_getwritebuffer != 0
-         && (*(bufprocs->bf_getsegcount))(pyobject, 0) == 1
-#else
          && bufprocs->bf_getbuffer != 0
-#endif
         ) {
 
    // get the buffer
-#if PY_VERSION_HEX < 0x03000000
-        Py_ssize_t buflen = (*(bufprocs->bf_getwritebuffer))(pyobject, 0, &buf);
-#else
         Py_buffer bufinfo;
         (*(bufprocs->bf_getbuffer))(pyobject, &bufinfo, PyBUF_WRITABLE);
         buf = (char*)bufinfo.buf;
         Py_ssize_t buflen = bufinfo.len;
         PyBuffer_Release(&bufinfo);
-#endif
 
         if (buf && check == true) {
         // determine buffer compatibility (use "buf" as a status flag)
@@ -1416,14 +1340,8 @@ PyObject* CPyCppyy::Utility::PyErr_Occurred_WithGIL()
 // Re-acquire the GIL before calling PyErr_Occurred() in case it has been
 // released; note that the p2.2 code assumes that there are no callbacks in
 // C++ to python (or at least none returning errors).
-#if PY_VERSION_HEX >= 0x02030000
     PythonGILRAII python_gil_raii;
     PyObject* e = PyErr_Occurred();
-#else
-    if (PyThreadState_GET())
-        return PyErr_Occurred();
-    PyObject* e = 0;
-#endif
 
     return e;
 }

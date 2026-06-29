@@ -4,6 +4,7 @@
 #include "PyStrings.h"
 #include "TypeManip.h"
 #include "Utility.h"
+#include <unordered_map>
 
 
 //- private helpers ----------------------------------------------------------
@@ -32,11 +33,7 @@ PyObject* CPyCppyy::pyval_from_enum(const std::string& enum_type, PyObject* pyty
     PyObject* bval;
     if (enum_type == "char") {
         char val = (char)llval;
-#if PY_VERSION_HEX < 0x03000000
-        bval = CPyCppyy_PyText_FromStringAndSize(&val, 1);
-#else
         bval = PyUnicode_FromOrdinal((int)val);
-#endif
     } else if (enum_type == "int" || enum_type == "unsigned int")
         bval = PyInt_FromLong((long)llval);
     else
@@ -97,7 +94,7 @@ static PyObject* enum_repr(PyObject* self)
 //----------------------------------------------------------------------------
 // TODO: factor the following lookup with similar codes in Convertes and TemplateProxy.cxx
 
-static std::map<std::string, std::string> gCTypesNames = {
+static std::unordered_map<std::string, std::string> gCTypesNames = {
     {"bool", "c_bool"},
     {"char", "c_char"}, {"wchar_t", "c_wchar"},
     {"std::byte", "c_byte"}, {"int8_t", "c_byte"}, {"uint8_t", "c_ubyte"},
@@ -172,7 +169,7 @@ CPyCppyy::CPPEnum* CPyCppyy::CPPEnum_New(const std::string& name, Cppyy::TCppSco
     // create the __cpp_name__ for templates
         PyObject* dct = PyDict_New();
         PyObject* pycppname = CPyCppyy_PyText_FromString(ename.c_str());
-        PyObject* pycppscope = PyLong_FromVoidPtr(etype);
+        PyObject* pycppscope = PyLong_FromVoidPtr(etype.data);
         PyDict_SetItem(dct, PyStrings::gCppName, pycppname);
         PyDict_SetItem(dct, PyStrings::gThisModule, pycppscope);
         Py_DECREF(pycppname);
@@ -203,7 +200,7 @@ CPyCppyy::CPPEnum* CPyCppyy::CPPEnum_New(const std::string& name, Cppyy::TCppSco
     // collect the enum values
         std::vector<Cppyy::TCppScope_t> econstants = Cppyy::GetEnumConstants(etype);
         bool values_ok = true;
-        for (auto *econstant : econstants) {
+        for (auto econstant : econstants) {
             PyObject* val = pyval_from_enum(resolved, pyenum, pyside_type, econstant);
             if (!val) {
                 values_ok = false;

@@ -2,6 +2,7 @@
 #include "CPyCppyy.h"
 #include "Dispatcher.h"
 #include "CPPScope.h"
+#include "Cppyy.h"
 #include "PyStrings.h"
 #include "ProxyWrappers.h"
 #include "TypeManip.h"
@@ -59,11 +60,7 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
     Utility::ConstructCallbackPreamble(retType, argtypes, code);
 
 // perform actual method call
-#if PY_VERSION_HEX < 0x03000000
-    code << "    PyObject* mtPyName = PyString_FromString(\"" << mtCppName << "\");\n" // TODO: intern?
-#else
     code << "    PyObject* mtPyName = PyUnicode_FromString(\"" << mtCppName << "\");\n"
-#endif
             "    PyObject* pyresult = PyObject_CallMethodObjArgs(iself, mtPyName";
     for (Cppyy::TCppIndex_t i = 0; i < nArgs; ++i)
         code << ", pyargs[" << i << "]";
@@ -76,9 +73,9 @@ static inline void InjectMethod(Cppyy::TCppMethod_t method, const std::string& m
 //----------------------------------------------------------------------------
 namespace {
     struct BaseInfo {
-        BaseInfo(Cppyy::TCppType_t t, std::string&& bn, std::string&& bns) :
+        BaseInfo(Cppyy::TCppScope_t t, std::string&& bn, std::string&& bns) :
             btype(t), bname(bn), bname_scoped(bns) {}
-        Cppyy::TCppType_t btype;
+        Cppyy::TCppScope_t btype;
         std::string bname;
         std::string bname_scoped;
     };
@@ -188,7 +185,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
         if (!CPPScope_Check(PyTuple_GET_ITEM(bases, ibase)))
             continue;
 
-        Cppyy::TCppType_t basetype = ((CPPScope*)PyTuple_GET_ITEM(bases, ibase))->fCppType;
+        Cppyy::TCppScope_t basetype = ((CPPScope*)PyTuple_GET_ITEM(bases, ibase))->fCppType;
 
         if (!basetype) {
             err << "base class is incomplete";
@@ -301,7 +298,7 @@ bool CPyCppyy::InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
                 continue;
             }
 
-            std::string mtCppName = Cppyy::GetMethodName(method);
+            std::string mtCppName = Cppyy::GetName(Cppyy::TCppScope_t(method.data));
             PyObject* key = CPyCppyy_PyText_FromString(mtCppName.c_str());
             int contains = PyDict_Contains(dct, key);
             if (contains == -1) PyErr_Clear();

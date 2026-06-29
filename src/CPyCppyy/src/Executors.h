@@ -1,6 +1,9 @@
 #ifndef CPYCPPYY_EXECUTORS_H
 #define CPYCPPYY_EXECUTORS_H
 
+#include "Python.h"
+#include "Cppyy.h"
+
 // Bindings
 #include "Dimensions.h"
 

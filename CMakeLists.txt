@@ -11,7 +11,7 @@ include(GNUInstallDirs)
 # This option won't make a lot of sense since we only ship the shared library in site-packages
 # Perhaps this should permanently be OFF and users can build their own CppInterOp if they want to run the tests?
 option(CPPJIT_ENABLE_CPPINTEROP_TESTS "enable CppInterOp tests" OFF)
-set(CPPINTEROP_GIT_TAG "main" CACHE STRING "")
+set(CPPINTEROP_GIT_TAG "a438c13316a8c1917cb86e00d5b0d95e6aee75f5" CACHE STRING "")
 
 set(Python_FIND_VIRTUALENV ONLY)
 find_package(Python COMPONENTS Interpreter Development)

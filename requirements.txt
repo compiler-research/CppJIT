@@ -1,0 +1,11 @@
+uv
+
+pytest
+pytest-xdist
+
+# Numba tests (Not tested for Python >= 3.14)
+numba==0.61.2; python_version < '3.14'
+numpy
+
+# Leak check tests (To be re-enabled)
+# psutil

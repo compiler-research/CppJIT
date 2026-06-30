@@ -1,0 +1,6 @@
+{
+    ignore_free_delete_mismatches
+    Memcheck:Free
+    fun:free
+    obj:*
+}

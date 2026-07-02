@@ -432,8 +432,8 @@ class TestLOWLEVEL:
 
         voidpp = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_void_p))
         for i in range(argc.value):
-            cppyy.ll.free(ctypes.cast(voidpp[i], ctypes.c_void_p))
-        cppyy.ll.free(ptr)
+            cppyy.ll.array_delete(ctypes.cast(voidpp[i], ctypes.POINTER(ctypes.c_ubyte)))
+        cppyy.ll.array_delete['char*'](ctypes.cast(ptr, ctypes.POINTER(ctypes.c_char_p)))
 
     def test12_null_array(self):
         """Null low level view as empty list"""
@@ -533,6 +533,68 @@ class TestLOWLEVEL:
         assert type(gbl.LLV.ptr_null) == cppyy._backend.LowLevelView
         assert cppyy.addressof(gbl.LLV.ptr_x)
         assert cppyy.addressof(gbl.LLV.ptr_null) == 0
+
+    def test17_array_delete_multidim(self):
+        """Free a multidimensional (jagged) heap array with ll.array_delete"""
+
+        import cppyy, ctypes
+        import cppyy.ll
+
+      # C++ allocates a jagged 2D array (array of pointers to rows)
+        cppyy.cppdef("""\
+        namespace ArrayDeleteMD {
+        void make2d(int& n, int& m, double**& a) {
+            n = 2; m = 3;
+            a = new double*[n];
+            for (int i = 0; i < n; ++i) {
+                a[i] = new double[m];
+                for (int j = 0; j < m; ++j) a[i][j] = 10.*i + j;
+            }
+        } }""")
+
+        n = ctypes.c_int(0); m = ctypes.c_int(0)
+        ptr = ctypes.c_void_p()
+        cppyy.gbl.ArrayDeleteMD.make2d(n, m, ptr)
+
+        assert n.value == 2
+        assert m.value == 3
+        rows = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_void_p))
+        for i in range(n.value):
+            row = ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double))
+            for j in range(m.value):
+                assert row[j] == 10.*i + j
+
+      # delete[] each row, then the (outer) array of row pointers
+        for i in range(n.value):
+            cppyy.ll.array_delete(ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double)))
+        cppyy.ll.array_delete['void'](ptr)
+
+    def test18_array_delete_fixed(self):
+        """Free a fixed-size contiguous multidimensional heap array"""
+
+        import cppyy, ctypes
+        import cppyy.ll
+
+      # C++ allocates a contiguous 2D array (single new int[3][4])
+        cppyy.cppdef("""\
+        namespace ArrayDeleteFixed {
+        intptr_t make(int& r, int& c) {
+            r = 3; c = 4;
+            int (*a)[4] = new int[3][4];
+            for (int i = 0; i < r; ++i)
+                for (int j = 0; j < c; ++j) a[i][j] = c*i + j;
+            return (intptr_t)a;
+        } }""")
+
+        r = ctypes.c_int(0); c = ctypes.c_int(0)
+        addr = cppyy.gbl.ArrayDeleteFixed.make(r, c)
+
+        blk = ctypes.cast(addr, ctypes.POINTER(ctypes.c_int))
+        for k in range(r.value * c.value):
+            assert blk[k] == k
+
+      # a single contiguous allocation is released with a single delete[]
+        cppyy.ll.array_delete(ctypes.cast(ctypes.c_void_p(addr), ctypes.POINTER(ctypes.c_int)))
 
 class TestMULTIDIMARRAYS:
     def setup_class(cls):

@@ -958,6 +958,8 @@ static const ptrdiff_t PS_END_ADDR  =  7;   // non-aligned address, so no clash
 static const ptrdiff_t PS_FLAG_ADDR = 11;   // id.
 static const ptrdiff_t PS_COLL_ADDR = 13;   // id.
 
+PyObject* STLIterNext(PyObject* self);      // defined below; used by STLSequenceIter
+
 PyObject* LLSequenceIter(PyObject* self)
 {
 // Implement python's __iter__ for low level views used through STL-type begin()/end()
@@ -992,6 +994,25 @@ PyObject* STLSequenceIter(PyObject* self)
         PyObject* end = PyObject_CallMethodNoArgs(self, PyStrings::gEnd);
         if (end) {
             if (CPPInstance_Check(iter)) {
+            // Guarantee the returned iterator implements Python's iterator protocol.
+            // The deferred, name-based __next__ install can miss when an iterator's
+            // canonical return-type spelling and its scoped-final-name diverge
+            // (e.g libc++'s std::__1::__wrap_iter on macOS) leaving the type without
+            // __next__, so iter() rejects it. begin()/end() resolving here proves
+            // this is an STL forward iterator, so install the protocol now if it is still absent
+                PyTypeObject* itype = Py_TYPE(iter);
+                if (!PyIter_Check(iter)) {   // no tp_iternext, or the
+                                             // _PyObject_NextNotImplemented sentinel
+                    itype->tp_iternext = (iternextfunc)STLIterNext;
+                    Utility::AddToClass((PyObject*)itype, CPPYY__next__,
+                                        (PyCFunction)STLIterNext, METH_NOARGS);
+                    if (!itype->tp_iter) {
+                        itype->tp_iter = (getiterfunc)PyObject_SelfIter;
+                        Utility::AddToClass((PyObject*)itype, "__iter__",
+                                            (PyCFunction)PyObject_SelfIter, METH_NOARGS);
+                    }
+                    PyType_Modified(itype);
+                }
             // use the data member cache to store extra state on the iterator object,
             // without it being visible on the Python side
                 auto& dmc = ((CPPInstance*)iter)->GetDatamemberCache();

@@ -60,7 +60,7 @@ function(cppjit_add_cppinterop)
     endif()
 
     ExternalProject_Add(CppInterOp
-        GIT_REPOSITORY https://github.com/compiler-research/CppInterOp.git
+        GIT_REPOSITORY ${CPPINTEROP_GIT_REPOSITORY}
         GIT_TAG        ${CPPINTEROP_GIT_TAG}
         PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
         CMAKE_ARGS     ${_args}

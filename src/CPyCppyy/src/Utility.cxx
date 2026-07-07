@@ -884,7 +884,7 @@ std::string CPyCppyy::Utility::CT2CppNameS(PyObject* pytc, bool allow_voidp)
             case 'd': name = "double";             break;
             case 'g': name = "long double";        break;
             case 'z': name = "const char*";        break;
-            default:  name = (allow_voidp ? "void*" : nullptr); break;
+            default:  if (allow_voidp) name = "void*"; break;
         }
     }
 

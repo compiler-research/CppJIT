@@ -2403,7 +2403,7 @@ class TestDATATYPES:
         with raises(TypeError):
             ns53.f1(1000)
 
-    @mark.xfail(reason="optional on enum uint8_t is broken")
+    @mark.xfail(condition= IS_MAC, reason="std::optional<std::string>::value_or rvalue conversion fails on OS X clang-repl (InstanceMoveConverter)")
     def test54_optional_use(self):
         import cppyy
         cppyy.cppdef("""
@@ -2417,6 +2417,9 @@ class TestDATATYPES:
 
             enum class Tec : char {ZERO, ONE, TWO};
             std::optional<Tec> tec;
+
+            enum class Tei8 : int8_t {ZERO, ONE, TWO};
+            std::optional<Tei8> tei8;
 
             enum class Teu8 : uint8_t {ZERO, ONE, TWO};
             std::optional<Teu8> teu8;
@@ -2438,6 +2441,10 @@ class TestDATATYPES:
         assert ns54.tec.value_or(ns54.Tec.TWO) == ns54.Tec.TWO
         ns54.tec = ns54.Tec.TWO
         assert ns54.tec == ns54.Tec.TWO
+
+        assert ns54.tei8.value_or(ns54.Tei8.TWO) == ns54.Tei8.TWO
+        ns54.tei8 = ns54.Tei8.TWO
+        assert ns54.tei8 == ns54.Tei8.TWO
 
         assert ns54.teu8.value_or(ns54.Teu8.TWO) == ns54.Teu8.TWO
         ns54.teu8 = ns54.Teu8.TWO

@@ -52,7 +52,7 @@ static bool gEnableFastPath = true;
 // global initialization -----------------------------------------------------
 namespace {
 
-const int kMAXSIGNALS = 16;
+//const int kMAXSIGNALS = 16;
 
 // names copied from TUnixSystem
 #ifdef WIN32
@@ -68,6 +68,7 @@ const int SIGUSR1  = 0;
 const int SIGUSR2  = 0;
 #endif
 
+#if 0
 static struct Signalmap_t {
    int               fCode;
    const char       *fSigName;
@@ -89,6 +90,7 @@ static struct Signalmap_t {
    { SIGUSR1,   "user-defined signal 1" },
    { SIGUSR2,   "user-defined signal 2" }
 };
+#endif
 
 static inline
 void push_tokens_from_string(char *s, std::vector <const char*> &tokens) {
@@ -705,6 +707,13 @@ Cppyy::TCppScope_t Cppyy::GetScope(const std::string& name,
       bool added_new_type = !Cppyy::AppendTypesSlow(name, types, /*parent=*/parent_scope);
       std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
       if (added_new_type && types.size() == 1) {
+        // A pointer or reference spelling (e.g. "std::chrono::nanoseconds *",
+        // the return type of std::array<nanoseconds, N>::begin()) does not
+        // name a scope; GetScopeFromType would silently strip the pointer and
+        // return the pointee's scope, misclassifying the name.
+        if (Cpp::IsPointerType(types[0].m_Type) ||
+            Cpp::IsReferenceType(types[0].m_Type))
+          return nullptr;
         TCppScope_t scope = Cpp::GetScopeFromType(types[0].m_Type);
         // Naming the type as a template argument above does not instantiate
         // it, so the specialization may still be declared-but-undefined.
@@ -899,7 +908,7 @@ static inline
 bool WrapperCall(Cppyy::TCppMethod_t method, size_t nargs, void* args_, void* self, void* result)
 {
     Parameter* args = (Parameter*)args_;
-    bool is_direct = nargs & DIRECT_CALL;
+    //bool is_direct = nargs & DIRECT_CALL;
     nargs = CALL_NARGS(nargs);
 
     // if (!is_ready(wrap, is_direct))
@@ -995,7 +1004,7 @@ char* Cppyy::CallS(
 }
 
 Cppyy::TCppObject_t Cppyy::CallConstructor(
-    TCppMethod_t method, TCppScope_t klass, size_t nargs, void* args)
+    TCppMethod_t method, TCppScope_t /*klass*/, size_t nargs, void* args)
 {
     void* obj = nullptr;
     WrapperCall(method, nargs, args, nullptr, &obj);
@@ -1018,7 +1027,7 @@ Cppyy::TCppObject_t Cppyy::CallO(TCppMethod_t method,
     return TCppObject_t{};
 }
 
-Cppyy::TCppFuncAddr_t Cppyy::GetFunctionAddress(TCppMethod_t method, bool check_enabled)
+Cppyy::TCppFuncAddr_t Cppyy::GetFunctionAddress(TCppMethod_t method, bool /*check_enabled*/)
 {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
     return Cpp::GetFunctionAddress(method);
@@ -1310,7 +1319,7 @@ bool Cppyy::GetSmartPtrInfo(
 
 // type offsets --------------------------------------------------------------
 ptrdiff_t Cppyy::GetBaseOffset(TCppScope_t derived, TCppScope_t base,
-    TCppObject_t address, int direction, bool rerror)
+    TCppObject_t /*address*/, int direction, bool rerror)
 {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
     intptr_t offset = Cpp::GetBaseClassOffset(derived, base);
@@ -1414,7 +1423,7 @@ std::string Cppyy::GetMethodArgDefault(TCppMethod_t method, TCppIndex_t iarg)
     return Cpp::GetFunctionArgDefault(method, iarg);
 }
 
-Cppyy::TCppIndex_t Cppyy::CompareMethodArgType(TCppMethod_t method, TCppIndex_t iarg, const std::string &req_type)
+Cppyy::TCppIndex_t Cppyy::CompareMethodArgType(TCppMethod_t /*method*/, TCppIndex_t iarg, const std::string &req_type)
 {
     // if (method) {
     //     TFunction* f = m2f(method);
@@ -1519,7 +1528,7 @@ void Cppyy::GetTemplatedMethods(TCppScope_t scope, std::vector<Cppyy::TCppMethod
     Cpp::GetFunctionTemplatedDecls(scope, methods);
 }
 
-Cppyy::TCppIndex_t Cppyy::GetNumTemplatedMethods(TCppScope_t scope, bool accept_namespace)
+Cppyy::TCppIndex_t Cppyy::GetNumTemplatedMethods(TCppScope_t scope, bool /*accept_namespace*/)
 {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
     std::vector<Cppyy::TCppMethod_t> mc;
@@ -1597,11 +1606,23 @@ Cppyy::TCppMethod_t Cppyy::GetMethodTemplate(
     cppmeth = Cpp::BestOverloadFunctionMatch(
         unresolved_candidate_methods, templ_params, arg_types);
 
-    if (!cppmeth && unresolved_candidate_methods.size() == 1 &&
-        !templ_params.empty()) {
-      cppmeth = Cpp::InstantiateTemplate(
-          TCppScope_t(unresolved_candidate_methods[0].data), templ_params.data(),
-          templ_params.size(), /*instantiate_body=*/false).data;
+    // If overload resolution failed but explicit template arguments were
+    // supplied, fall back to direct template-argument substitution: ask Sema
+    // to instantiate each candidate with the explicit args. Sema's SFINAE
+    // rejects overloads whose substitution fails (e.g. the initializer_list
+    // form of std::make_any with non-init-list explicit args), so iterating
+    // gives back exactly the viable specialisation. The wrapper-side argument
+    // conversion then handles e.g. taking the address of an instance when the
+    // substituted parameter is a pointer.
+    if (!cppmeth && !templ_params.empty()) {
+        for (const auto& cand : unresolved_candidate_methods) {
+            if (Cpp::DeclRef spec = Cpp::InstantiateTemplate(
+                    TCppScope_t(cand.data), templ_params.data(),
+                    templ_params.size(), /*instantiate_body=*/false)) {
+                cppmeth = spec.data;
+                break;
+            }
+        }
     }
 
     return TCppMethod_t(cppmeth.data);

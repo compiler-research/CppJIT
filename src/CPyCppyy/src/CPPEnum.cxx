@@ -24,10 +24,11 @@ PyObject* CPyCppyy::pyval_from_enum(const std::string& enum_type, PyObject* pyty
         PyObject* btype, Cppyy::TCppScope_t enum_constant) {
     long long llval = Cppyy::GetEnumDataValue(enum_constant);
 
-    if (enum_type == "bool") {
+    if (enum_type == "bool" && !(pytype && btype)) {
+    // no enum class to instantiate; the singletons can not carry attributes
         PyObject* result = (bool)llval ? Py_True : Py_False;
         Py_INCREF(result);
-        return result;                      // <- immediate return;
+        return result;
     }
 
     PyObject* bval;
@@ -210,12 +211,9 @@ CPyCppyy::CPPEnum* CPyCppyy::CPPEnum_New(const std::string& name, Cppyy::TCppSco
             PyObject* pydname = CPyCppyy_PyText_FromString(dname.c_str());
             PyObject_SetAttr(pyenum, pydname, val);
             Py_DECREF(pydname);
-            if (resolved != "bool") {
-                // bool is special cased enum look at pyval_from_enum
-                PyObject* pydcppname = CPyCppyy_PyText_FromString((ename.empty() ? dname : (ename+"::"+dname)).c_str());
-                PyObject_SetAttr(val, PyStrings::gCppName, pydcppname);
-                Py_DECREF(pydcppname);
-            }
+            PyObject* pydcppname = CPyCppyy_PyText_FromString((ename.empty() ? dname : (ename+"::"+dname)).c_str());
+            PyObject_SetAttr(val, PyStrings::gCppName, pydcppname);
+            Py_DECREF(pydcppname);
             Py_DECREF(val);
         }
 

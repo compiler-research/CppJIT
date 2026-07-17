@@ -764,8 +764,9 @@ class TestDATATYPES:
 
         assert sc.vraioufaux.faux == False
         assert sc.vraioufaux.vrai == True
-        assert type(sc.vraioufaux.faux) == bool  # no bool as base class
-        assert isinstance(sc.vraioufaux.faux, bool)
+        assert type(sc.vraioufaux.faux) == sc.vraioufaux
+        assert isinstance(sc.vraioufaux.faux, int)   # no bool as base class
+        assert 'bool' in repr(sc.vraioufaux.faux)
 
     def test12_enum_scopes(self):
         """Enum accessibility and scopes"""
@@ -2339,7 +2340,6 @@ class TestDATATYPES:
         assert [ns.test[i]  for i in range(6)] == [-0x12, -0x34, -0x56, -0x78, 0x0, 0x0]
         assert [ns.utest[i] for i in range(6)] == [ 0x12,  0x34,  0x56,  0x78, 0x0, 0x0]
 
-    @mark.xfail(reason="enum class : bool is broken, doesn't populate underlying _member_names_, for example")
     def test51_enum_integrity(self):
         import cppyy
         import enum

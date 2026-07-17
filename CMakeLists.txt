@@ -12,7 +12,7 @@ include(GNUInstallDirs)
 # Perhaps this should permanently be OFF and users can build their own CppInterOp if they want to run the tests?
 option(CPPJIT_ENABLE_CPPINTEROP_TESTS "enable CppInterOp tests" OFF)
 set(CPPINTEROP_GIT_REPOSITORY "https://github.com/compiler-research/CppInterOp.git" CACHE STRING "")
-set(CPPINTEROP_GIT_TAG "91a0c1e47696e9f08771e38c3bd751c4103e96c1" CACHE STRING "")
+set(CPPINTEROP_GIT_TAG "3103be92baa66a5e78e3a7c6207d83d4623ca956" CACHE STRING "")
 
 set(Python_FIND_VIRTUALENV ONLY)
 find_package(Python COMPONENTS Interpreter Development)

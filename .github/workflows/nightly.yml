@@ -34,7 +34,7 @@ jobs:
           - { os: ubuntu-24.04,     llvm: '21', flavor: system, py: '3.14', cxx: '20', vg: true }
           - { os: ubuntu-24.04,     llvm: '22', flavor: '',     py: '3.14', cxx: '20' }
           - { os: ubuntu-24.04,     llvm: '21', flavor: system, py: '3.12', cxx: '20', vg: true }
-          - { os: ubuntu-24.04-arm, llvm: '21', flavor: system, py: '3.13', cxx: '20', vg: true }
+          - { os: ubuntu-24.04-arm, llvm: '22', flavor: '',     py: '3.13', cxx: '20', vg: true }
           - { os: ubuntu-24.04-arm, llvm: '20', flavor: system, py: '3.12', cxx: '17' }
           - { os: macos-26,         llvm: '21', flavor: system, py: '3.12', cxx: '20' }
           - { os: macos-26-intel,   llvm: '21', flavor: system, py: '3.12', cxx: '20' }

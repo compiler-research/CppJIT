@@ -1334,6 +1334,21 @@ class TestTEMPLATES:
         assert a.m([1, 2, 3])
         assert not a.m(42)
 
+    def test40_instantiation_failure_error_message(self):
+        """Rejected instantiation names the template, not garbage"""
+
+        import cppyy
+
+        cppyy.cppdef("namespace errpath { template <unsigned N> struct Buf { int tag; }; }")
+
+        # Check that the failed instantiation error message contains the
+        # correct template name.
+        with raises(TypeError) as exc:
+            cppyy.gbl.errpath.Buf["int"]
+        msg = str(exc.value)
+        assert "errpath::Buf" in msg
+        assert "<unnamed>" not in msg
+
 
 @mark.skipif((IS_MAC and IS_CLING), reason="setup class fails with OS X cling")
 class TestTEMPLATED_TYPEDEFS:

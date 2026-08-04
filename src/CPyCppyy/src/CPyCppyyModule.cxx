@@ -385,7 +385,7 @@ static PyObject* MakeCppTemplateClass(PyObject* /* self */, PyObject* args)
     if (!scope) {
       PyErr_Format(PyExc_TypeError,
                    "Template instantiation failed: '%s' with args: '%s\n'",
-                   Cppyy::GetScopedFinalName(cppscope).c_str(),
+                   Cppyy::GetScopedFinalName(tmpl).c_str(),
                    CPyCppyy_PyText_AsString(PyObject_Repr(args)));
       return nullptr;
     }

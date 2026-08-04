@@ -541,7 +541,10 @@ bool Cppyy::AppendTypesSlow(const std::string& name,
 
   for (const std::string& candidate : candidates) {
     std::string var = "__Cppyy_s" + std::to_string(struct_count++);
-    if (!Cpp::Declare(("__Cppyy_AppendTypesSlow<" + candidate + "> " + var + ";\n").c_str(), /*silent=*/true)) {
+    // nodebug: with -g the variable's debug info would carry the full DIE
+    // tree of every template argument (all member declarations included) --
+    // a large, uncacheable per-lookup cost on heavyweight types.
+    if (!Cpp::Declare(("__Cppyy_AppendTypesSlow<" + candidate + "> __attribute__((nodebug)) " + var + ";\n").c_str(), /*silent=*/true)) {
       TCppType_t varN =
           Cpp::GetVariableType(Cpp::GetNamed(var.c_str(), /*parent=*/nullptr));
       TCppScope_t instance_class = Cpp::GetScopeFromType(varN);

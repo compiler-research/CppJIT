@@ -84,7 +84,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddCppInterOp.cmake)
 cppjit_add_cppinterop()
 
 # this libcppyy.so merges both CPyCppyy and clingwrapper
-file(GLOB CPYCPPYY_SOURCES CONFIGURE_DEPENDS src/CPyCppyy/src/*.cxx)
+file(GLOB CPYCPPYY_SOURCES CONFIGURE_DEPENDS src/CPyCppyy/*.cxx)
 set(BACKEND_SOURCES
     src/backend/clingwrapper.cxx
     src/backend/cppinterop_dispatch.cxx
@@ -100,8 +100,10 @@ target_compile_definitions(cppyy PRIVATE
 )
 
 target_include_directories(cppyy PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CPyCppyy/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CPyCppyy/src
+    # src/ itself resolves the public "CPyCppyy/*.h" spellings against the
+    # flattened src/CPyCppyy/ directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/CPyCppyy
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backend
     ${CPPINTEROP_INSTALL_DIR}/include
     ${Python_INCLUDE_DIRS}
@@ -145,6 +147,12 @@ install(CODE "
     file(INSTALL \"${CPPINTEROP_INSTALL_DIR}/include/\" DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend/include)
 ")
 
-install(DIRECTORY src/CPyCppyy/include/CPyCppyy
-    DESTINATION cppjit/cppyy_backend/include
+# the public CPyCppyy API headers keep their installed CPyCppyy/ prefix
+install(FILES
+    src/CPyCppyy/API.h
+    src/CPyCppyy/CommonDefs.h
+    src/CPyCppyy/DispatchPtr.h
+    src/CPyCppyy/PyException.h
+    src/CPyCppyy/Reflex.h
+    DESTINATION cppjit/cppyy_backend/include/CPyCppyy
 )

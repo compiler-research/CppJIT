@@ -13,14 +13,14 @@ def setup_module(mod):
 class TestDOCFEATURES:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
+        import cppjit
 
         # touch __version__ as a test
-        assert hasattr(cppyy, '__version__')
+        assert hasattr(cppjit, '__version__')
 
-        cls.doc_helper = cppyy.load_reflection_info(cls.test_dct)
+        cls.doc_helper = cppjit.load_reflection_info(cls.test_dct)
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -163,8 +163,8 @@ namespace Namespace {
 """)
 
     def test_abstract_class(self):
-        import cppyy
-        from cppyy.gbl import Abstract, Concrete
+        import cppjit
+        from cppjit.gbl import Abstract, Concrete
 
         raises(TypeError, Abstract)
         assert issubclass(Concrete, Abstract)
@@ -172,8 +172,8 @@ namespace Namespace {
         assert isinstance(c, Abstract)
 
     def test_array(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
         from array import array
 
         c = Concrete()
@@ -181,46 +181,46 @@ namespace Namespace {
         raises(IndexError, c.m_data.__getitem__, 4)
 
     def test_builtin_data(self):
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.gUint == 0
-        raises(ValueError, setattr, cppyy.gbl, 'gUint', -1)
+        assert cppjit.gbl.gUint == 0
+        raises(ValueError, setattr, cppjit.gbl, 'gUint', -1)
 
     def test_casting(self):
-        import cppyy
-        from cppyy.gbl import Abstract, Concrete
+        import cppjit
+        from cppjit.gbl import Abstract, Concrete
 
         c = Concrete()
         assert 'Abstract' in Concrete.show_autocast.__doc__
         d = c.show_autocast()
-        assert type(d) == cppyy.gbl.Concrete
+        assert type(d) == cppjit.gbl.Concrete
 
-        from cppyy import addressof, bind_object
+        from cppjit import addressof, bind_object
         e = bind_object(addressof(d), Abstract)
-        assert type(e) == cppyy.gbl.Abstract
+        assert type(e) == cppjit.gbl.Abstract
 
     def test_classes_and_structs(self):
-        import cppyy
-        from cppyy.gbl import Concrete, Namespace
+        import cppjit
+        from cppjit.gbl import Concrete, Namespace
 
         assert Concrete != Namespace.Concrete
         n = Namespace.Concrete.NestedClass()
         assert 'Namespace.Concrete.NestedClass' in str(type(n))
         assert 'NestedClass' == type(n).__name__
-        assert 'cppyy.gbl.Namespace.Concrete' == type(n).__module__
+        assert 'cppjit.gbl.Namespace.Concrete' == type(n).__module__
         assert 'Namespace::Concrete::NestedClass' == type(n).__cpp_name__
 
     def test_data_members(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
 
         c = Concrete()
         assert c.m_int == 42
         raises(TypeError, setattr, c, 'm_const_int', 71)
 
     def test_default_arguments(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
 
         c = Concrete()
         assert c.m_int == 42
@@ -231,8 +231,8 @@ namespace Namespace {
         assert c.m_int == 27
 
     def test_keyword_arguments(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
 
         c = Concrete(n=17)
         assert c.m_int == 17
@@ -250,21 +250,21 @@ namespace Namespace {
         assert c.m_int == 18
 
     def test_doc_strings(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
         assert 'void Concrete::array_method(int * ad, int size)'.replace(" ", "") in Concrete.array_method.__doc__.replace(" ", "")
         assert 'void Concrete::array_method(double * ad, int size)'.replace(" ", "") in Concrete.array_method.__doc__.replace(" ", "")
 
     def test_enums(self):
-        import cppyy
+        import cppjit
 
         pass
 
     @mark.xfail(run=False, condition=IS_MAC, reason="Seg Fault")
     def test_functions(self):
-        import cppyy
+        import cppjit
 
-        from cppyy.gbl import global_function, call_int_int_function, Namespace
+        from cppjit.gbl import global_function, call_int_int_function, Namespace
         assert not(global_function == Namespace.global_function)
 
         assert round(global_function(1.)-2.718281828459045, 8) == 0.
@@ -281,57 +281,57 @@ namespace Namespace {
         assert call_int_int_function(lambda x, y: x*y, 3, 7) == 21
 
     def test_inheritance(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_memory(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
 
         c = Concrete()
         assert c.__python_owns__ == True
 
     def test_methods(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_namespaces(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_null(self):
-        import cppyy
+        import cppjit
 
-        assert hasattr(cppyy, 'nullptr')
-        assert not cppyy.nullptr
+        assert hasattr(cppjit, 'nullptr')
+        assert not cppjit.nullptr
 
     def test_operator_conversions(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
 
         assert str(Concrete()) == 'Hello operator const char*!'
 
     def test_operator_overloads(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_pointers(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_pyobject(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_ref(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
         from ctypes import c_uint
 
         c = Concrete()
@@ -340,59 +340,59 @@ namespace Namespace {
         assert u.value == 42
 
     def test_static_data_members(self):
-        import cppyy
-        from cppyy.gbl import Concrete
+        import cppjit
+        from cppjit.gbl import Concrete
 
         assert Concrete.s_int == 321
         Concrete().s_int = 123
         assert Concrete.s_int == 123
 
     def test_static_methods(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_strings(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_templated_classes(self):
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.std.vector
-        assert isinstance(cppyy.gbl.std.vector(int), type)
-        assert type(cppyy.gbl.std.vector(int)()) == cppyy.gbl.std.vector(int)
+        assert cppjit.gbl.std.vector
+        assert isinstance(cppjit.gbl.std.vector(int), type)
+        assert type(cppjit.gbl.std.vector(int)()) == cppjit.gbl.std.vector(int)
 
     def test_templated_functions(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_templated_methods(self):
-        import cppyy
+        import cppjit
 
         pass
 
     def test_typedefs(self):
-        import cppyy
-        from cppyy.gbl import Concrete, Concrete_t
+        import cppjit
+        from cppjit.gbl import Concrete, Concrete_t
 
         assert Concrete is Concrete_t
 
     def test_unary_operators(sef):
-        import cppyy
+        import cppjit
 
         pass
 
     @mark.xfail(condition=IS_MAC, run=not IS_MAC_ARM, reason="Crashes with exception not being caught on Apple Silicon")
     def test_x_inheritance(self):
-        import cppyy
-        from cppyy.gbl import Abstract, Concrete, call_abstract_method
+        import cppjit
+        from cppjit.gbl import Abstract, Concrete, call_abstract_method
 
         class PyConcrete1(Abstract):
             def abstract_method(self):
-                return cppyy.gbl.std.string("Hello, Python World! (1)")
+                return cppjit.gbl.std.string("Hello, Python World! (1)")
 
             def concrete_method(self):
                 pass
@@ -437,9 +437,9 @@ namespace Namespace {
     def test_multi_x_inheritance(self):
         """Multiple cross-inheritance"""
 
-        import cppyy
+        import cppjit
 
-        class PyConcrete(cppyy.multi(cppyy.gbl.Abstract1, cppyy.gbl.Abstract2)):
+        class PyConcrete(cppjit.multi(cppjit.gbl.Abstract1, cppjit.gbl.Abstract2)):
             def abstract_method1(self):
                 return "first message"
 
@@ -448,8 +448,8 @@ namespace Namespace {
 
         pc = PyConcrete()
 
-        assert cppyy.gbl.call_abstract_method1(pc) == "first message"
-        assert cppyy.gbl.call_abstract_method2(pc) == "second message"
+        assert cppjit.gbl.call_abstract_method1(pc) == "first message"
+        assert cppjit.gbl.call_abstract_method2(pc) == "second message"
 
     @mark.xfail(run=False, condition=IS_MAC_ARM, reason="Crashes with exception not being caught on Apple Silicon")
     def test_exceptions(self):
@@ -458,26 +458,26 @@ namespace Namespace {
         if ispypy:
             skip('throwing exceptions terminates the process')
 
-        import cppyy
+        import cppjit
 
         caught = False
         try:
-            cppyy.gbl.DocHelper.throw_an_error(1)
-        except cppyy.gbl.SomeError as e:
+            cppjit.gbl.DocHelper.throw_an_error(1)
+        except cppjit.gbl.SomeError as e:
             assert 'this is an error' in str(e)
             assert e.what() == 'this is an error'
             caught = True
         assert caught == True
 
         caught = False
-        for exc_type in (cppyy.gbl.SomeOtherError,
-                         cppyy.gbl.SomeError,
-                         cppyy.gbl.std.exception,
+        for exc_type in (cppjit.gbl.SomeOtherError,
+                         cppjit.gbl.SomeError,
+                         cppjit.gbl.std.exception,
                          Exception,
                          BaseException):
             caught = False
             try:
-                cppyy.gbl.DocHelper.throw_an_error(0)
+                cppjit.gbl.DocHelper.throw_an_error(0)
             except exc_type as e:
                 caught = True
             assert caught == True
@@ -487,16 +487,16 @@ namespace Namespace {
 @mark.skipif(IS_MAC and IS_CLING, reason="setup class fails with OS X cling")
 class TestTUTORIALFEATURES:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
 class Integer1 {
 public:
     Integer1(int i) : m_data(i) {}
     int m_data;
 };""")
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
 namespace Math {
     class Integer2 : public Integer1 {
     public:
@@ -505,7 +505,7 @@ namespace Math {
     };
 }""")
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
 namespace Zoo {
 
     enum EAnimal { eLion, eMouse };
@@ -546,19 +546,19 @@ namespace Zoo {
 """)
 
       # pythonize the animal release function to take ownership on return
-        cppyy.gbl.Zoo.release_animal.__creates__ = True
+        cppjit.gbl.Zoo.release_animal.__creates__ = True
 
     def test01_class_existence(self):
         """Existence and importability of created class"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.Integer1
-        assert issubclass(cppyy.gbl.Integer1, object)
+        assert cppjit.gbl.Integer1
+        assert issubclass(cppjit.gbl.Integer1, object)
 
-        from cppyy.gbl import Integer1
+        from cppjit.gbl import Integer1
 
-        assert cppyy.gbl.Integer1 is Integer1
+        assert cppjit.gbl.Integer1 is Integer1
 
         i = Integer1(42)
         assert isinstance(i, Integer1)
@@ -566,7 +566,7 @@ namespace Zoo {
     def test02_python_introspection(self):
         """Introspection of newly created class/instances"""
 
-        from cppyy.gbl import Integer1
+        from cppjit.gbl import Integer1
 
         i = Integer1(42)
         assert hasattr(i, 'm_data')
@@ -577,8 +577,8 @@ namespace Zoo {
     def test03_STL_containers(self):
         """Instantiate STL containers with new class"""
 
-        from cppyy.gbl import Integer1
-        from cppyy.gbl.std import vector
+        from cppjit.gbl import Integer1
+        from cppjit.gbl.std import vector
 
         v = vector[Integer1]()
 
@@ -587,7 +587,7 @@ namespace Zoo {
     def test04_pretty_repr(self):
         """Create a pretty repr for the new class"""
 
-        from cppyy.gbl import Integer1
+        from cppjit.gbl import Integer1
 
         Integer1.__repr__ = lambda self: repr(self.m_data)
         assert str([Integer1(j) for j in range(10)]) == '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]'
@@ -595,15 +595,15 @@ namespace Zoo {
     def test05_pythonizer(self):
         """Implement and test a pythonizor"""
 
-        import cppyy
+        import cppjit
 
         def pythonizor(klass, name):
             if name == 'Integer2':
                 klass.__repr__ = lambda self: repr(self.m_data)
 
-        cppyy.py.add_pythonization(pythonizor, 'Math')
+        cppjit.py.add_pythonization(pythonizor, 'Math')
 
-        Integer2 = cppyy.gbl.Math.Integer2    # first time a new namespace is used, it can not be imported from
+        Integer2 = cppjit.gbl.Math.Integer2    # first time a new namespace is used, it can not be imported from
         v = [Integer2(j) for j in range(10)]
 
         assert str(v) == '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]'
@@ -615,17 +615,17 @@ namespace Zoo {
     def test06_add_operator(self):
         """Add operator+"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
 namespace Math {
     Integer2 operator+(const Integer2& left, const Integer1& right) {
         return left.m_data + right.m_data;
     }
 }""")
 
-        from cppyy.gbl import Integer1
-        from cppyy.gbl.Math import Integer2
+        from cppjit.gbl import Integer1
+        from cppjit.gbl.Math import Integer2
 
         i = Integer1(42)
         i2 = Integer2(13)
@@ -636,7 +636,7 @@ namespace Math {
     def test07_run_zoo(self):
         """Bunch of zoo animals running around"""
 
-        from cppyy.gbl import Zoo
+        from cppjit.gbl import Zoo
 
         assert raises(TypeError, Zoo.Animal)
 
@@ -663,9 +663,9 @@ namespace Math {
     def test08_shared_ptr(self):
         """Shared pointer transparency"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
 namespace Zoo {
    std::shared_ptr<Lion> free_lion{new Lion{}};
 
@@ -675,7 +675,7 @@ namespace Zoo {
 }
 """)
 
-        from cppyy.gbl import Zoo
+        from cppjit.gbl import Zoo
 
         assert type(Zoo.free_lion).__name__ == 'Lion'
 
@@ -688,27 +688,27 @@ namespace Zoo {
     def test09_templated_function(self):
         """Templated free function"""
 
-        import cppyy
+        import cppjit
 
-        mul = cppyy.gbl.multiply
+        mul = cppjit.gbl.multiply
 
-        assert 'multiply' in cppyy.gbl.__dict__
+        assert 'multiply' in cppjit.gbl.__dict__
 
         assert mul(1,  2) == 2
-        assert 'multiply<int,int,int>' in map(lambda x: x.replace(" ", ""), cppyy.gbl.__dict__)
+        assert 'multiply<int,int,int>' in map(lambda x: x.replace(" ", ""), cppjit.gbl.__dict__)
         assert mul(1., 5) == 5.
-        assert 'multiply<double,int,double>' in map(lambda x: x.replace(" ", ""), cppyy.gbl.__dict__)
+        assert 'multiply<double,int,double>' in map(lambda x: x.replace(" ", ""), cppjit.gbl.__dict__)
 
         assert mul[int]     (1, 1) == 1
-        assert 'multiply<int>' in map(lambda x: x.replace(" ", ""), cppyy.gbl.__dict__)
+        assert 'multiply<int>' in map(lambda x: x.replace(" ", ""), cppjit.gbl.__dict__)
         assert mul[int, int](1, 1) == 1
-        assert 'multiply<int,int>' in map(lambda x: x.replace(" ", ""), cppyy.gbl.__dict__)
+        assert 'multiply<int,int>' in map(lambda x: x.replace(" ", ""), cppjit.gbl.__dict__)
 
       # make sure cached values are actually looked up
-        old = getattr(cppyy.gbl, 'multiply<int,int>')
-        setattr(cppyy.gbl, 'multiply<int,int>', staticmethod(lambda x, y: 2*x*y))
+        old = getattr(cppjit.gbl, 'multiply<int,int>')
+        setattr(cppjit.gbl, 'multiply<int,int>', staticmethod(lambda x, y: 2*x*y))
         assert mul[int, int](2, 2) == 8
-        setattr(cppyy.gbl, 'multiply<int,int>', old)
+        setattr(cppjit.gbl, 'multiply<int,int>', old)
         assert mul[int, int](2, 2) == 4
 
         assert raises(TypeError, mul[int, int, int, int], 1, 1)
@@ -723,26 +723,26 @@ namespace Zoo {
     def test10_stl_algorithm(self):
         """STL algorithm on std::string"""
 
-        import cppyy
+        import cppjit
 
-        cppstr = cppyy.gbl.std.string
+        cppstr = cppjit.gbl.std.string
         n = cppstr('this is a C++ string')
         assert n == 'this is a C++ string'
-        n.erase(cppyy.gbl.std.remove(n.begin(), n.end(), cppstr.value_type(' ')))
+        n.erase(cppjit.gbl.std.remove(n.begin(), n.end(), cppstr.value_type(' ')))
         assert n == 'thisisaC++stringing'
 
 
 @mark.skipif(IS_MAC and IS_CLING, reason="setup class fails with OS X cling")
 class TestADVERTISED:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
     def test01_reduction_of_overloads(self):
         """Reduce available overloads to 1"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace Advert01 {
+        cppjit.cppdef("""namespace Advert01 {
         class A {
         public:
             A(int) {}
@@ -753,9 +753,9 @@ class TestADVERTISED:
             if name == 'A':
                 klass.__init__ = klass.__init__.__overload__("int")
 
-        cppyy.py.add_pythonization(pythonize_A, 'Advert01')
+        cppjit.py.add_pythonization(pythonize_A, 'Advert01')
 
-        from cppyy.gbl import Advert01
+        from cppjit.gbl import Advert01
 
         assert Advert01.A(1)
         raises(TypeError, Advert01.A, 1.)
@@ -763,10 +763,10 @@ class TestADVERTISED:
     def test02_use_c_void_p(self):
         """Use of opaque handles and ctypes.c_void_p"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
       ### void pointer as opaque handle
-        cppyy.cppdef("""namespace Advert02 {
+        cppjit.cppdef("""namespace Advert02 {
             typedef void* PicamHandle;
             void Picam_OpenFirstCamera(PicamHandle* cam) {
                 *cam = new int(42);
@@ -780,12 +780,12 @@ class TestADVERTISED:
             }
         }""")
 
-        from cppyy.gbl import Advert02
+        from cppjit.gbl import Advert02
 
         assert Advert02.PicamHandle
 
       # first approach
-        cam = Advert02.PicamHandle(cppyy.nullptr)
+        cam = Advert02.PicamHandle(cppjit.nullptr)
         Advert02.Picam_OpenFirstCamera(cam)
         assert Advert02.Picam_CloseCamera(cam)
 
@@ -797,9 +797,9 @@ class TestADVERTISED:
     def test03_use_of_ctypes_and_enum(self):
         """Use of (opaque) enum through ctypes.c_void_p"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        cppyy.cppdef("""namespace Advert03 {
+        cppjit.cppdef("""namespace Advert03 {
         enum SomeEnum1 { AA = -1, BB = 42 };
         void build_enum_array1(SomeEnum1** ptr, int* sz) {
             *ptr = (SomeEnum1*)malloc(sizeof(SomeEnum1)*4);
@@ -816,42 +816,42 @@ class TestADVERTISED:
 
      # enum through void pointer (b/c underlying type unknown)
         vp = ctypes.c_void_p(0); cnt = ctypes.c_int(0)
-        cppyy.gbl.Advert03.build_enum_array2(vp, ctypes.pointer(cnt))
+        cppjit.gbl.Advert03.build_enum_array2(vp, ctypes.pointer(cnt))
         assert cnt.value == 4
 
         vp = ctypes.c_void_p(0); cnt = ctypes.c_int(0)
-        cppyy.gbl.Advert03.build_enum_array1(vp, ctypes.pointer(cnt))
+        cppjit.gbl.Advert03.build_enum_array1(vp, ctypes.pointer(cnt))
         assert cnt.value == 4
 
      # helper to convert the enum array pointer & size to something packaged
-        cppyy.cppdef("""namespace Advert03 {
+        cppjit.cppdef("""namespace Advert03 {
         std::vector<SomeEnum1> ptr2vec(intptr_t ptr, int sz) {
             std::vector<SomeEnum1> result{(SomeEnum1*)ptr, (SomeEnum1*)ptr+sz};
             free((void*)ptr);
             return result;
         } }""")
 
-        assert list(cppyy.gbl.Advert03.ptr2vec(vp.value, cnt.value)) == [-1, 42, -1, 42]
+        assert list(cppjit.gbl.Advert03.ptr2vec(vp.value, cnt.value)) == [-1, 42, -1, 42]
 
       # 2nd approach through low level cast
-        vp = ctypes.pointer(cppyy.gbl.Advert03.SomeEnum2.__ctype__(0)); cnt = ctypes.c_int(0)
-        cppyy.gbl.Advert03.build_enum_array2(vp, ctypes.pointer(cnt))
+        vp = ctypes.pointer(cppjit.gbl.Advert03.SomeEnum2.__ctype__(0)); cnt = ctypes.c_int(0)
+        cppjit.gbl.Advert03.build_enum_array2(vp, ctypes.pointer(cnt))
         assert cnt.value == 4
 
-        import cppyy.ll
-        arr = cppyy.ll.cast['Advert03::SomeEnum2*'](vp)
+        import cppjit.ll
+        arr = cppjit.ll.cast['Advert03::SomeEnum2*'](vp)
         arr.reshape((cnt.value,))
 
         assert list(arr) == [1, 42, 1, 42]
-        cppyy.gbl.free(vp)
+        cppjit.gbl.free(vp)
 
     @mark.xfail(run=(not IS_MAC and IS_CLANG_REPL), condition=IS_MAC and IS_CLING, reason= "Crashes on OS X Cling")
     def test04_ptr_ptr_python_owns(self):
         """Example of ptr-ptr use where python owns"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace Advert04 {
+        cppjit.cppdef("""namespace Advert04 {
         struct SomeStruct {
             SomeStruct(int i) : i(i) {}
             int i;
@@ -863,31 +863,31 @@ class TestADVERTISED:
             return total;
         } }""")
 
-        cppyy.gbl.Advert04
-        from cppyy.gbl.Advert04 import SomeStruct, count_them
+        cppjit.gbl.Advert04
+        from cppjit.gbl.Advert04 import SomeStruct, count_them
 
       # initialization on python side
-        v = cppyy.gbl.std.vector['Advert04::SomeStruct*']()
+        v = cppjit.gbl.std.vector['Advert04::SomeStruct*']()
         v._l = [SomeStruct(i) for i in range(10)]
         for s in v._l: v.push_back(s)
         assert count_them(v.data(), v.size()) == sum(range(10))
 
       # initialization on C++ side
-        cppyy.cppdef("""namespace Advert04 {
+        cppjit.cppdef("""namespace Advert04 {
         void ptr2ptr_init(SomeStruct** ref) {
             *ref = new SomeStruct(42);
         } }""")
 
-        s = cppyy.bind_object(cppyy.nullptr, SomeStruct)
-        cppyy.gbl.Advert04.ptr2ptr_init(s)
+        s = cppjit.bind_object(cppjit.nullptr, SomeStruct)
+        cppjit.gbl.Advert04.ptr2ptr_init(s)
         assert s.i == 42
 
     def test05_ptr_ptr_with_array(self):
         """Example of ptr-ptr with array"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        cppyy.cppdef("""namespace Advert05 {
+        cppjit.cppdef("""namespace Advert05 {
         struct SomeStruct { int i; };
 
         void create_them(SomeStruct** them, int* sz) {
@@ -896,14 +896,14 @@ class TestADVERTISED:
             for (int i = 0; i < *sz; ++i) (*them)[i].i = i*i;
         } }""")
 
-        cppyy.gbl.Advert05
-        from cppyy.gbl.Advert05 import SomeStruct, create_them
+        cppjit.gbl.Advert05
+        from cppjit.gbl.Advert05 import SomeStruct, create_them
 
-        ptr = cppyy.bind_object(cppyy.nullptr, SomeStruct)
+        ptr = cppjit.bind_object(cppjit.nullptr, SomeStruct)
         sz = ctypes.c_int(0)
         create_them(ptr, sz)
 
-        arr = cppyy.bind_object(cppyy.addressof(ptr), cppyy.gbl.std.array[SomeStruct, sz.value])
+        arr = cppjit.bind_object(cppjit.addressof(ptr), cppjit.gbl.std.array[SomeStruct, sz.value])
         total = 0
         for s in arr: total += s.i
         assert total == 14
@@ -911,9 +911,9 @@ class TestADVERTISED:
     def test06_c_char_p(self):
         """Example of ctypes.c_char_p usage"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        cppyy.cppdef("""namespace Advert06 {
+        cppjit.cppdef("""namespace Advert06 {
         intptr_t createit(const char** out) {
             *out = (char*)malloc(4);
             return (intptr_t)*out;
@@ -924,8 +924,8 @@ class TestADVERTISED:
             return out;
         } }""")
 
-        cppyy.gbl.Advert06
-        from cppyy.gbl.Advert06 import createit, destroyit
+        cppjit.gbl.Advert06
+        from cppjit.gbl.Advert06 import createit, destroyit
 
         ptr = ctypes.c_char_p()
         val = createit(ptr)
@@ -934,13 +934,13 @@ class TestADVERTISED:
     def test07_array_of_arrays(self):
         """Example of array of array usage"""
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
 
         NREADOUTS = 4
         NPIXELS = 16
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         #define NREADOUTS %d
         #define NPIXELS %d
         namespace Advert07 {
@@ -960,19 +960,19 @@ class TestADVERTISED:
             void* fField;
         }; }""" % (NREADOUTS, NPIXELS))
 
-        s = cppyy.gbl.Advert07.S()
+        s = cppjit.gbl.Advert07.S()
 
         for i in range(NREADOUTS):
-            image_array = cppyy.ll.cast['uint16_t*'](s.fField[i])
+            image_array = cppjit.ll.cast['uint16_t*'](s.fField[i])
             for j in range (NPIXELS):
                  assert image_array[j] == i*NPIXELS+j
 
     def test08_voidptr_array(self):
         """Example of access to array of void ptrs"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace VoidPtrArray {
             typedef struct _name {
                 _name() { p[0] = (void*)0x1; p[1] = (void*)0x2; p[2] = (void*)0x3; }
@@ -980,7 +980,7 @@ class TestADVERTISED:
             } name;
         }""")
 
-        n = cppyy.gbl.VoidPtrArray.name()
+        n = cppjit.gbl.VoidPtrArray.name()
         assert n.p[0] == 0x1
         assert n.p[1] == 0x2
         assert n.p[2] == 0x3
@@ -990,9 +990,9 @@ class TestADVERTISED:
     def test09_custom_str(self):
         """Example of customized str"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace TopologicCore {
 
         class Shell {
@@ -1007,9 +1007,9 @@ class TestADVERTISED:
             if 'GetTypeAsString' in klass.__dict__:
                 klass.__str__ = lambda self: str(self.GetTypeAsString())
 
-        cppyy.py.add_pythonization(pythonize_topologic_printing, 'TopologicCore')
+        cppjit.py.add_pythonization(pythonize_topologic_printing, 'TopologicCore')
 
-        s = cppyy.gbl.TopologicCore.Shell()
+        s = cppjit.gbl.TopologicCore.Shell()
 
         assert str(s) == "hi there!"
 
@@ -1017,9 +1017,9 @@ class TestADVERTISED:
     def test10_llvm_blog(self):
         """Test code posted in the LLVM blog posting"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace LLVMBlog {
         template<typename T> class Producer {
         public:
@@ -1045,7 +1045,7 @@ class TestADVERTISED:
             }
         }; } """)
 
-        ns = cppyy.gbl.LLVMBlog
+        ns = cppjit.gbl.LLVMBlog
 
         def factory(base_v, *derived_v):
             class _F(ns.Producer[type(base_v)]):
@@ -1068,13 +1068,13 @@ class TestADVERTISED:
 
 
 # The series of tests below mostly exists already in other places, but these
-# were used as examples for the CaaS' cppyy presentation and are preserved here.
+# were used as examples for the CaaS' cppjit presentation and are preserved here.
 @mark.skipif(IS_MAC and IS_CLING, reason="setup class fails with OS X cling")
 class TestTALKEXAMPLES:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         struct MyClass {
             MyClass(int i) : fData(i) {}
@@ -1085,16 +1085,16 @@ class TestTALKEXAMPLES:
             int fData;
         };}""")
 
-        cppyy.gbl.talk_examples
+        cppjit.gbl.talk_examples
 
     # @mark.skip
     def test_template_instantiation(self):
         """Run-time template instantiation example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        v = cppyy.gbl.std.vector[CC.MyClass]()
+        v = cppjit.gbl.std.vector[CC.MyClass]()
 
         for i in range(10):
             v.emplace_back(i)
@@ -1106,10 +1106,10 @@ class TestTALKEXAMPLES:
     def test_cross_inheritance(self):
         """Cross-inheritance example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         int callb(MyClass* m, int i) {
           return m->add(i);
@@ -1126,8 +1126,8 @@ class TestTALKEXAMPLES:
     def test_cross_and_templates(self):
         """Template instantiation with cross-inheritance example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
         class PyMyClass(CC.MyClass):
             def __init__(self, data, extra):
@@ -1137,7 +1137,7 @@ class TestTALKEXAMPLES:
             def add(self, i):
                 return self.fData + self.extra + 2*i
 
-        v = cppyy.gbl.std.vector[PyMyClass]()
+        v = cppjit.gbl.std.vector[PyMyClass]()
         v.push_back(PyMyClass(4, 42))
 
         assert v.back().add(17) == 4+42+2*17
@@ -1146,10 +1146,10 @@ class TestTALKEXAMPLES:
     def test_fallbacks(self):
         """Template instantation switches based on value sizes"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         template<typename T>
         T passT(T t) {
@@ -1165,10 +1165,10 @@ class TestTALKEXAMPLES:
     def test_callbacks(self):
         """Function callback example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         typedef int (*P)(int);
         int callPtr(P f, int i) {
@@ -1192,10 +1192,10 @@ class TestTALKEXAMPLES:
     def test_templated_callback(self):
         """Templated callback example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         template<typename R, typename... U, typename... A>
         R callT(R (*f)(U...), A&&... args) {
@@ -1223,10 +1223,10 @@ class TestTALKEXAMPLES:
     def test_autocast_and_identiy(self):
         """Auto-cast and identiy preservation example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         struct Base {
             virtual ~Base() {}
@@ -1248,10 +1248,10 @@ class TestTALKEXAMPLES:
         if ispypy or IS_WINDOWS:
             skip('throwing exceptions from the JIT terminates the process')
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         class MyException : public std::exception {
         public:
@@ -1270,10 +1270,10 @@ class TestTALKEXAMPLES:
     def test_unicode(self):
         """Unicode non-UTF-8 example"""
 
-        import cppyy
-        import cppyy.gbl.talk_examples as CC
+        import cppjit
+        import cppjit.gbl.talk_examples as CC
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace talk_examples {
         template<class T>
         std::string to_str(const T& chars) {

@@ -1,5 +1,5 @@
-#ifndef CPPYY_TEST_STLTYPES_H
-#define CPPYY_TEST_STLTYPES_H
+#ifndef CPPJIT_TEST_STLTYPES_H
+#define CPPJIT_TEST_STLTYPES_H
 
 #include <exception>
 #include <list>
@@ -258,4 +258,4 @@ void throw_error(int i);
 
 } // ErrorNamespace
 
-#endif // !CPPYY_TEST_STLTYPES_H
+#endif // !CPPJIT_TEST_STLTYPES_H

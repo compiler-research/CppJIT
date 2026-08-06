@@ -6,29 +6,29 @@ from support import IS_MAC_ARM, IS_MAC_X86, IS_LINUX_ARM
 class TestCONCURRENT:
 
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
         cls.data = [3.1415, 2.7183, 1.4142, 1.3807, -9.2848]
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace Workers {
             double calc(double d) { return d*42.; }
         }""")
 
-        cppyy.gbl.Workers.calc.__release_gil__ = True
+        cppjit.gbl.Workers.calc.__release_gil__ = True
 
     @mark.xfail(run=False, reason="Crashes")
     def test01_simple_threads(self):
         """Run basic Python threads"""
 
-        import cppyy
+        import cppjit
         import threading
 
-        cppyy.gbl.Workers.calc.__release_gil__ = True
+        cppjit.gbl.Workers.calc.__release_gil__ = True
 
         threads = []
         for d in self.data:
-            threads.append(threading.Thread(target=cppyy.gbl.Workers.calc, args=(d,)))
+            threads.append(threading.Thread(target=cppjit.gbl.Workers.calc, args=(d,)))
 
         for t in threads:
             t.start()
@@ -40,7 +40,7 @@ class TestCONCURRENT:
     def test02_futures(self):
         """Run with Python futures"""
 
-        import cppyy
+        import cppjit
 
         try:
             import concurrent.futures
@@ -49,7 +49,7 @@ class TestCONCURRENT:
 
         total = 0.
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.data)) as executor:
-            futures = [executor.submit(cppyy.gbl.Workers.calc, d) for d in self.data]
+            futures = [executor.submit(cppjit.gbl.Workers.calc, d) for d in self.data]
             for f in concurrent.futures.as_completed(futures):
                 total += f.result()
         assert round(total+26.4642, 8) == 0.0
@@ -58,33 +58,33 @@ class TestCONCURRENT:
         """Time-out with threads"""
 
         return
-        import cppyy
+        import cppjit
         import threading, time
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace test12_timeout {
             bool _islive = false; volatile bool* islive = &_islive;
             bool _stopit = false; volatile bool* stopit = &_stopit;
         }""")
 
-        cppyy.gbl.cling.runtime.gCling.process.__release_gil__ = True
+        cppjit.gbl.cling.runtime.gCling.process.__release_gil__ = True
         cmd = r"""\
            *test12_timeout::islive = true;
            while (!*test12_timeout::stopit);
         """
 
-        t = threading.Thread(target=cppyy.gbl.cling.runtime.gCling.process, args=(cmd,))
+        t = threading.Thread(target=cppjit.gbl.cling.runtime.gCling.process, args=(cmd,))
         t.start()
 
       # have to give ProcessLine() time to actually start doing work
-        while not cppyy.gbl.test12_timeout.islive:
+        while not cppjit.gbl.test12_timeout.islive:
             time.sleep(0.1)     # in seconds
 
       # join the thread with a timeout after 0.1s
         t.join(0.1)             # id.
 
         if t.is_alive():        # was timed-out
-            cppyy.gbl.test12_timeout.stopit[0] = True
+            cppjit.gbl.test12_timeout.stopit[0] = True
 
     @mark.xfail(condition=IS_MAC_X86, reason="Fails on OS X x86")
     def test04_cpp_threading_with_exceptions(self):
@@ -93,11 +93,11 @@ class TestCONCURRENT:
         if IS_MAC_ARM:
             skip("JIT exceptions can not be caught in JITed code on Mac ARM")
 
-        import cppyy
+        import cppjit
 
-        cppyy.include("CPyCppyy/PyException.h")
+        cppjit.include("cpyrt/PyException.h")
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         #include <thread>
         namespace thread_test {
 
@@ -116,7 +116,7 @@ class TestCONCURRENT:
                     while (counter++ < 10)
                         try {
                             cons->process(counter);
-                        } catch (CPyCppyy::PyException& e) {
+                        } catch (cppjit::cpyrt::PyException& e) {
                             err_msg = e.what();
                             return;
                         }
@@ -133,7 +133,7 @@ class TestCONCURRENT:
             std::string err_msg;
         }; }""")
 
-        ns = cppyy.gbl.thread_test
+        ns = cppjit.gbl.thread_test
         consumer = ns.consumer
         worker = ns.worker
         worker.wait.__release_gil__ = True
@@ -170,9 +170,9 @@ class TestCONCURRENT:
     def test05_float2d_callback(self):
         """Passing of 2-dim float arguments"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         #include <thread>
         namespace FloatDim2 {
 
@@ -215,10 +215,10 @@ class TestCONCURRENT:
             t.join();
         } }""")
 
-        cppyy.gbl.FloatDim2.callback.__release_gil__ = True
+        cppjit.gbl.FloatDim2.callback.__release_gil__ = True
 
-        class Processor(cppyy.gbl.FloatDim2.Processor):
-            buffer = cppyy.gbl.FloatDim2.Buffer()
+        class Processor(cppjit.gbl.FloatDim2.Processor):
+            buffer = cppjit.gbl.FloatDim2.Buffer()
 
             def process(self, data, channels, samples):
                 self.buffer.setData(data)
@@ -231,15 +231,15 @@ class TestCONCURRENT:
                     print(e)
 
         p = Processor()
-        cppyy.gbl.FloatDim2.callback(p)
+        cppjit.gbl.FloatDim2.callback(p)
 
     def test06_overload_reuse_in_threads(self):
         """Threads reuse overload objects; check for clashes"""
 
-        import cppyy
+        import cppjit
         import threading
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CPPOverloadReuse {
         class Simulation1 {
         public:
@@ -248,7 +248,7 @@ class TestCONCURRENT:
 
         def test():
             o = {"a": "b"}        # causes a temporary to be created
-            simulation = cppyy.gbl.CPPOverloadReuse.Simulation1()
+            simulation = cppjit.gbl.CPPOverloadReuse.Simulation1()
             simulation.set_something(o, ".")
 
         threads = [threading.Thread(target=test) for i in range(0, 100)]
@@ -267,10 +267,10 @@ class TestCONCURRENT:
           # the culprit here is occasional std::system_error if a thread can not be joined
             skip("JIT exceptions can not be caught in JITed code on Mac ARM")
 
-        import cppyy
+        import cppjit
         import threading
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CPPOverloadReuse {
         class Simulation2 {
             int fCount;
@@ -279,7 +279,7 @@ class TestCONCURRENT:
             virtual int do_something() { return fCount; }
         }; }""")
 
-        cppyy.gbl.CPPOverloadReuse.Simulation2.do_something.__release_gil__ = True
+        cppjit.gbl.CPPOverloadReuse.Simulation2.do_something.__release_gil__ = True
 
         class State(object):
             lock = threading.Lock()
@@ -288,7 +288,7 @@ class TestCONCURRENT:
         def test(i, state=State):
             #global c1, c2, c3, lock
 
-            simulation = cppyy.gbl.CPPOverloadReuse.Simulation2(i)
+            simulation = cppjit.gbl.CPPOverloadReuse.Simulation2(i)
             res = simulation.do_something()
 
             with state.lock:
@@ -309,10 +309,10 @@ class TestCONCURRENT:
 
     def test08_python_callabcks_with_release_gil(self):
         """Test release GIL, when the C++ func calls back into Python"""
-        import cppyy
-        from cppyy import gbl
+        import cppjit
+        from cppjit import gbl
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
             namespace NS1 {
             int callback(int(*fn)(int, int), int x, int y) {
               return fn(x, y);

@@ -12,52 +12,52 @@ def setup_module(mod):
 class TestSTDStreams:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.streams = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.streams = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_std_ostream(self):
         """Test availability of std::ostream"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.std is cppyy.gbl.std
-        assert cppyy.gbl.std.ostream is cppyy.gbl.std.ostream
+        assert cppjit.gbl.std is cppjit.gbl.std
+        assert cppjit.gbl.std.ostream is cppjit.gbl.std.ostream
 
-        assert callable(cppyy.gbl.std.ostream)
+        assert callable(cppjit.gbl.std.ostream)
 
     def test02_std_cout(self):
         """Test access to std::cout"""
 
-        import cppyy
+        import cppjit
 
-        assert not (cppyy.gbl.std.cout is None)
+        assert not (cppjit.gbl.std.cout is None)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test03_consistent_naming_if_char_traits(self):
         """Naming consistency if char_traits"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace stringstream_base {
         void pass_through_base(std::ostream& o) {
             o << "TEST STRING";
         } }""")
 
-        s = cppyy.gbl.std.ostringstream();
+        s = cppjit.gbl.std.ostringstream();
       # base class used to fail to match
-        cppyy.gbl.stringstream_base.pass_through_base(s)
+        cppjit.gbl.stringstream_base.pass_through_base(s)
         assert s.str() == "TEST STRING"
 
     def test04_naming_of_ostringstream(self):
         """Naming consistency of ostringstream"""
 
-        import cppyy
+        import cppjit
 
         # Check if the object created is equal in all three cases
-        cl0 = cppyy.gbl.std.ostringstream
-        cl1 = cppyy.gbl.std.basic_ostringstream['char']
-        cl2 = cppyy.gbl.std.basic_ostringstream['char', cppyy.gbl.std.char_traits['char'] , cppyy.gbl.std.allocator['char']]
+        cl0 = cppjit.gbl.std.ostringstream
+        cl1 = cppjit.gbl.std.basic_ostringstream['char']
+        cl2 = cppjit.gbl.std.basic_ostringstream['char', cppjit.gbl.std.char_traits['char'] , cppjit.gbl.std.allocator['char']]
 
         assert cl0 == cl1
         assert cl1 == cl2

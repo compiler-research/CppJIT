@@ -69,7 +69,7 @@ static inline void replace_method_name(PyObject* klass, const char* n1, const ch
     PyObject_DelAttrString(klass, n1);
 }
 
-void pyzables::WithCallback1::WithCallback1::__cppyy_explicit_pythonize__(PyObject* klass, const std::string& name) {
+void pyzables::WithCallback1::WithCallback1::__cppjit_explicit_pythonize__(PyObject* klass, const std::string& name) {
 // change methods to camel case
     replace_method_name(klass, "get_int", "GetInt");
     replace_method_name(klass, "set_int", "SetInt");
@@ -85,7 +85,7 @@ pyzables::WithCallback2::WithCallback2(int i) : m_int(i) {}
 int pyzables::WithCallback2::get_int() { return m_int; }
 void pyzables::WithCallback2::set_int(int i) { m_int = i; }
 
-void pyzables::WithCallback2::WithCallback2::__cppyy_pythonize__(PyObject* klass, const std::string& name) {
+void pyzables::WithCallback2::WithCallback2::__cppjit_pythonize__(PyObject* klass, const std::string& name) {
 // change methods to camel case
     replace_method_name(klass, "get_int", "GetInt");
     replace_method_name(klass, "set_int", "SetInt");

@@ -12,8 +12,8 @@ def setup_module(mod):
 class TestOPERATORS:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.operators = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.operators = cppjit.load_reflection_info(cls.test_dct)
 
     def teardown_method(self, meth):
         import gc
@@ -22,9 +22,9 @@ class TestOPERATORS:
     def test01_math_operators(self):
         """Test overloading of math operators"""
 
-        import cppyy
+        import cppjit
 
-        number = cppyy.gbl.number
+        number = cppjit.gbl.number
 
         assert (number(20) + number(10)) == number(30)
         assert (number(20) + 10        ) == number(30)
@@ -45,9 +45,9 @@ class TestOPERATORS:
     def test02_unary_math_operators(self):
         """Test overloading of unary math operators"""
 
-        import cppyy
+        import cppjit
 
-        number = cppyy.gbl.number
+        number = cppjit.gbl.number
 
         n  = number(20)
         n += number(10)
@@ -62,9 +62,9 @@ class TestOPERATORS:
     def test03_comparison_operators(self):
         """Test overloading of comparison operators"""
 
-        import cppyy
+        import cppjit
 
-        number = cppyy.gbl.number
+        number = cppjit.gbl.number
 
         assert (number(20) >  number(10)) == True
         assert (number(20) <  number(10)) == False
@@ -76,9 +76,9 @@ class TestOPERATORS:
     def test04_boolean_operator(self):
         """Test implementation of operator bool"""
 
-        import cppyy
+        import cppjit
 
-        number = cppyy.gbl.number
+        number = cppjit.gbl.number
 
         n = number(20)
         assert n
@@ -89,9 +89,9 @@ class TestOPERATORS:
     def test05_exact_types(self):
         """Test converter operators of exact types"""
 
-        import cppyy
+        import cppjit
 
-        gbl = cppyy.gbl
+        gbl = cppjit.gbl
 
         o = gbl.operator_char_star()
         assert o.m_str == 'operator_char_star'
@@ -116,9 +116,9 @@ class TestOPERATORS:
     def test06_approximate_types(self):
         """Test converter operators of approximate types"""
 
-        import cppyy, sys
+        import cppjit, sys
 
-        gbl = cppyy.gbl
+        gbl = cppjit.gbl
 
         o = gbl.operator_short(); o.m_short = 256
         assert o.m_short == 256
@@ -140,12 +140,12 @@ class TestOPERATORS:
     def test07_virtual_operator_eq(self):
         """Test use of virtual bool operator=="""
 
-        import cppyy
+        import cppjit
 
-        b1  = cppyy.gbl.v_opeq_base(1)
-        b1a = cppyy.gbl.v_opeq_base(1)
-        b2  = cppyy.gbl.v_opeq_base(2)
-        b2a = cppyy.gbl.v_opeq_base(2)
+        b1  = cppjit.gbl.v_opeq_base(1)
+        b1a = cppjit.gbl.v_opeq_base(1)
+        b2  = cppjit.gbl.v_opeq_base(2)
+        b2a = cppjit.gbl.v_opeq_base(2)
 
         assert b1 == b1
         assert b1 == b1a
@@ -154,10 +154,10 @@ class TestOPERATORS:
         assert b2 == b2
         assert b2 == b2a
 
-        d1  = cppyy.gbl.v_opeq_derived(1)
-        d1a = cppyy.gbl.v_opeq_derived(1)
-        d2  = cppyy.gbl.v_opeq_derived(2)
-        d2a = cppyy.gbl.v_opeq_derived(2)
+        d1  = cppjit.gbl.v_opeq_derived(1)
+        d1a = cppjit.gbl.v_opeq_derived(1)
+        d2  = cppjit.gbl.v_opeq_derived(2)
+        d2a = cppjit.gbl.v_opeq_derived(2)
 
         # derived operator== returns opposite
         assert not d1 == d1
@@ -179,9 +179,9 @@ class TestOPERATORS:
     def test08_call_to_getsetitem_mapping(self):
         """Map () to []"""
 
-        import cppyy
+        import cppjit
 
-        m = cppyy.gbl.YAMatrix1()
+        m = cppjit.gbl.YAMatrix1()
         assert m.m_val == 42
         assert m[1,2]  == 42
         assert m(1,2)  == 42
@@ -190,16 +190,16 @@ class TestOPERATORS:
         assert m[1,2]  == 27
         assert m(1,2)  == 27
 
-        m = cppyy.gbl.YAMatrix2()
+        m = cppjit.gbl.YAMatrix2()
         assert m.m_val == 42
         assert m[1]    == 42
         m[1] = 27
         assert m.m_val == 27
         assert m[1]    == 27
 
-        for cls in [cppyy.gbl.YAMatrix3, cppyy.gbl.YAMatrix4,
-                    cppyy.gbl.YAMatrix5, cppyy.gbl.YAMatrix6,
-                    cppyy.gbl.YAMatrix7]:
+        for cls in [cppjit.gbl.YAMatrix3, cppjit.gbl.YAMatrix4,
+                    cppjit.gbl.YAMatrix5, cppjit.gbl.YAMatrix6,
+                    cppjit.gbl.YAMatrix7]:
             m = cls()
             assert m.m_val == 42
             assert m[1,2]  == 42
@@ -227,36 +227,36 @@ class TestOPERATORS:
     def test09_templated_operator(self):
         """Templated operator<()"""
 
-        from cppyy.gbl import TOIClass
+        from cppjit.gbl import TOIClass
 
         assert (TOIClass() < 1)
 
     def test10_r_non_associative(self):
         """Use of radd/rmul with non-associative types"""
 
-        import cppyy
+        import cppjit
 
         # Note: calls are repeated to test caching, if any
 
-        a = cppyy.gbl.AssocADD(5.)
+        a = cppjit.gbl.AssocADD(5.)
         assert 5+a == 10.
         assert a+5 == 10.
         assert 5+a == 10.
         assert a+5 == 10.
 
-        a = cppyy.gbl.NonAssocRADD(5.)
+        a = cppjit.gbl.NonAssocRADD(5.)
         assert 5+a == 10.
         assert 5+a == 10.
         with raises(NotImplementedError):
             v = a+5
 
-        a = cppyy.gbl.AssocMUL(5.)
+        a = cppjit.gbl.AssocMUL(5.)
         assert 2*a == 10.
         assert a*2 == 10.
         assert 2*a == 10.
         assert a*2 == 10.
 
-        m = cppyy.gbl.NonAssocRMUL(5.)
+        m = cppjit.gbl.NonAssocRMUL(5.)
         assert 2*m == 10.
         assert 2*m == 10.
         with raises(NotImplementedError):
@@ -265,10 +265,10 @@ class TestOPERATORS:
     def test11_overloaded_operators(self):
         """Overloaded operator*/+-"""
 
-        import cppyy
+        import cppjit
 
-        v = cppyy.gbl.MultiLookup.Vector2(1, 2)
-        w = cppyy.gbl.MultiLookup.Vector2(3, 4)
+        v = cppjit.gbl.MultiLookup.Vector2(1, 2)
+        w = cppjit.gbl.MultiLookup.Vector2(3, 4)
 
         u = v*2
         assert u.x == 2.
@@ -297,9 +297,9 @@ class TestOPERATORS:
     def test12_unary_operators(self):
         """Unary operator-+~"""
 
-        import cppyy
+        import cppjit
 
-        for cls in [cppyy.gbl.SomeGlobalNumber, cppyy.gbl.Unary.SomeNumber]:
+        for cls in [cppjit.gbl.SomeGlobalNumber, cppjit.gbl.Unary.SomeNumber]:
             n = cls(42)
 
             assert (-n).i == -42
@@ -309,17 +309,17 @@ class TestOPERATORS:
     def test13_comma_operator(self):
         """Comma operator"""
 
-        import cppyy
+        import cppjit
 
-        c = cppyy.gbl.CommaOperator(1)
+        c = cppjit.gbl.CommaOperator(1)
         assert c.__comma__(2).__comma__(3).fInt == 6
 
     def test14_single_argument_call(self):
         """Non-reference, single-argument, call not mapped to getitem"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace IndexingOperators {
         struct Foo {
             float operator[] (float x) { return x; }
@@ -329,7 +329,7 @@ class TestOPERATORS:
             float operator() (float x) { return 5.f; }
         }; }""")
 
-        ns = cppyy.gbl.IndexingOperators
+        ns = cppjit.gbl.IndexingOperators
 
         f = ns.Foo()
         assert f[42] == 42
@@ -342,7 +342,7 @@ class TestOPERATORS:
         if IS_WINDOWS:
             skip("missing symbol __std_max_element_4")
 
-        from cppyy.gbl import std
+        from cppjit.gbl import std
 
         x = std.vector[int]([1,2,3])
         assert (x.end() - 1).__deref__() == 3
@@ -352,9 +352,9 @@ class TestOPERATORS:
     def test16_global_ordered_operators(self):
         """Globally defined ordered oeprators"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace FriendOperator {
 
         struct ALt { ALt(int d) : data(d) {} int data; };
@@ -371,7 +371,7 @@ class TestOPERATORS:
 
         }""")
 
-        ns = cppyy.gbl.FriendOperator
+        ns = cppjit.gbl.FriendOperator
 
         assert     ns.ALt(4) <  ns.ALt(5)
         assert not ns.ALt(5) <  ns.ALt(4)
@@ -388,9 +388,9 @@ class TestOPERATORS:
     def test17_arrow_operator_recursion(self):
         """operator->() returning same type should not recurse"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace Recursion {
         class MCPCollection {
         public:
@@ -398,7 +398,7 @@ class TestOPERATORS:
           MCPCollection* operator->() { return this; }
         }; }""")
 
-        ns = cppyy.gbl.Recursion
+        ns = cppjit.gbl.Recursion
 
         coll = ns.MCPCollection()
         with raises(AttributeError):

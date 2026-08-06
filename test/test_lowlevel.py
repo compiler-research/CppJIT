@@ -11,16 +11,16 @@ def setup_module(mod):
 
 class TestLOWLEVEL:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
         cls.test_dct = test_dct
-        cls.datatypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        cls.datatypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = cppjit.gbl.N
 
     def test00_import_all(self):
-        """Validity of `from cppyy.ll import *`"""
+        """Validity of `from cppjit.ll import *`"""
 
-        from cppyy import ll
+        from cppjit import ll
 
         for attr in ll.__all__:
             assert hasattr(ll, attr)
@@ -28,14 +28,14 @@ class TestLOWLEVEL:
     def test01_llv_type(self):
         """Existence of LowLevelView type"""
 
-        import cppyy.types
+        import cppjit.types
 
-        assert cppyy.types.LowLevelView
+        assert cppjit.types.LowLevelView
 
     def test02_builtin_cpp_casts(self):
         """C++ casting of builtin types"""
 
-        from cppyy import ll
+        from cppjit import ll
 
         for cast in (ll.cast, ll.static_cast):
             assert type(cast[float](1)) == float
@@ -50,34 +50,34 @@ class TestLOWLEVEL:
     def test03_memory(self):
         """Memory allocation and free-ing"""
 
-        import cppyy
-        from cppyy import ll
+        import cppjit
+        from cppjit import ll
 
       # regular C malloc/free
-        mem = cppyy.gbl.malloc(16)
-        cppyy.gbl.free(mem)
+        mem = cppjit.gbl.malloc(16)
+        cppjit.gbl.free(mem)
 
       # typed styles
-        mem = cppyy.ll.malloc[int](self.N)
+        mem = cppjit.ll.malloc[int](self.N)
         assert len(mem) == self.N
         assert not mem.__cpp_array__
         for i in range(self.N):
             mem[i] = i+1
             assert type(mem[i]) == int
             assert mem[i] == i+1
-        cppyy.ll.free(mem)
+        cppjit.ll.free(mem)
 
       # C++ arrays
-        mem = cppyy.ll.array_new[int](self.N)
+        mem = cppjit.ll.array_new[int](self.N)
         assert mem.__cpp_array__
         assert len(mem) == self.N
         for i in range(self.N):
             mem[i] = i+1
             assert type(mem[i]) == int
             assert mem[i] == i+1
-        cppyy.ll.array_delete(mem)
+        cppjit.ll.array_delete(mem)
 
-        mem = cppyy.ll.array_new[int](self.N, managed=True)
+        mem = cppjit.ll.array_new[int](self.N, managed=True)
         assert     mem.__python_owns__
         mem.__python_owns__ = False
         assert not mem.__python_owns__
@@ -87,32 +87,32 @@ class TestLOWLEVEL:
     def test04_python_casts(self):
         """Casts to common Python pointer encapsulations"""
 
-        import cppyy, cppyy.ll
+        import cppjit, cppjit.ll
 
-        cppyy.cppdef("""namespace pycasts {
+        cppjit.cppdef("""namespace pycasts {
         struct SomeObject{};
         uintptr_t get_address(SomeObject* ptr) { return (intptr_t)ptr; }
         uintptr_t get_deref(void* ptr) { return (uintptr_t)(*(void**)ptr); }
         }""")
 
-        from cppyy.gbl import pycasts
+        from cppjit.gbl import pycasts
 
         s = pycasts.SomeObject()
         actual = pycasts.get_address(s)
 
-        assert cppyy.ll.addressof(s) == actual
-        assert cppyy.ll.as_ctypes(s).value == actual
+        assert cppjit.ll.addressof(s) == actual
+        assert cppjit.ll.as_ctypes(s).value == actual
 
-        ptrptr = cppyy.ll.as_ctypes(s, byref=True)
+        ptrptr = cppjit.ll.as_ctypes(s, byref=True)
         assert pycasts.get_deref(ptrptr) == actual
 
     def test05_array_as_ref(self):
         """Use arrays for pass-by-ref"""
 
-        import cppyy, sys
+        import cppjit, sys
         from array import array
 
-        ctd = cppyy.gbl.CppyyTestData()
+        ctd = cppjit.gbl.CppjitTestData()
 
       # boolean type
         b = array('b', [0]); ctd.set_bool_r(b); assert b[0] == True
@@ -167,10 +167,10 @@ class TestLOWLEVEL:
         # c_double          double                                      float
         # c_longdouble      long double                                 float
 
-        import cppyy, ctypes
-        import cppyy.ll
+        import cppjit, ctypes
+        import cppjit.ll
 
-        ctd = cppyy.gbl.CppyyTestData()
+        ctd = cppjit.gbl.CppjitTestData()
 
       ### pass by reference/pointer and set value back
 
@@ -230,60 +230,60 @@ class TestLOWLEVEL:
         # types are allowed to pass; this tests allocation into the pointer)
 
         from ctypes import POINTER
-        import cppyy.ll
+        import cppjit.ll
 
       # boolean type
         b = POINTER(ctypes.c_bool)();     ctd.set_bool_ppa(b);
         assert b[0] == True; assert b[1] == False; assert b[2] == True
-        cppyy.ll.array_delete(b)
+        cppjit.ll.array_delete(b)
 
       # char types
         c = POINTER(ctypes.c_ubyte)();    ctd.set_uchar_ppa(c)
         assert c[0] == ord('k'); assert c[1] == ord('l'); assert c[2] == ord('m')
-        cppyy.ll.array_delete(c)
+        cppjit.ll.array_delete(c)
 
       # integer types
         i = POINTER(ctypes.c_int8)();         ctd.set_int8_ppa(i)
         assert i[0] == -27; assert i[1] == -28; assert i[2] == -29
-        cppyy.ll.array_delete['void'](i)    # template resolves as signed char*
+        cppjit.ll.array_delete['void'](i)    # template resolves as signed char*
         i = POINTER(ctypes.c_uint8)();       ctd.set_uint8_ppa(i)
         assert i[0] ==  28; assert i[1] ==  29; assert i[2] ==  30
-        cppyy.ll.array_delete['void'](i)    # template resolves as unsigned char*
+        cppjit.ll.array_delete['void'](i)    # template resolves as unsigned char*
         i = POINTER(ctypes.c_short)();        ctd.set_short_ppa(i)
         assert i[0] ==  -1; assert i[1] ==  -2; assert i[2] ==  -3
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_ushort)();       ctd.set_ushort_ppa(i)
         assert i[0] ==   4; assert i[1] ==   5; assert i[2] ==   6
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_int)();          ctd.set_int_ppa(i)
         assert i[0] ==  -7; assert i[1] ==  -8; assert i[2] ==  -9
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_uint)();         ctd.set_uint_ppa(i)
         assert i[0] ==  10; assert i[1] ==  11; assert i[2] ==  12
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_long)();         ctd.set_long_ppa(i)
         assert i[0] == -13; assert i[1] == -14; assert i[2] == -15
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_ulong)();        ctd.set_ulong_ppa(i)
         assert i[0] ==  16; assert i[1] ==  17; assert i[2] ==  18
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_longlong)();     ctd.set_llong_ppa(i)
         assert i[0] == -19; assert i[1] == -20; assert i[2] == -21
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
         i = POINTER(ctypes.c_ulonglong)();    ctd.set_ullong_ppa(i)
         assert i[0] ==  22; assert i[1] ==  23; assert i[2] ==  24
-        cppyy.ll.array_delete(i)
+        cppjit.ll.array_delete(i)
 
       # floating point types
         f = POINTER(ctypes.c_float)();        ctd.set_float_ppa(f)
         assert f[0] ==   5; assert f[1] ==  10; assert f[2] ==  20
-        cppyy.ll.array_delete(f)
+        cppjit.ll.array_delete(f)
         f = POINTER(ctypes.c_double)();       ctd.set_double_ppa(f)
         assert f[0] ==  -5; assert f[1] == -10; assert f[2] == -20
-        cppyy.ll.array_delete(f)
+        cppjit.ll.array_delete(f)
         f = POINTER(ctypes.c_longdouble)();   ctd.set_ldouble_ppa(f)
         assert f[0] ==   5; assert f[1] ==  10; assert f[2] ==  20
-        cppyy.ll.array_delete(f)
+        cppjit.ll.array_delete(f)
 
     def test07_ctypes_pointer_types(self):
         """Use ctypes for pass-by-ptr/ptr-ptr"""
@@ -300,9 +300,9 @@ class TestLOWLEVEL:
         # c_wchar_p         wchar_t* (NULL terminated)                  unicode or None
         # c_void_p          void*                                       int/long or None
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        ctd = cppyy.gbl.CppyyTestData()
+        ctd = cppjit.gbl.CppjitTestData()
 
         ptr = ctypes.c_char_p()
         for meth in ['char', 'cchar']:
@@ -321,9 +321,9 @@ class TestLOWLEVEL:
     def test08_ctypes_type_correctness(self):
         """If types don't match with ctypes, expect exceptions"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        ctd = cppyy.gbl.CppyyTestData()
+        ctd = cppjit.gbl.CppjitTestData()
 
         meth_types = ['bool', 'double']
         if not IS_WINDOWS:
@@ -337,22 +337,22 @@ class TestLOWLEVEL:
     def test09_numpy_bool_array(self):
         """Test passing of numpy bool array"""
 
-        import cppyy
+        import cppjit
         try:
             import numpy as np
         except ImportError:
             skip('numpy is not installed')
 
-        cppyy.cppdef('int convert_bool(bool* x) {return *x;}')
+        cppjit.cppdef('int convert_bool(bool* x) {return *x;}')
 
         x = np.array([True], dtype=bool)
-        assert cppyy.gbl.convert_bool(x)
+        assert cppjit.gbl.convert_bool(x)
 
     @mark.xfail(run=False, condition=IS_MAC, reason="Crashes on OSX")
     def test10_array_of_const_char_star(self):
         """Test passting of const char*[]"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
         def py2c(pyargs):
             cargsn = (ctypes.c_char_p * len(pyargs))(*pyargs)
@@ -361,33 +361,33 @@ class TestLOWLEVEL:
         pyargs = [b'hello', b'world']
 
         cargs = py2c(pyargs)
-        v = cppyy.gbl.ArrayOfCStrings.takes_array_of_cstrings(cargs, len(pyargs))
+        v = cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(cargs, len(pyargs))
         assert len(v) == len(pyargs)
         assert list(v) == [x.decode() for x in pyargs]
 
         for t in (tuple, list):
             for pyargs in (t(['aap', 'noot', 'mies']), t([b'zus', 'jet', 'tim'])):
-                v = cppyy.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
+                v = cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
                 assert len(v) == len(pyargs)
                 assert t(v) == t([type(x) == str and x or x.decode() for x in pyargs])
 
       # debatable, but the following works:
         pyargs = ['aap', 1, 'mies']
         with raises(TypeError):
-            cppyy.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
+            cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
 
         pyargs = ['aap', None, 'mies']
         with raises(TypeError):
-            cppyy.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
+            cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
 
     def test11_array_of_const_char_ref(self):
         """Test passting of const char**&"""
 
-        import cppyy, ctypes
-        import cppyy.ll
+        import cppjit, ctypes
+        import cppjit.ll
 
       # IN parameter case
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ConstCharStarStarRef {
         int initialize(int& argc, char**& argv) {
             argv[0][0] = 'H';
@@ -395,7 +395,7 @@ class TestLOWLEVEL:
             return argc;
         } }""")
 
-        initialize = cppyy.gbl.ConstCharStarStarRef.initialize
+        initialize = cppjit.gbl.ConstCharStarStarRef.initialize
 
         def py2c(pyargs):
             cargsn = (ctypes.c_char_p * len(pyargs))(*pyargs)
@@ -409,7 +409,7 @@ class TestLOWLEVEL:
         assert cargs[1] == b'World'
 
       # OUT parameter case
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ConstCharStarStarRef {
         void fill(int& argc, char**& argv) {
             argc = 2;
@@ -418,7 +418,7 @@ class TestLOWLEVEL:
             argv[1] = new char[6]; strcpy(argv[1], "World");
         } }""")
 
-        fill = cppyy.gbl.ConstCharStarStarRef.fill
+        fill = cppjit.gbl.ConstCharStarStarRef.fill
 
         argc = ctypes.c_int(0)
         ptr = ctypes.c_void_p()
@@ -432,20 +432,20 @@ class TestLOWLEVEL:
 
         voidpp = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_void_p))
         for i in range(argc.value):
-            cppyy.ll.array_delete(ctypes.cast(voidpp[i], ctypes.POINTER(ctypes.c_ubyte)))
-        cppyy.ll.array_delete['char*'](ctypes.cast(ptr, ctypes.POINTER(ctypes.c_char_p)))
+            cppjit.ll.array_delete(ctypes.cast(voidpp[i], ctypes.POINTER(ctypes.c_ubyte)))
+        cppjit.ll.array_delete['char*'](ctypes.cast(ptr, ctypes.POINTER(ctypes.c_char_p)))
 
     def test12_null_array(self):
         """Null low level view as empty list"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace NullArray {
            double* gime_null() { return nullptr; }
         }""")
 
-        ns = cppyy.gbl.NullArray
+        ns = cppjit.gbl.NullArray
 
         assert not ns.gime_null()
         assert list(ns.gime_null()) == []
@@ -453,19 +453,19 @@ class TestLOWLEVEL:
     def test13_array_interface(self):
         """Test usage of __array__ from numpy"""
 
-        import cppyy
+        import cppjit
 
         try:
             import numpy as np
         except ImportError:
             skip('numpy is not installed')
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ArrayConversions {
             int ivals[] = {1, 2, 3};
         }""")
 
-        ns = cppyy.gbl.ArrayConversions
+        ns = cppjit.gbl.ArrayConversions
 
         a = ns.ivals
 
@@ -488,40 +488,40 @@ class TestLOWLEVEL:
     def test14_templated_arrays(self):
         """Use of arrays in template types"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.std.vector[int].value_type == 'int'
-        assert cppyy.gbl.std.vector[cppyy.gbl.std.vector[int]].value_type == 'std::vector<int>'
-        assert cppyy.gbl.std.vector['int[1]'].value_type == 'int[1]'
+        assert cppjit.gbl.std.vector[int].value_type == 'int'
+        assert cppjit.gbl.std.vector[cppjit.gbl.std.vector[int]].value_type == 'std::vector<int>'
+        assert cppjit.gbl.std.vector['int[1]'].value_type == 'int[1]'
 
     def test15_templated_arrays_gmpxx(self):
         """Use of gmpxx array types in templates"""
 
-        import cppyy
+        import cppjit
 
         try:
-            cppyy.include("gmpxx.h")
-            cppyy.load_library('gmpxx')
+            cppjit.include("gmpxx.h")
+            cppjit.load_library('gmpxx')
         except ImportError:
             skip("gmpxx not installed")
 
-        assert cppyy.gbl.std.vector[cppyy.gbl.mpz_class].value_type
+        assert cppjit.gbl.std.vector[cppjit.gbl.mpz_class].value_type
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace test15_templated_arrays_gmpxx::vector {
            template <typename T>
            using value_type = typename T::value_type;
         }""")
 
 
-        g = cppyy.gbl
+        g = cppjit.gbl
         assert g.test15_templated_arrays_gmpxx.vector.value_type[g.std.vector[g.mpz_class]]
 
     def test16_addressof_nullptr(self):
-        import cppyy
-        from cppyy import gbl
+        import cppjit
+        from cppjit import gbl
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace LLV {
         int x = 10;
         int *ptr_x = &x;
@@ -529,19 +529,19 @@ class TestLOWLEVEL:
         }
         """)
 
-        assert type(gbl.LLV.ptr_x) == cppyy._backend.LowLevelView
-        assert type(gbl.LLV.ptr_null) == cppyy._backend.LowLevelView
-        assert cppyy.addressof(gbl.LLV.ptr_x)
-        assert cppyy.addressof(gbl.LLV.ptr_null) == 0
+        assert type(gbl.LLV.ptr_x) == cppjit._backend.LowLevelView
+        assert type(gbl.LLV.ptr_null) == cppjit._backend.LowLevelView
+        assert cppjit.addressof(gbl.LLV.ptr_x)
+        assert cppjit.addressof(gbl.LLV.ptr_null) == 0
 
     def test17_array_delete_multidim(self):
         """Free a multidimensional (jagged) heap array with ll.array_delete"""
 
-        import cppyy, ctypes
-        import cppyy.ll
+        import cppjit, ctypes
+        import cppjit.ll
 
       # C++ allocates a jagged 2D array (array of pointers to rows)
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ArrayDeleteMD {
         void make2d(int& n, int& m, double**& a) {
             n = 2; m = 3;
@@ -554,7 +554,7 @@ class TestLOWLEVEL:
 
         n = ctypes.c_int(0); m = ctypes.c_int(0)
         ptr = ctypes.c_void_p()
-        cppyy.gbl.ArrayDeleteMD.make2d(n, m, ptr)
+        cppjit.gbl.ArrayDeleteMD.make2d(n, m, ptr)
 
         assert n.value == 2
         assert m.value == 3
@@ -566,17 +566,17 @@ class TestLOWLEVEL:
 
       # delete[] each row, then the (outer) array of row pointers
         for i in range(n.value):
-            cppyy.ll.array_delete(ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double)))
-        cppyy.ll.array_delete['void'](ptr)
+            cppjit.ll.array_delete(ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double)))
+        cppjit.ll.array_delete['void'](ptr)
 
     def test18_array_delete_fixed(self):
         """Free a fixed-size contiguous multidimensional heap array"""
 
-        import cppyy, ctypes
-        import cppyy.ll
+        import cppjit, ctypes
+        import cppjit.ll
 
       # C++ allocates a contiguous 2D array (single new int[3][4])
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ArrayDeleteFixed {
         intptr_t make(int& r, int& c) {
             r = 3; c = 4;
@@ -587,21 +587,21 @@ class TestLOWLEVEL:
         } }""")
 
         r = ctypes.c_int(0); c = ctypes.c_int(0)
-        addr = cppyy.gbl.ArrayDeleteFixed.make(r, c)
+        addr = cppjit.gbl.ArrayDeleteFixed.make(r, c)
 
         blk = ctypes.cast(addr, ctypes.POINTER(ctypes.c_int))
         for k in range(r.value * c.value):
             assert blk[k] == k
 
       # a single contiguous allocation is released with a single delete[]
-        cppyy.ll.array_delete(ctypes.cast(ctypes.c_void_p(addr), ctypes.POINTER(ctypes.c_int)))
+        cppjit.ll.array_delete(ctypes.cast(ctypes.c_void_p(addr), ctypes.POINTER(ctypes.c_int)))
 
 class TestMULTIDIMARRAYS:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
         cls.test_dct = test_dct
-        cls.datatypes = cppyy.load_reflection_info(cls.test_dct)
+        cls.datatypes = cppjit.load_reflection_info(cls.test_dct)
         cls.numeric_builtin_types = [
             'short', 'unsigned short', 'int', 'unsigned int', 'long', 'unsigned long',
             'long long', 'unsigned long long', 'float', 'double'
@@ -628,9 +628,9 @@ class TestMULTIDIMARRAYS:
     def test01_2D_arrays(self):
         """Access and use of 2D data members"""
 
-        import cppyy
+        import cppjit
 
-        ns = cppyy.gbl.MultiDimArrays
+        ns = cppjit.gbl.MultiDimArrays
         h = ns.DataHolder()
 
         data2a = self._data_m('2a')
@@ -639,7 +639,7 @@ class TestMULTIDIMARRAYS:
 
             arr = getattr(h, m)
             assert arr.shape == (5, 7)
-            elem_tp = getattr(cppyy.gbl, tp)
+            elem_tp = getattr(cppjit.gbl, tp)
             for i in range(5):
                 for j in range(7):
                     val = elem_tp(5*i+j)
@@ -660,7 +660,7 @@ class TestMULTIDIMARRAYS:
         for m, tp in data2c:
             arr = getattr(h, m)
             assert arr.shape == (3, 5)
-            elem_tp = getattr(cppyy.gbl, tp)
+            elem_tp = getattr(cppjit.gbl, tp)
             for i in range(3):
                 for j in range(5):
                     val = elem_tp(3*i+j)
@@ -670,14 +670,14 @@ class TestMULTIDIMARRAYS:
     def test02_assign_2D_arrays(self):
         """Direct assignment of 2D arrays"""
 
-        import cppyy
+        import cppjit
 
         try:
             import numpy as np
         except ImportError:
             skip('numpy is not installed')
 
-        ns = cppyy.gbl.MultiDimArrays
+        ns = cppjit.gbl.MultiDimArrays
         h = ns.DataHolder()
 
       # copy assignment
@@ -687,7 +687,7 @@ class TestMULTIDIMARRAYS:
 
             arr = getattr(h, m)
             assert arr.shape == (3, 5)
-            val = getattr(cppyy.gbl, tp)(1)
+            val = getattr(cppjit.gbl, tp)(1)
             for i in range(3):
                 for j in range(5):
                     assert arr[i][j] == val
@@ -708,7 +708,7 @@ class TestMULTIDIMARRAYS:
             setattr(h, m, getattr(h, 'new_'+self.nbt_short_names[itp]+'2d')(N, M))
 
             arr = getattr(h, m)
-            elem_tp = getattr(cppyy.gbl, tp)
+            elem_tp = getattr(cppjit.gbl, tp)
             for i in range(N):
                 for j in range(M):
                     val = elem_tp(7*i+j)
@@ -722,9 +722,9 @@ class TestMULTIDIMARRAYS:
     def test03_3D_arrays(self):
         """Access and use of 3D data members"""
 
-        import cppyy
+        import cppjit
 
-        ns = cppyy.gbl.MultiDimArrays
+        ns = cppjit.gbl.MultiDimArrays
         h = ns.DataHolder()
 
         data3a = self._data_m('3a')
@@ -733,7 +733,7 @@ class TestMULTIDIMARRAYS:
 
             arr = getattr(h, m)
             assert arr.shape == (5, 7, 11)
-            elem_tp = getattr(cppyy.gbl, tp)
+            elem_tp = getattr(cppjit.gbl, tp)
             for i in range(5):
                 for j in range(7):
                     for k in range(11):
@@ -757,7 +757,7 @@ class TestMULTIDIMARRAYS:
         for m, tp in data3c:
             arr = getattr(h, m)
             assert arr.shape == (3, 5, 7)
-            elem_tp = getattr(cppyy.gbl, tp)
+            elem_tp = getattr(cppjit.gbl, tp)
             for i in range(3):
                 for j in range(5):
                     for k in range(7):
@@ -768,10 +768,10 @@ class TestMULTIDIMARRAYS:
     def test04_malloc(self):
         """Use of malloc to create multi-dim arrays"""
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace MallocChecker {
         template<typename T>
         struct Foo {
@@ -788,10 +788,10 @@ class TestMULTIDIMARRAYS:
             return Foo<T>(other);
         } }""")
 
-        ns = cppyy.gbl.MallocChecker
+        ns = cppjit.gbl.MallocChecker
 
         for dtype in ["int", "int*", "int**",]:
-            bar = cppyy.ll.malloc[dtype](4)
+            bar = cppjit.ll.malloc[dtype](4)
             assert len(bar) == 4
 
           # variable assignment
@@ -807,19 +807,19 @@ class TestMULTIDIMARRAYS:
             foo3 = ns.create[dtype](bar)
             assert foo3.eq(bar)
 
-            cppyy.ll.free(bar)
+            cppjit.ll.free(bar)
 
     def test05_char_multidim(self):
         """Multi-dimensional char arrays"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace StringArray {
            char str_array[3][8] = {"s1\0", "s23\0", "s456\0"};
         }""")
 
-        ns = cppyy.gbl.StringArray
+        ns = cppjit.gbl.StringArray
 
         for i, v in enumerate(("s1", "s23", "s456")):
             assert len(ns.str_array[i]) == 8
@@ -827,7 +827,7 @@ class TestMULTIDIMARRAYS:
     
     def test06_fixed_multidim_array_itemsize(self):
         """conversion of fixed-length array low level views into NumPy arrays"""
-        import cppyy
+        import cppjit
 
         try:
             import numpy as np
@@ -845,12 +845,12 @@ class TestMULTIDIMARRAYS:
 
         for cpp_type, np_dtype, (rows, cols) in cases:
             tag = cpp_type.replace(" ", "_")
-            cppyy.cppdef(f"""
+            cppjit.cppdef(f"""
                 struct cpp_arr_{tag} {{
                     {cpp_type} a[{rows}][{cols}];
                 }};
             """)
-            s = getattr(cppyy.gbl, f"cpp_arr_{tag}")()
+            s = getattr(cppjit.gbl, f"cpp_arr_{tag}")()
 
             itemsize = np.dtype(np_dtype).itemsize
             mv = memoryview(s.a)
@@ -864,10 +864,10 @@ class TestMULTIDIMARRAYS:
 
     
     def test07_3D_custom_struct(self):
-        import cppyy
-        from cppyy import gbl
+        import cppjit
+        from cppjit import gbl
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         constexpr int S = 4;
 
         struct Klass {
@@ -885,7 +885,7 @@ class TestMULTIDIMARRAYS:
         """)
 
         assert gbl.klasses
-        # assert type(gbl.klasses) == cppyy._backend.LowLevelView # FIXME: https://github.com/compiler-research/CPyCppyy/issues/141
+        # assert type(gbl.klasses) == cppjit._backend.LowLevelView # FIXME: https://github.com/compiler-research/cpyrt/issues/141
 
         for i in range(gbl.S):
             for j in range(gbl.S + 3):

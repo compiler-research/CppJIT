@@ -5,7 +5,7 @@ currpath = py.path.local(__file__).dirpath()
 
 
 def setup_make(targetname):
-    if os.getenv("CPPYY_TEST_SKIP_MAKE", False):
+    if os.getenv("CPPJIT_TEST_SKIP_MAKE", False):
         return
 
     if sys.platform == 'win32':
@@ -42,7 +42,7 @@ if 'darwin' in sys.platform:
     import platform
     if 'arm64' in platform.machine():
         IS_MAC_ARM = 64
-        os.environ["CPPYY_UNCAUGHT_QUIET"] = "1"
+        os.environ["CPPJIT_UNCAUGHT_QUIET"] = "1"
     else:
         IS_MAC_X86 = 1
 IS_MAC = IS_MAC_ARM or IS_MAC_X86
@@ -55,7 +55,7 @@ if 'linux' in sys.platform:
     import platform
     if 'aarch64' in platform.machine():
         IS_LINUX_ARM = 64
-        os.environ["CPPYY_UNCAUGHT_QUIET"] = "1"
+        os.environ["CPPJIT_UNCAUGHT_QUIET"] = "1"
     else:
         IS_LINUX_X86 = 1
 
@@ -65,13 +65,13 @@ try:
 except ImportError:
     ispypy = False
 
-import cppyy
-IS_CLANG_REPL = (cppyy.evaluate("""#ifndef __CLING__ 
+import cppjit
+IS_CLANG_REPL = (cppjit.evaluate("""#ifndef __CLING__ 
                                            true
                                            #else
                                            false
                                            #endif\n""") == 1)
-IS_CLANG_DEBUG = (cppyy.evaluate("""#ifdef NDEBUG
+IS_CLANG_DEBUG = (cppjit.evaluate("""#ifdef NDEBUG
                                             false
                                             #else
                                             true

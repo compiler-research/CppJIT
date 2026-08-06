@@ -13,30 +13,30 @@ def setup_module(mod):
 class TestFRAGILE:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.fragile = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.fragile = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_load_failure(self):
         """Test failure to load dictionary"""
 
-        import cppyy
-        raises(RuntimeError, cppyy.load_reflection_info, "does_not_exist")
+        import cppjit
+        raises(RuntimeError, cppjit.load_reflection_info, "does_not_exist")
 
         try:
-            cppyy.load_reflection_info("does_not_exist")
+            cppjit.load_reflection_info("does_not_exist")
         except RuntimeError as e:
             assert "does_not_exist" in str(e)
 
     def test02_missing_classes(self):
         """Test (non-)access to missing classes"""
 
-        import cppyy
+        import cppjit
 
-        raises(AttributeError, getattr, cppyy.gbl, "no_such_class")
+        raises(AttributeError, getattr, cppjit.gbl, "no_such_class")
 
-        assert cppyy.gbl.fragile is cppyy.gbl.fragile
-        assert cppyy.gbl.fragile == cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
+        assert cppjit.gbl.fragile is cppjit.gbl.fragile
+        assert cppjit.gbl.fragile == cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
 
         # FIXME: Should be fixed with root dictionary 
         #        look at https://github.com/wlav/cppyy/discussions/306
@@ -59,10 +59,10 @@ class TestFRAGILE:
     def test03_arguments(self):
         """Test reporting when providing wrong arguments"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile == cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
+        assert cppjit.gbl.fragile == cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
 
         assert fragile.D == fragile.D
         assert fragile.D().check() == ord('D')
@@ -77,10 +77,10 @@ class TestFRAGILE:
     def test04_unsupported_arguments(self):
         """Test arguments that are yet unsupported"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile == cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
+        assert cppjit.gbl.fragile == cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
 
         assert fragile.E == fragile.E
         assert fragile.E().check() == ord('E')
@@ -89,15 +89,15 @@ class TestFRAGILE:
         raises(TypeError, e.overload, None)
         # allowing access to e.m_pp_no_such is debatable, but it allows a typed address
         # to be passed back into C++, which may be useful ...
-        assert cppyy.addressof(e.m_pp_no_such[0]) == 0xdead
+        assert cppjit.addressof(e.m_pp_no_such[0]) == 0xdead
 
     def test05_wrong_arg_addressof(self):
         """Test addressof() error reporting"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile == cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
+        assert cppjit.gbl.fragile == cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
 
         assert fragile.F == fragile.F
         assert fragile.F().check() == ord('F')
@@ -105,22 +105,22 @@ class TestFRAGILE:
         f = fragile.F()
         o = object()
 
-        cppyy.addressof(f)
-        raises(TypeError, cppyy.addressof, o)
-        raises(TypeError, cppyy.addressof, 1)
+        cppjit.addressof(f)
+        raises(TypeError, cppjit.addressof, o)
+        raises(TypeError, cppjit.addressof, 1)
 
         # regression (m_int is 0 by default, but its address is not)
-        assert cppyy.addressof(f, 'm_int')
+        assert cppjit.addressof(f, 'm_int')
 
         # see also test08_void_pointer_passing in test_advancedcpp.py
 
     def test06_wrong_this(self):
         """Test that using an incorrect self argument raises"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile == cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
+        assert cppjit.gbl.fragile == cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
 
         a = fragile.A()
         assert fragile.A.check(a) == ord('A')
@@ -138,43 +138,43 @@ class TestFRAGILE:
     def test07_unnamed_enum(self):
         """Test that an unnamed enum does not cause infinite recursion"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile is cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
-        assert cppyy.gbl.fragile is fragile
+        assert cppjit.gbl.fragile is cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
+        assert cppjit.gbl.fragile is fragile
 
         g = fragile.G()
 
     def test08_unhandled_scoped_datamember(self):
         """Test that an unhandled scoped data member does not cause infinite recursion"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile is cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
-        assert cppyy.gbl.fragile is fragile
+        assert cppjit.gbl.fragile is cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
+        assert cppjit.gbl.fragile is fragile
 
         h = fragile.H()
 
     def test09_operator_bool(self):
         """Access to global vars with an operator bool() returning False"""
 
-        import cppyy
+        import cppjit
 
-        i = cppyy.gbl.fragile.I()
+        i = cppjit.gbl.fragile.I()
         assert not i
 
-        g = cppyy.gbl.fragile.gI
+        g = cppjit.gbl.fragile.gI
         assert not g
 
     def test10_documentation(self):
         """Check contents of documentation"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile == cppyy.gbl.fragile
-        fragile = cppyy.gbl.fragile
+        assert cppjit.gbl.fragile == cppjit.gbl.fragile
+        fragile = cppjit.gbl.fragile
 
         d = fragile.D()
         try:
@@ -218,9 +218,9 @@ class TestFRAGILE:
     def test11_dir(self):
         """Test __dir__ method"""
 
-        import cppyy
+        import cppjit
 
-        members = dir(cppyy.gbl.fragile)
+        members = dir(cppjit.gbl.fragile)
         assert 'A' in members
         assert 'B' in members
         assert 'C' in members
@@ -235,26 +235,26 @@ class TestFRAGILE:
 
       # GetAllCppNames() behaves differently from python dir() but providing the full
       # set, which is then filtered in dir(); check both
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         #ifdef _MSC_VER
-        #define CPPYY_IMPORT extern __declspec(dllimport)
+        #define CPPJIT_IMPORT extern __declspec(dllimport)
         #else
-        #define CPPYY_IMPORT extern
+        #define CPPJIT_IMPORT extern
         #endif
         
         namespace Cpp {
         struct DeclRef;
         }  // namespace Cpp
 
-        namespace Cppyy {
+        namespace cppjit::interop {
         typedef Cpp::DeclRef TCppScope_t;
 
-        CPPYY_IMPORT TCppScope_t GetScope(const std::string& scope_name, TCppScope_t parent_scope = TCppScope_t());
-        CPPYY_IMPORT void GetAllCppNames(TCppScope_t scope, std::set<std::string>& cppnames);
+        CPPJIT_IMPORT TCppScope_t GetScope(const std::string& scope_name, TCppScope_t parent_scope = TCppScope_t());
+        CPPJIT_IMPORT void GetAllCppNames(TCppScope_t scope, std::set<std::string>& cppnames);
 
         }""")
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace GG {
         struct S {
           int _a;
@@ -265,13 +265,13 @@ class TestFRAGILE:
         }; }""");
 
 
-        assert 'S' in dir(cppyy.gbl.GG)
+        assert 'S' in dir(cppjit.gbl.GG)
 
-        handle = cppyy.gbl.Cppyy.GetScope("GG::S")
+        handle = cppjit.gbl.cppjit.interop.GetScope("GG::S")
         assert handle
 
-        cppnames = cppyy.gbl.std.set[str]()
-        cppyy.gbl.Cppyy.GetAllCppNames(handle, cppnames)
+        cppnames = cppjit.gbl.std.set[str]()
+        cppjit.gbl.cppjit.interop.GetAllCppNames(handle, cppnames)
 
         assert 'S' in cppnames
         assert '_a' in cppnames
@@ -279,7 +279,7 @@ class TestFRAGILE:
 
         assert 'operator<' in cppnames
 
-        dirS = dir(cppyy.gbl.GG.S)
+        dirS = dir(cppjit.gbl.GG.S)
 
         assert 'S' not in dirS # is __init__
         assert '_a' in dirS
@@ -290,54 +290,54 @@ class TestFRAGILE:
     def test12_imports(self):
         """Test ability to import from namespace (or fail with ImportError)"""
 
-        import cppyy
+        import cppjit
 
         # TODO: namespaces aren't loaded (and thus not added to sys.modules)
         # with just the from ... import statement; actual use is needed
-        from cppyy.gbl import fragile
+        from cppjit.gbl import fragile
 
         def fail_import():
-            from cppyy.gbl import does_not_exist
+            from cppjit.gbl import does_not_exist
         raises(ImportError, fail_import)
 
-        from cppyy.gbl.fragile import A, B, C, D
-        assert cppyy.gbl.fragile.A is A
-        assert cppyy.gbl.fragile.B is B
-        assert cppyy.gbl.fragile.C is C
-        assert cppyy.gbl.fragile.D is D
+        from cppjit.gbl.fragile import A, B, C, D
+        assert cppjit.gbl.fragile.A is A
+        assert cppjit.gbl.fragile.B is B
+        assert cppjit.gbl.fragile.C is C
+        assert cppjit.gbl.fragile.D is D
 
         # according to warnings, can't test "import *" ...
 
-        from cppyy.gbl.fragile import nested1
-        assert cppyy.gbl.fragile.nested1 is nested1
+        from cppjit.gbl.fragile import nested1
+        assert cppjit.gbl.fragile.nested1 is nested1
         assert nested1.__name__ == 'nested1'
-        assert nested1.__module__ == 'cppyy.gbl.fragile'
+        assert nested1.__module__ == 'cppjit.gbl.fragile'
         assert nested1.__cpp_name__ == 'fragile::nested1'
 
-        from cppyy.gbl.fragile.nested1 import A, nested2
-        assert cppyy.gbl.fragile.nested1.A is A
+        from cppjit.gbl.fragile.nested1 import A, nested2
+        assert cppjit.gbl.fragile.nested1.A is A
         assert A.__name__ == 'A'
-        assert A.__module__ == 'cppyy.gbl.fragile.nested1'
+        assert A.__module__ == 'cppjit.gbl.fragile.nested1'
         assert A.__cpp_name__ == 'fragile::nested1::A'
-        assert cppyy.gbl.fragile.nested1.nested2 is nested2
+        assert cppjit.gbl.fragile.nested1.nested2 is nested2
         assert nested2.__name__ == 'nested2'
-        assert nested2.__module__ == 'cppyy.gbl.fragile.nested1'
+        assert nested2.__module__ == 'cppjit.gbl.fragile.nested1'
         assert nested2.__cpp_name__ == 'fragile::nested1::nested2'
 
-        from cppyy.gbl.fragile.nested1.nested2 import A, nested3
-        assert cppyy.gbl.fragile.nested1.nested2.A is A
+        from cppjit.gbl.fragile.nested1.nested2 import A, nested3
+        assert cppjit.gbl.fragile.nested1.nested2.A is A
         assert A.__name__ == 'A'
-        assert A.__module__ == 'cppyy.gbl.fragile.nested1.nested2'
+        assert A.__module__ == 'cppjit.gbl.fragile.nested1.nested2'
         assert A.__cpp_name__ == 'fragile::nested1::nested2::A'
-        assert cppyy.gbl.fragile.nested1.nested2.nested3 is nested3
+        assert cppjit.gbl.fragile.nested1.nested2.nested3 is nested3
         assert nested3.__name__ == 'nested3'
-        assert nested3.__module__ == 'cppyy.gbl.fragile.nested1.nested2'
+        assert nested3.__module__ == 'cppjit.gbl.fragile.nested1.nested2'
         assert nested3.__cpp_name__ == 'fragile::nested1::nested2::nested3'
 
-        from cppyy.gbl.fragile.nested1.nested2.nested3 import A
-        assert cppyy.gbl.fragile.nested1.nested2.nested3.A is nested3.A
+        from cppjit.gbl.fragile.nested1.nested2.nested3 import A
+        assert cppjit.gbl.fragile.nested1.nested2.nested3.A is nested3.A
         assert A.__name__ == 'A'
-        assert A.__module__ == 'cppyy.gbl.fragile.nested1.nested2.nested3'
+        assert A.__module__ == 'cppjit.gbl.fragile.nested1.nested2.nested3'
         assert A.__cpp_name__ == 'fragile::nested1::nested2::nested3::A'
 
         # test writability of __module__
@@ -359,9 +359,9 @@ class TestFRAGILE:
     def test13_missing_casts(self):
         """Test proper handling when a hierarchy is not fully available"""
 
-        import cppyy
+        import cppjit
 
-        k = cppyy.gbl.fragile.K()
+        k = cppjit.gbl.fragile.K()
 
         assert k is k.GimeK(False)
         assert k is not k.GimeK(True)
@@ -376,10 +376,10 @@ class TestFRAGILE:
     def test14_double_enum_trouble(self):
         """Test a redefinition of enum in a derived class"""
 
-        import cppyy
+        import cppjit
 
-        M = cppyy.gbl.fragile.M
-        N = cppyy.gbl.fragile.N
+        M = cppjit.gbl.fragile.M
+        N = cppjit.gbl.fragile.N
 
         assert M.kOnce == N.kOnce
         assert M.kTwice == N.kTwice
@@ -387,9 +387,9 @@ class TestFRAGILE:
     def test15_const_in_name(self):
         """Make sure 'const' is not erased when part of a name"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             struct Some0Class {}        myvar0;
             struct constSome1Class {}   myvar1;
             struct Some2Classconst {}   myvar2;
@@ -397,52 +397,52 @@ class TestFRAGILE:
             struct SomeconstClass4 {}   myvar4;
         """)
 
-        assert cppyy.gbl.myvar0
-        assert cppyy.gbl.myvar1
-        assert cppyy.gbl.myvar2
-        assert cppyy.gbl.myvar3
-        assert cppyy.gbl.myvar4
+        assert cppjit.gbl.myvar0
+        assert cppjit.gbl.myvar1
+        assert cppjit.gbl.myvar2
+        assert cppjit.gbl.myvar3
+        assert cppjit.gbl.myvar4
 
     def test16_opaque_handle(self):
         """Support use of opaque handles"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.fragile.OpaqueType
-        assert cppyy.gbl.fragile.OpaqueHandle_t
+        assert cppjit.gbl.fragile.OpaqueType
+        assert cppjit.gbl.fragile.OpaqueHandle_t
 
-        handle = cppyy.gbl.fragile.OpaqueHandle_t(0x42)
+        handle = cppjit.gbl.fragile.OpaqueHandle_t(0x42)
         assert handle
-        assert cppyy.addressof(handle) == 0x42
+        assert cppjit.addressof(handle) == 0x42
 
-        raises(TypeError, cppyy.gbl.fragile.OpaqueType)
-        assert not 'OpaqueType' in cppyy.gbl.fragile.__dict__
+        raises(TypeError, cppjit.gbl.fragile.OpaqueType)
+        assert not 'OpaqueType' in cppjit.gbl.fragile.__dict__
 
-        handle = cppyy.gbl.fragile.OpaqueHandle_t()
+        handle = cppjit.gbl.fragile.OpaqueHandle_t()
         assert not handle
 
-        addr = cppyy.gbl.fragile.create_handle(handle);
+        addr = cppjit.gbl.fragile.create_handle(handle);
         assert addr
         assert not not handle
 
-        assert cppyy.gbl.fragile.destroy_handle(handle, addr);
+        assert cppjit.gbl.fragile.destroy_handle(handle, addr);
 
         # now define OpaqueType
-        cppyy.cppdef("namespace fragile { class OpaqueType { public: int m_int; }; }")
+        cppjit.cppdef("namespace fragile { class OpaqueType { public: int m_int; }; }")
 
         # get fresh (should not have been cached while incomplete)
-        o = cppyy.gbl.fragile.OpaqueType()
+        o = cppjit.gbl.fragile.OpaqueType()
         assert hasattr(o, 'm_int')
 
-        assert 'OpaqueType' in cppyy.gbl.fragile.__dict__
+        assert 'OpaqueType' in cppjit.gbl.fragile.__dict__
 
     def test17_interactive(self):
-        """Test the usage of 'from cppyy.interactive import *'"""
+        """Test the usage of 'from cppjit.interactive import *'"""
 
         import sys
 
         if 0x030b0000 <= sys.hexversion:
-            skip('"from cppyy.interactive import *" is no longer supported')
+            skip('"from cppjit.interactive import *" is no longer supported')
 
         oldsp = sys.path[:]
         sys.path.append('.')
@@ -454,9 +454,9 @@ class TestFRAGILE:
     def test18_overload(self):
         """Test usage of __overload__"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""struct Variable {
+        cppjit.cppdef("""struct Variable {
             Variable(double lb, double ub, double value, bool binary, bool integer, const std::string& name) {}
             Variable(int) {}
         };""")
@@ -464,14 +464,14 @@ class TestFRAGILE:
         for sig in ['double, double, double, bool, bool, const std::string&',
                     'double,double,double,bool,bool,const std::string&',
                     'double lb, double ub, double value, bool binary, bool integer, const std::string& name']:
-            assert cppyy.gbl.Variable.__init__.__overload__(sig)
+            assert cppjit.gbl.Variable.__init__.__overload__(sig)
 
     def test19_gbl_contents(self):
-        """Assure cppyy.gbl is mostly devoid of ROOT thingies"""
+        """Assure cppjit.gbl is mostly devoid of ROOT thingies"""
 
-        import cppyy
+        import cppjit
 
-        dd = dir(cppyy.gbl)
+        dd = dir(cppjit.gbl)
 
         assert not 'TCanvasImp' in dd
         assert not 'ESysConstants' in dd
@@ -481,9 +481,9 @@ class TestFRAGILE:
     def test20_capture_output(self):
         """Capture cerr into a string"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace capture {
         void say_hello() {
            std::cerr << "Hello, World\n";
@@ -493,14 +493,14 @@ class TestFRAGILE:
            o.rdbuf(b);
         } }""")
 
-        capture = cppyy.gbl.std.ostringstream()
-        oldbuf = cppyy.gbl.std.cerr.rdbuf()
+        capture = cppjit.gbl.std.ostringstream()
+        oldbuf = cppjit.gbl.std.cerr.rdbuf()
 
         try:
-            cppyy.gbl.capture.rdbuf_wa(cppyy.gbl.std.cerr, capture.rdbuf())
-            cppyy.gbl.capture.say_hello()
+            cppjit.gbl.capture.rdbuf_wa(cppjit.gbl.std.cerr, capture.rdbuf())
+            cppjit.gbl.capture.say_hello()
         finally:
-            cppyy.gbl.std.cerr.rdbuf(oldbuf)
+            cppjit.gbl.std.cerr.rdbuf(oldbuf)
 
         assert capture.str() == "Hello, World\n"
 
@@ -508,7 +508,7 @@ class TestFRAGILE:
     def test21_failing_cppcode(self):
         """Check error behavior of failing C++ code"""
 
-        import cppyy, string, re
+        import cppjit, string, re
 
         allspace = re.compile(r'\s+')
         def get_errmsg(exc, allspace=allspace):
@@ -516,21 +516,21 @@ class TestFRAGILE:
             return re.sub(allspace, '', err)
 
         with raises(ImportError) as include_exc:
-            cppyy.include("doesnotexist.h")
+            cppjit.include("doesnotexist.h")
         err = get_errmsg(include_exc)
         assert "Failedtoloadheaderfile\"doesnotexist.h\"" in err
         assert "fatalerror:" in err
         assert "\'doesnotexist.h\'filenotfound" in err
 
         with raises(ImportError) as c_include_exc:
-            cppyy.c_include("doesnotexist.h")
+            cppjit.c_include("doesnotexist.h")
         err = get_errmsg(c_include_exc)
         assert "Failedtoloadheaderfile\"doesnotexist.h\"" in err
         assert "fatalerror:" in err
         assert "\'doesnotexist.h\'filenotfound" in err
 
         with raises(SyntaxError) as cppdef_exc:
-            cppyy.cppdef("1aap = 42;")
+            cppjit.cppdef("1aap = 42;")
         err = get_errmsg(cppdef_exc)
         assert "FailedtoparsethegivenC++code" in err
         assert "error:" in err
@@ -544,51 +544,51 @@ class TestFRAGILE:
     def test22_cppexec(self):
         """Interactive access to the Cling global scope"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppexec("int interactive_b = 4")
-        assert cppyy.gbl.interactive_b == 4
+        cppjit.cppexec("int interactive_b = 4")
+        assert cppjit.gbl.interactive_b == 4
 
         with raises(SyntaxError):
-            cppyy.cppexec("doesnotexist");
+            cppjit.cppexec("doesnotexist");
 
     def test23_set_debug(self):
         """Setting of debugging facilities"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.set_debug()
-        assert cppyy.gbl.Cpp.IsDebugOutputEnabled() == True
-        cppyy.set_debug(False)
-        assert cppyy.gbl.Cpp.IsDebugOutputEnabled() == False
-        cppyy.set_debug(True)
-        assert cppyy.gbl.Cpp.IsDebugOutputEnabled() == True
-        cppyy.set_debug(False)
-        assert cppyy.gbl.Cpp.IsDebugOutputEnabled() == False
+        cppjit.set_debug()
+        assert cppjit.gbl.Cpp.IsDebugOutputEnabled() == True
+        cppjit.set_debug(False)
+        assert cppjit.gbl.Cpp.IsDebugOutputEnabled() == False
+        cppjit.set_debug(True)
+        assert cppjit.gbl.Cpp.IsDebugOutputEnabled() == True
+        cppjit.set_debug(False)
+        assert cppjit.gbl.Cpp.IsDebugOutputEnabled() == False
 
     @mark.xfail(condition = IS_LINUX, reason="Fails on Ubuntu")
     def test24_asan(self):
         """Check availability of ASAN with gcc"""
 
-        import cppyy
+        import cppjit
         import sys
 
         if not 'linux' in sys.platform:
             return
 
-        cppyy.include('sanitizer/asan_interface.h')
+        cppjit.include('sanitizer/asan_interface.h')
 
     @mark.xfail
     def test25_cppdef_error_reporting(self):
-        """Check error reporting of cppyy.cppdef"""
+        """Check error reporting of cppjit.cppdef"""
 
-        import cppyy, warnings
+        import cppjit, warnings
 
-        assert cppyy.gbl.fragile.add42(1) == 43     # brings in symbol from library
+        assert cppjit.gbl.fragile.add42(1) == 43     # brings in symbol from library
 
         with raises(SyntaxError):
           # redefine symbol, leading to duplicate
-            cppyy.cppdef("""\
+            cppjit.cppdef("""\
             namespace fragile {
                 int add42(int i) { return i + 42; }
             }""")
@@ -599,7 +599,7 @@ class TestFRAGILE:
 
           # missing return statement
             with raises(SyntaxWarning) as exc:
-                cppyy.cppdef("""\
+                cppjit.cppdef("""\
                 namespace fragile {
                     void add42d(double d) {
                     #warning return plastic for recycling!
@@ -611,7 +611,7 @@ class TestFRAGILE:
       # mix of error and warning
         with raises(SyntaxError):
           # redefine symbol, leading to duplicate
-            cppyy.cppdef("""\
+            cppjit.cppdef("""\
             namespace fragile {
                 float add42f(float d) { d + 42.f; }
                 int add42(int i) { return i + 42; }
@@ -621,62 +621,62 @@ class TestFRAGILE:
     def test26_macro(self):
         """Test access to C++ pre-processor macro's"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef('#define HELLO "Hello, World!"')
-        assert cppyy.macro("HELLO") == "Hello, World!"
+        cppjit.cppdef('#define HELLO "Hello, World!"')
+        assert cppjit.macro("HELLO") == "Hello, World!"
 
         with raises(ValueError):
-            cppyy.macro("SOME_INT")
+            cppjit.macro("SOME_INT")
 
-        cppyy.cppdef('#define SOME_INT 42')
-        assert cppyy.macro("SOME_INT") == 42
+        cppjit.cppdef('#define SOME_INT 42')
+        assert cppjit.macro("SOME_INT") == 42
 
     def test27_pickle_enums(self):
         """Pickling of enum types"""
 
-        import cppyy
+        import cppjit
         import pickle
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         enum MyPickleEnum { PickleFoo, PickleBar };
         namespace MyPickleNamespace {
           enum MyPickleEnum { PickleFoo, PickleBar };
         }""")
 
-        e1 = cppyy.gbl.MyPickleEnum
-        assert e1.__module__ == 'cppyy.gbl'
+        e1 = cppjit.gbl.MyPickleEnum
+        assert e1.__module__ == 'cppjit.gbl'
         assert pickle.dumps(e1.PickleFoo)
 
-        e2 = cppyy.gbl.MyPickleNamespace.MyPickleEnum
-        assert e2.__module__ == 'cppyy.gbl.MyPickleNamespace'
+        e2 = cppjit.gbl.MyPickleNamespace.MyPickleEnum
+        assert e2.__module__ == 'cppjit.gbl.MyPickleNamespace'
         assert pickle.dumps(e2.PickleBar)
 
     def test28_memoryview_of_empty(self):
         """memoryview of an empty array"""
 
-        import cppyy, array
+        import cppjit, array
 
-        cppyy.cppdef("void f(unsigned char const *buf) {}")
+        cppjit.cppdef("void f(unsigned char const *buf) {}")
         try:
-            cppyy.gbl.f(memoryview(array.array('B', [])))
+            cppjit.gbl.f(memoryview(array.array('B', [])))
         except TypeError:
             pass        # used to crash in PyObject_CheckBuffer on Linux
 
     def test29_vector_datamember(self):
         """Offset calculation of vector datamember"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("struct VectorDatamember { std::vector<unsigned> v; };")
-        cppyy.gbl.VectorDatamember     # used to crash on Mac arm64
+        cppjit.cppdef("struct VectorDatamember { std::vector<unsigned> v; };")
+        cppjit.gbl.VectorDatamember     # used to crash on Mac arm64
 
     def test30_two_nested_ambiguity(self):
         """Nested class ambiguity in older Clangs"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         #include <vector>
 
         namespace Test {
@@ -695,7 +695,7 @@ class TestFRAGILE:
             };
         }; }""")
 
-        from cppyy.gbl import Test
+        from cppjit.gbl import Test
 
         p = Test.Family1.Parent()
         p.children                          # used to crash
@@ -703,9 +703,9 @@ class TestFRAGILE:
     def test31_template_with_class_enum(self):
         """Template instantiated with class enum"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         enum class ClassEnumA { A, };
 
         template<ClassEnumA T>
@@ -728,16 +728,16 @@ class TestFRAGILE:
           template class EnumTemplate<ClassEnumA::A>;
         }""")
 
-        for ns, val in [(cppyy.gbl, 42),
-                        (cppyy.gbl.ClassEnumNS, 37)]:
+        for ns, val in [(cppjit.gbl, 42),
+                        (cppjit.gbl.ClassEnumNS, 37)]:
             assert ns.EnumTemplate[ns.ClassEnumA.A]().foo() == val
 
 
 class TestSIGNALS:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.fragile = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.fragile = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(run=False, reason="Crashes")
     def test01_abortive_signals(self):
@@ -749,86 +749,86 @@ class TestSIGNALS:
         if IS_MAC_ARM:
             skip("JIT exceptions from signals not supported on Mac ARM")
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
 
-        f = cppyy.gbl.fragile
+        f = cppjit.gbl.fragile
 
-        assert issubclass(cppyy.ll.BusError,               cppyy.ll.FatalError)
-        assert issubclass(cppyy.ll.SegmentationViolation,  cppyy.ll.FatalError)
-        assert issubclass(cppyy.ll.IllegalInstruction,     cppyy.ll.FatalError)
-        assert issubclass(cppyy.ll.AbortSignal,            cppyy.ll.FatalError)
+        assert issubclass(cppjit.ll.BusError,               cppjit.ll.FatalError)
+        assert issubclass(cppjit.ll.SegmentationViolation,  cppjit.ll.FatalError)
+        assert issubclass(cppjit.ll.IllegalInstruction,     cppjit.ll.FatalError)
+        assert issubclass(cppjit.ll.AbortSignal,            cppjit.ll.FatalError)
 
         import os
-        os.putenv('CPPYY_CRASH_QUIET', '1')
+        os.putenv('CPPJIT_CRASH_QUIET', '1')
 
-        with raises((cppyy.ll.SegmentationViolation, cppyy.ll.IllegalInstruction)):
-            with cppyy.ll.signals_as_exception():
+        with raises((cppjit.ll.SegmentationViolation, cppjit.ll.IllegalInstruction)):
+            with cppjit.ll.signals_as_exception():
                 f.segfault()
 
-        with raises(cppyy.ll.AbortSignal):
-            with cppyy.ll.signals_as_exception():
+        with raises(cppjit.ll.AbortSignal):
+            with cppjit.ll.signals_as_exception():
                 f.sigabort()
 
       # can only recover once from each error on Windows, which is functionally
       # enough, but precludes further testing here
         if not IS_WINDOWS:
-            cppyy.ll.set_signals_as_exception(True)
-            with raises((cppyy.ll.SegmentationViolation, cppyy.ll.IllegalInstruction)):
+            cppjit.ll.set_signals_as_exception(True)
+            with raises((cppjit.ll.SegmentationViolation, cppjit.ll.IllegalInstruction)):
                 f.segfault()
-            with raises(cppyy.ll.AbortSignal):
+            with raises(cppjit.ll.AbortSignal):
                 f.sigabort()
-            cppyy.ll.set_signals_as_exception(False)
+            cppjit.ll.set_signals_as_exception(False)
 
             f.segfault.__sig2exc__ = True
-            with raises((cppyy.ll.SegmentationViolation, cppyy.ll.IllegalInstruction)):
+            with raises((cppjit.ll.SegmentationViolation, cppjit.ll.IllegalInstruction)):
                 f.segfault()
 
             f.sigabort.__sig2exc__ = True
-            with raises(cppyy.ll.AbortSignal):
+            with raises(cppjit.ll.AbortSignal):
                 f.sigabort()
 
 
 class TestSTDNOTINGLOBAL:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
     def test01_stl_in_std(self):
         """STL classes should live in std:: only"""
 
-        import cppyy
+        import cppjit
 
         names = ['array', 'function', 'list', 'set', 'vector', 'byte']
 
         for name in names:
-            getattr(cppyy.gbl.std, name)
+            getattr(cppjit.gbl.std, name)
             with raises(AttributeError):
-                getattr(cppyy.gbl, name)
+                getattr(cppjit.gbl, name)
 
       # inject a vector in the global namespace
-        cppyy.cppdef("class vector{};")
-        v = cppyy.gbl.vector()
-        assert cppyy.gbl.vector is not cppyy.gbl.std.vector
+        cppjit.cppdef("class vector{};")
+        v = cppjit.gbl.vector()
+        assert cppjit.gbl.vector is not cppjit.gbl.std.vector
 
     def test02_ctypes_in_both(self):
         """Standard int types live in both global and std::"""
 
-        import cppyy
+        import cppjit
 
         for name in ['int8_t', 'uint8_t']:
-            getattr(cppyy.gbl.std, name)
-            getattr(cppyy.gbl, name)
+            getattr(cppjit.gbl.std, name)
+            getattr(cppjit.gbl, name)
 
         # TODO: get the types to match exactly as well
-        assert cppyy.gbl.std.int8_t(-42) == cppyy.gbl.int8_t(-42)
-        assert cppyy.gbl.std.uint8_t(42) == cppyy.gbl.uint8_t(42)
+        assert cppjit.gbl.std.int8_t(-42) == cppjit.gbl.int8_t(-42)
+        assert cppjit.gbl.std.uint8_t(42) == cppjit.gbl.uint8_t(42)
 
     def test03_clashing_using_in_global(self):
         """Redefines of std:: typedefs should be possible in global"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             using uint   = unsigned int;
             using ushort = unsigned short;
             using uchar  = unsigned char;
@@ -836,14 +836,14 @@ class TestSTDNOTINGLOBAL:
         """ )
 
         for name in ['int', 'uint', 'ushort', 'uchar', 'byte']:
-            getattr(cppyy.gbl, name)
+            getattr(cppjit.gbl, name)
 
     def test04_no_legacy(self):
         """Test some functions that previously crashed"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace CppyyLegacy {
           enum ELogLevel {
             kLogEmerg          = 0,
@@ -857,7 +857,7 @@ class TestSTDNOTINGLOBAL:
           };
         }""")
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         enum ELogLevel {
           kLogEmerg          = 0,
           kLogAlert          = 1,
@@ -869,14 +869,14 @@ class TestSTDNOTINGLOBAL:
           kLogDebug          = 7
         };""")
 
-        assert cppyy.gbl.ELogLevel != cppyy.gbl.CppyyLegacy.ELogLevel
+        assert cppjit.gbl.ELogLevel != cppjit.gbl.CppyyLegacy.ELogLevel
 
     def test05_span_compatibility(self):
         """Test compatibility of span under C++2a compilers that support it"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         #if __cplusplus >= 202002
         #include <span>
         std::span<int> my_test_span1;

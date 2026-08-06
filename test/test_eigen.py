@@ -15,23 +15,23 @@ for p in inc_paths:
 @mark.skipif(eigen_path is None, reason="Eigen not found")
 class TestEIGEN:
     def setup_class(cls):
-        import cppyy, warnings
+        import cppjit, warnings
 
-        cppyy.add_include_path(eigen_path)
+        cppjit.add_include_path(eigen_path)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            cppyy.include('Eigen/Dense')
+            cppjit.include('Eigen/Dense')
 
     def test01_simple_matrix_and_vector(self):
         """Basic creation of an Eigen::Matrix and Eigen::Vector"""
 
-        import cppyy
+        import cppjit
 
-        a = cppyy.gbl.Eigen.Matrix['double', 2, 2]()
+        a = cppjit.gbl.Eigen.Matrix['double', 2, 2]()
         assert a.rows() == 2
         assert a.cols() == 2
 
-        b = cppyy.gbl.Eigen.MatrixXd(2, 2)
+        b = cppjit.gbl.Eigen.MatrixXd(2, 2)
         b[0,0] = 3
         assert b(0,0) == 3.
         b[1,0] = 2.5
@@ -41,7 +41,7 @@ class TestEIGEN:
         b[1,1] = b(1,0) + b(0,1)
         assert b(1,1) == b[1,0] + b[0,1]
 
-        v = cppyy.gbl.Eigen.VectorXd(2)
+        v = cppjit.gbl.Eigen.VectorXd(2)
         v[0] = 4
         assert v[0] == 4 and v(0) == 4
         v[1] = v(0) - 1
@@ -50,14 +50,14 @@ class TestEIGEN:
     def test02_comma_insertion(self):
         """Comma insertion overload"""
 
-        import cppyy
+        import cppjit
 
-        m = cppyy.gbl.Eigen.MatrixXd(2, 5)
+        m = cppjit.gbl.Eigen.MatrixXd(2, 5)
         assert m.rows() == 2
         assert m.cols() == 5
 
         # TODO: this calls a conversion to int ...
-        #m.resize(cppyy.gbl.Eigen.NoChange_t(), 3)
+        #m.resize(cppjit.gbl.Eigen.NoChange_t(), 3)
         #assert m.rows() == 2
         #assert m.cols() == 3
 
@@ -82,13 +82,13 @@ class TestEIGEN:
         assert m[3, 1] ==  2.
         assert m[3, 2] ==  1.
 
-        matA = cppyy.gbl.Eigen.MatrixXf(2, 2)
+        matA = cppjit.gbl.Eigen.MatrixXf(2, 2)
         (matA << 1).__comma__(2).__comma__(3).__comma__(4)
-        matB = cppyy.gbl.Eigen.MatrixXf(4, 4)
+        matB = cppjit.gbl.Eigen.MatrixXf(4, 4)
         # TODO: the insertion operator is a template that expect only the base class
         #(matB << matA).__comma__(matA/10).__comma__(matA/10).__comma__(matA)
 
-        v = cppyy.gbl.Eigen.VectorXd(2)
+        v = cppjit.gbl.Eigen.VectorXd(2)
         v.resize(5)
         assert v.size() == 5
         assert v.rows() == 5
@@ -103,11 +103,11 @@ class TestEIGEN:
     def test03_matrices_and_vectors(self):
         """Matrices and vectors"""
 
-        import cppyy
+        import cppjit
 
      # 'dynamic' matrices/vectors
-        MatrixXd = cppyy.gbl.Eigen.MatrixXd
-        VectorXd = cppyy.gbl.Eigen.VectorXd
+        MatrixXd = cppjit.gbl.Eigen.MatrixXd
+        VectorXd = cppjit.gbl.Eigen.VectorXd
 
         m = MatrixXd.Random(3, 3)
         assert m.rows() == 3
@@ -120,8 +120,8 @@ class TestEIGEN:
         assert (m*v).size() == v.size()
 
      # 'static' matrices/vectors
-        Matrix3d = cppyy.gbl.Eigen.Matrix3d
-        Vector3d = cppyy.gbl.Eigen.Vector3d
+        Matrix3d = cppjit.gbl.Eigen.Matrix3d
+        Vector3d = cppjit.gbl.Eigen.Vector3d
 
         m = Matrix3d.Random()
         m = (m + Matrix3d.Constant(1.2)) * 50
@@ -133,11 +133,11 @@ class TestEIGEN:
     def test04_resizing_through_assignment(self):
         """Resize on assignment"""
 
-        import cppyy
+        import cppjit
 
-        a = cppyy.gbl.Eigen.MatrixXf(2, 2)
+        a = cppjit.gbl.Eigen.MatrixXf(2, 2)
         assert a.size() == 4
-        b = cppyy.gbl.Eigen.MatrixXf(3, 3)
+        b = cppjit.gbl.Eigen.MatrixXf(3, 3)
         assert b.size() == 9
 
         a.__assign__(b)
@@ -147,18 +147,18 @@ class TestEIGEN:
 @mark.skipif(eigen_path is None, reason="Eigen not found")
 class TestEIGEN_REGRESSIOn:
     def setup_class(cls):
-        import cppyy, warnings
+        import cppjit, warnings
 
-        cppyy.add_include_path(eigen_path)
+        cppjit.add_include_path(eigen_path)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            cppyy.include('Eigen/Dense')
+            cppjit.include('Eigen/Dense')
 
     def test01_use_of_Map(self):
         """Use of Map (used to crash)"""
 
-        import cppyy
-        from cppyy.gbl import Eigen
+        import cppjit
+        from cppjit.gbl import Eigen
 
         assert Eigen.VectorXd
         assert Eigen.Map

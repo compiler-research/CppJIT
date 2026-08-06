@@ -1,15 +1,15 @@
-from cppyy.interactive import *
+from cppjit.interactive import *
 
 # namespace at the global level
 assert std
 
-# cppyy functions
+# cppjit functions
 assert cppdef
 assert include
 
 try:
     import __pypy__
-  # 'cppyy.gbl' bound to 'g'
+  # 'cppjit.gbl' bound to 'g'
     assert g
     assert g.std
 except ImportError:

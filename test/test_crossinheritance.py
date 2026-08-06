@@ -12,15 +12,15 @@ def setup_module(mod):
 class TestCROSSINHERITANCE:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.example01 = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.example01 = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(run=not (IS_CLANG_DEBUG or IS_CLING), reason="Crashes with ClangRepl with 'toString not implemented' and on Cling")
     def test01_override_function(self):
         """Test ability to override a simple function"""
 
-        import cppyy
-        Base1 = cppyy.gbl.CrossInheritance.Base1
+        import cppjit
+        Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1().get_value() == 42
 
@@ -40,8 +40,8 @@ class TestCROSSINHERITANCE:
     def test02_constructor(self):
         """Test constructor usage for derived classes"""
 
-        import cppyy
-        Base1 = cppyy.gbl.CrossInheritance.Base1
+        import cppjit
+        Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).get_value() == 27
 
@@ -77,8 +77,8 @@ class TestCROSSINHERITANCE:
     def test03_override_function_abstract_base(self):
         """Test ability to override a simple function with an abstract base"""
 
-        import cppyy
-        CX = cppyy.gbl.CrossInheritance
+        import cppjit
+        CX = cppjit.gbl.CrossInheritance
 
         class C1PyBase2(CX.IBase2):
             def __init__(self):
@@ -134,8 +134,8 @@ class TestCROSSINHERITANCE:
     def test04_arguments(self):
         """Test ability to override functions that take arguments"""
 
-        import cppyy
-        Base1 = cppyy.gbl.CrossInheritance.Base1
+        import cppjit
+        Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_value(-7) == 20
 
@@ -170,8 +170,8 @@ class TestCROSSINHERITANCE:
     def test05_override_overloads(self):
         """Test ability to override overloaded functions"""
 
-        import cppyy
-        Base1 = cppyy.gbl.CrossInheritance.Base1
+        import cppjit
+        Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_all(-7)     == 20
         assert Base1(27).sum_all(-3, -4) == 20
@@ -191,8 +191,8 @@ class TestCROSSINHERITANCE:
     def test06_const_methods(self):
         """Declared const methods should keep that qualifier"""
 
-        import cppyy
-        CX = cppyy.gbl.CrossInheritance
+        import cppjit
+        CX = cppjit.gbl.CrossInheritance
 
         class C1PyBase4(CX.IBase4):
             def __init__(self):
@@ -214,9 +214,9 @@ class TestCROSSINHERITANCE:
     def test07_templated_base(self):
         """Derive from a base class that is instantiated from a template"""
 
-        import cppyy
+        import cppjit
 
-        from cppyy.gbl.CrossInheritance import TBase1, TDerived1, TBase1_I
+        from cppjit.gbl.CrossInheritance import TBase1, TDerived1, TBase1_I
 
         class TPyDerived1(TBase1_I):
             def __init__(self):
@@ -239,8 +239,8 @@ class TestCROSSINHERITANCE:
     def test08_error_handling(self):
         """Python errors should propagate through wrapper"""
 
-        import cppyy
-        Base1 = cppyy.gbl.CrossInheritance.Base1
+        import cppjit
+        Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_value(-7) == 20
 
@@ -261,19 +261,19 @@ class TestCROSSINHERITANCE:
         except ValueError as e:
             assert errmsg in str(e)
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CrossInheritance {
         std::string call_base1(Base1* b) {
             try {
                 b->sum_value(-7);
-            } catch (CPyCppyy::PyException& e) {
+            } catch (cppjit::cpyrt::PyException& e) {
                 e.clear();
                 return e.what();
             }
             return "";
         } }""")
 
-        res = cppyy.gbl.CrossInheritance.call_base1(d)
+        res = cppjit.gbl.CrossInheritance.call_base1(d)
 
         assert 'ValueError' in res
         assert os.path.basename(__file__) in res
@@ -282,8 +282,8 @@ class TestCROSSINHERITANCE:
     def test09_interface_checking(self):
         """Conversion errors should be Python exceptions"""
 
-        import cppyy
-        Base1 = cppyy.gbl.CrossInheritance.Base1
+        import cppjit
+        Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_value(-7) == 20
 
@@ -299,9 +299,9 @@ class TestCROSSINHERITANCE:
     def test10_python_in_templates(self):
         """Usage of Python derived objects in std::vector"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        CB = cppyy.gbl.CrossInheritance.CountableBase
+        CB = cppjit.gbl.CrossInheritance.CountableBase
 
         class PyCountable(CB):
             def call(self):
@@ -312,7 +312,7 @@ class TestCROSSINHERITANCE:
 
         start_count = CB.s_count
 
-        v = cppyy.gbl.std.vector[PyCountable]()
+        v = cppjit.gbl.std.vector[PyCountable]()
         v.emplace_back(PyCountable())     # uses copy ctor
         assert len(v) == 1
         gc.collect()
@@ -345,9 +345,9 @@ class TestCROSSINHERITANCE:
     def test11_python_in_make_shared(self):
         """Usage of Python derived objects with std::make_shared"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace MakeSharedTest {
+        cppjit.cppdef("""namespace MakeSharedTest {
         class Abstract {
         public:
           virtual ~Abstract() = 0;
@@ -360,8 +360,8 @@ class TestCROSSINHERITANCE:
           return ptr->some_imp();
         } }""")
 
-        from cppyy.gbl import std, MakeSharedTest
-        from cppyy.gbl.MakeSharedTest import Abstract, call_shared
+        from cppjit.gbl import std, MakeSharedTest
+        from cppjit.gbl.MakeSharedTest import Abstract, call_shared
 
         class PyDerived(Abstract):
             def __init__(self, val):
@@ -383,10 +383,10 @@ class TestCROSSINHERITANCE:
     def test12a_counter_test(self):
         """Test countable base counting"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        std = cppyy.gbl.std
-        CB  = cppyy.gbl.CrossInheritance.CountableBase
+        std = cppjit.gbl.std
+        CB  = cppjit.gbl.CrossInheritance.CountableBase
 
         class PyCountable(CB):
             def call(self):
@@ -409,10 +409,10 @@ class TestCROSSINHERITANCE:
     def test12_python_shared_ptr_memory(self):
         """Usage of Python derived objects with std::shared_ptr"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        std = cppyy.gbl.std
-        CB  = cppyy.gbl.CrossInheritance.CountableBase
+        std = cppjit.gbl.std
+        CB  = cppjit.gbl.CrossInheritance.CountableBase
 
         class PyCountable(CB):
             def call(self):
@@ -436,9 +436,9 @@ class TestCROSSINHERITANCE:
     def test13_virtual_dtors_and_del(self):
         """Usage of virtual destructors and Python-side del."""
 
-        import cppyy, warnings
+        import cppjit, warnings
 
-        cppyy.cppdef("""namespace VirtualDtor {
+        cppjit.cppdef("""namespace VirtualDtor {
         class MyClass1 {};    // no virtual dtor ...
 
         class MyClass2 {
@@ -454,7 +454,7 @@ class TestCROSSINHERITANCE:
           virtual ~MyClass4() {}
         }; }""")
 
-        VD = cppyy.gbl.VirtualDtor
+        VD = cppjit.gbl.VirtualDtor
 
       # rethought this: just issue a warning if there is no virtual destructor
       # as the C++ side now carries the type of the dispatcher, not the type of
@@ -491,9 +491,9 @@ class TestCROSSINHERITANCE:
     def test14_protected_access(self):
         """Derived classes should have access to protected members"""
 
-        import cppyy
+        import cppjit
 
-        ns = cppyy.gbl.AccessProtected
+        ns = cppjit.gbl.AccessProtected
 
         assert not 'my_data' in ns.MyBase.__dict__
         assert not hasattr(ns.MyBase(), 'my_data')
@@ -521,10 +521,10 @@ class TestCROSSINHERITANCE:
     def test15_object_returns(self):
         """Return of C++ objects from overridden functions"""
 
-        import cppyy
+        import cppjit
 
       # Part 1: return of a new C++ object
-        cppyy.cppdef("""namespace object_returns {
+        cppjit.cppdef("""namespace object_returns {
         class Base {
         public:
           virtual Base* foo() { return new Base(); }
@@ -540,7 +540,7 @@ class TestCROSSINHERITANCE:
 
         Base* call_foo(Base& obj) { return obj.foo(); } }""")
 
-        ns = cppyy.gbl.object_returns
+        ns = cppjit.gbl.object_returns
 
         class PyDerived1(ns.Base):
             def foo(self):
@@ -589,9 +589,9 @@ class TestCROSSINHERITANCE:
     def test16_cctor_access_controlled(self):
         """Python derived class of C++ class with access controlled cctor"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace cctor_access_controlled {
+        cppjit.cppdef("""namespace cctor_access_controlled {
         class CommonBase {
         public:
           virtual ~CommonBase() {}
@@ -617,7 +617,7 @@ class TestCROSSINHERITANCE:
 
         std::string callit(CommonBase& obj) { return obj.whoami(); } }""")
 
-        ns = cppyy.gbl.cctor_access_controlled
+        ns = cppjit.gbl.cctor_access_controlled
 
         for base in (ns.Base1, ns.Base2):
             class PyDerived(base):
@@ -631,9 +631,9 @@ class TestCROSSINHERITANCE:
     def test17_deep_hierarchy(self):
         """Test a deep Python hierarchy with pure virtual functions"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace deep_hierarchy {
+        cppjit.cppdef("""namespace deep_hierarchy {
         class Base {
         public:
           virtual ~Base() {}
@@ -642,7 +642,7 @@ class TestCROSSINHERITANCE:
 
         std::string callit(Base& obj) { return obj.whoami(); } }""")
 
-        ns = cppyy.gbl.deep_hierarchy
+        ns = cppjit.gbl.deep_hierarchy
 
         class PyDerived1(ns.Base):
             def whoami(self):
@@ -679,9 +679,9 @@ class TestCROSSINHERITANCE:
         """Hierarchy with abstract classes"""
 
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace abstract_classes {
+        cppjit.cppdef("""namespace abstract_classes {
         class Base {
         public:
           virtual ~Base() {}
@@ -692,7 +692,7 @@ class TestCROSSINHERITANCE:
         std::string whois(Base& obj) { return obj.whoami(); }
         std::string saywot(Base& obj) { return obj.message(); } }""")
 
-        ns = cppyy.gbl.abstract_classes
+        ns = cppjit.gbl.abstract_classes
 
         class PyDerived1(ns.Base):
             def __init__(self):
@@ -720,9 +720,9 @@ class TestCROSSINHERITANCE:
     def test19_cpp_side_multiple_inheritance(self):
         """Hierarchy with multiple inheritance on the C++ side"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(""" namespace cpp_side_multiple_inheritance {
+        cppjit.cppdef(""" namespace cpp_side_multiple_inheritance {
         struct Result {
           Result() : result(1337) {}
           Result(int r) : result(r) {}
@@ -746,7 +746,7 @@ class TestCROSSINHERITANCE:
           Result abstract2() override { return Result(999); } 
         }; } """)
 
-        ns = cppyy.gbl.cpp_side_multiple_inheritance
+        ns = cppjit.gbl.cpp_side_multiple_inheritance
 
         class Derived(ns.Base):
             def abstract1(self):
@@ -756,9 +756,9 @@ class TestCROSSINHERITANCE:
     def test20_basic_multiple_inheritance(self):
         """Basic multiple inheritance"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace basic_multiple_inheritance {
+        cppjit.cppdef("""namespace basic_multiple_inheritance {
         class MyClass1 {
         public:
           MyClass1() : m_1(13) {}
@@ -792,9 +792,9 @@ class TestCROSSINHERITANCE:
         };
         int callz(MyClass3& m) { return m.z(); } }""")
 
-        ns = cppyy.gbl.basic_multiple_inheritance
+        ns = cppjit.gbl.basic_multiple_inheritance
 
-        class MyPyDerived(cppyy.multi(ns.MyClass1, ns.MyClass2)):
+        class MyPyDerived(cppjit.multi(ns.MyClass1, ns.MyClass2)):
             def x(self):
                 return 16
 
@@ -810,7 +810,7 @@ class TestCROSSINHERITANCE:
         assert a.m_1 == 13
         assert a.m_2 == 42
 
-        class MyPyDerived2(cppyy.multi(ns.MyClass1, ns.MyClass2, ns.MyClass3)):
+        class MyPyDerived2(cppjit.multi(ns.MyClass1, ns.MyClass2, ns.MyClass3)):
             def x(self):
                 return 16
 
@@ -835,9 +835,9 @@ class TestCROSSINHERITANCE:
     def test21_multiple_inheritance_with_constructors(self):
         """Multiple inheritance with constructors"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace multiple_inheritance_with_constructors {
+        cppjit.cppdef("""namespace multiple_inheritance_with_constructors {
         class MyClass1 {
         public:
           MyClass1() : m_1(13) {}
@@ -874,9 +874,9 @@ class TestCROSSINHERITANCE:
         };
         int callz(MyClass3& m) { return m.z(); } }""")
 
-        ns = cppyy.gbl.multiple_inheritance_with_constructors
+        ns = cppjit.gbl.multiple_inheritance_with_constructors
 
-        class MyPyDerived(cppyy.multi(ns.MyClass1, ns.MyClass2)):
+        class MyPyDerived(cppjit.multi(ns.MyClass1, ns.MyClass2)):
             def __init__(self, val1, val2):
                 super(MyPyDerived, self).__init__((val1,), (val2,))
 
@@ -895,7 +895,7 @@ class TestCROSSINHERITANCE:
         assert a.m_1 == 27
         assert a.m_2 == 88
 
-        class MyPyDerived2(cppyy.multi(ns.MyClass1, ns.MyClass2, ns.MyClass3)):
+        class MyPyDerived2(cppjit.multi(ns.MyClass1, ns.MyClass2, ns.MyClass3)):
             def __init__(self, val1, val2, val3):
                 super(MyPyDerived2, self).__init__((val1,), (val2,), (val3,))
 
@@ -923,9 +923,9 @@ class TestCROSSINHERITANCE:
     def test22_multiple_inheritance_with_defaults(self):
         """Multiple inheritance with defaults"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace multiple_inheritance_with_defaults {
+        cppjit.cppdef("""namespace multiple_inheritance_with_defaults {
         class MyClass1 {
         public:
           MyClass1(int i=13) : m_1(i) {}
@@ -959,9 +959,9 @@ class TestCROSSINHERITANCE:
         };
         int callz(MyClass3& m) { return m.z(); } }""")
 
-        ns = cppyy.gbl.multiple_inheritance_with_defaults
+        ns = cppjit.gbl.multiple_inheritance_with_defaults
 
-        class MyPyDerived(cppyy.multi(ns.MyClass1, ns.MyClass2, ns.MyClass3)):
+        class MyPyDerived(cppjit.multi(ns.MyClass1, ns.MyClass2, ns.MyClass3)):
             def __init__(self, val1=None, val2=None, val3=None, nArgs=3):
                 a1 = val1 is not None and (val1,) or ()
                 a2 = val2 is not None and (val2,) or ()
@@ -1014,9 +1014,9 @@ class TestCROSSINHERITANCE:
     def test23_const_byvalue_return(self):
         """Const by-value return in overridden method"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace const_byvalue_return {
+        cppjit.cppdef("""namespace const_byvalue_return {
         struct Const {
             Const() = default;
             explicit Const(const std::string& s) { m_value = s; }
@@ -1030,7 +1030,7 @@ class TestCROSSINHERITANCE:
 
         const Const callit(Abstract* a) { return a->return_const(); } }""")
 
-        ns = cppyy.gbl.const_byvalue_return
+        ns = cppjit.gbl.const_byvalue_return
 
         class ReturnConstByValue(ns.Abstract):
              def return_const(self):
@@ -1044,9 +1044,9 @@ class TestCROSSINHERITANCE:
     def test24_non_copyable(self):
         """Inheriting from a non-copyable base class"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace non_copyable {
         struct Copyable {
             Copyable() = default;
@@ -1090,7 +1090,7 @@ class TestCROSSINHERITANCE:
             NoCopyNoMove* fActual;
         }; }""")
 
-        ns = cppyy.gbl.non_copyable
+        ns = cppjit.gbl.non_copyable
 
         Copyable = ns.Copyable
         Movable  = ns.Movable
@@ -1104,7 +1104,7 @@ class TestCROSSINHERITANCE:
             pass
 
       # used to fail with compilation error
-        class DerivedMulti(cppyy.multi(Movable, Copyable)):
+        class DerivedMulti(cppjit.multi(Movable, Copyable)):
             pass
 
      # used to fail with compilation error
@@ -1124,9 +1124,9 @@ class TestCROSSINHERITANCE:
     def test25_default_ctor_and_multiple_inheritance(self):
         """Regression test: default ctor did not get added"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace default_ctor_and_multiple {
+        cppjit.cppdef("""namespace default_ctor_and_multiple {
         struct Copyable {
           Copyable() = default;
           virtual ~Copyable() {}
@@ -1149,12 +1149,12 @@ class TestCROSSINHERITANCE:
           virtual ~SomeClass() {}
         }; }""")
 
-        ns = cppyy.gbl.default_ctor_and_multiple
+        ns = cppjit.gbl.default_ctor_and_multiple
         Copyable  = ns.Copyable
         Movable   = ns.Movable
         SomeClass = ns.SomeClass
 
-        class DerivedMulti(cppyy.multi(Movable, Copyable, SomeClass)):
+        class DerivedMulti(cppjit.multi(Movable, Copyable, SomeClass)):
             def __init__(self):
                 super(DerivedMulti, self).__init__()
 
@@ -1164,9 +1164,9 @@ class TestCROSSINHERITANCE:
     def test26_no_default_ctor(self):
         """Make sure no default ctor is created if not viable"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace no_default_ctor {
+        cppjit.cppdef("""namespace no_default_ctor {
         struct NoDefCtor1 {
           NoDefCtor1(int) {}
           virtual ~NoDefCtor1() {}
@@ -1189,7 +1189,7 @@ class TestCROSSINHERITANCE:
         };
         }""")
 
-        ns = cppyy.gbl.no_default_ctor
+        ns = cppjit.gbl.no_default_ctor
 
         for kls in (ns.NoDefCtor1, ns.NoDefCtor2, ns.NoDefCtor3):
             class PyDerived(kls):
@@ -1199,14 +1199,14 @@ class TestCROSSINHERITANCE:
             with raises(TypeError):
                 PyDerived()
 
-            class PyDerived(cppyy.multi(kls, ns.Simple)):
+            class PyDerived(cppjit.multi(kls, ns.Simple)):
                 def __init__(self):
                     super(PyDerived, self).__init__()
 
             with raises(TypeError):
                 PyDerived()
 
-            class PyDerived(cppyy.multi(ns.Simple, kls)):
+            class PyDerived(cppjit.multi(ns.Simple, kls)):
                 def __init__(self):
                     super(PyDerived, self).__init__()
 
@@ -1216,9 +1216,9 @@ class TestCROSSINHERITANCE:
     def test27_interfaces(self):
         """Inherit from base with non-standard offset"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace NonStandardOffset {
         struct Calc1 {
           virtual int calc1() = 0;
@@ -1243,7 +1243,7 @@ class TestCROSSINHERITANCE:
         int callback2(Calc2* c2) { return c2->calc2(); }
         }""")
 
-        ns = cppyy.gbl.NonStandardOffset
+        ns = cppjit.gbl.NonStandardOffset
 
         class MyPyDerived(ns.Derived):
             pass
@@ -1260,9 +1260,9 @@ class TestCROSSINHERITANCE:
     def test28_cross_deep(self):
         """Deep inheritance hierarchy"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CrossDeep {
 
         class A {
@@ -1273,7 +1273,7 @@ class TestCROSSINHERITANCE:
             virtual int fun2() const { return fun1(); }
         }; }""")
 
-        A = cppyy.gbl.CrossDeep.A
+        A = cppjit.gbl.CrossDeep.A
 
         class B(A):
             def __init__ (self, name = 'b'):
@@ -1297,9 +1297,9 @@ class TestCROSSINHERITANCE:
     def test29_cross_deep_multi(self):
         """Deep multi-inheritance hierarchy"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CrossMultiDeep {
 
         class A {
@@ -1318,9 +1318,9 @@ class TestCROSSINHERITANCE:
 
         int calc_b(B* b) { return b->calc_b(); } }""")
 
-        ns = cppyy.gbl.CrossMultiDeep
+        ns = cppjit.gbl.CrossMultiDeep
 
-        class C(cppyy.multi(ns.A, ns.B)):
+        class C(cppjit.multi(ns.A, ns.B)):
             def calc_a(self):
                 return 18
 
@@ -1338,7 +1338,7 @@ class TestCROSSINHERITANCE:
         d = D()
         assert ns.calc_b(d) == 44
 
-        class E(cppyy.multi(ns.A, D)):
+        class E(cppjit.multi(ns.A, D)):
             def calc_a(self):
                 return 19
 
@@ -1353,7 +1353,7 @@ class TestCROSSINHERITANCE:
         f = F()
         assert ns.calc_a(f) == 20
 
-        class G(cppyy.multi(F, ns.B)):
+        class G(cppjit.multi(F, ns.B)):
             def calc_b(self):
                 return 45
 
@@ -1365,14 +1365,14 @@ class TestCROSSINHERITANCE:
             def calc_a(self):
                 return 66
 
-        class I(cppyy.multi(ns.A, H)):
+        class I(cppjit.multi(ns.A, H)):
             def calc_a(self):
                 return 77
 
         i = I()
         assert ns.calc_a(i) == 77
 
-        class J(cppyy.multi(H, ns.A)):
+        class J(cppjit.multi(H, ns.A)):
             def calc_a(self):
                 return 88
 
@@ -1383,9 +1383,9 @@ class TestCROSSINHERITANCE:
     def test30_access_and_overload(self):
         """Inheritance with access and overload complications"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AccessAndOverload {
         class Base {
         public:
@@ -1404,7 +1404,7 @@ class TestCROSSINHERITANCE:
             int call3(int i, int j) { return i+j; }
         }; }""")
 
-        ns = cppyy.gbl.AccessAndOverload
+        ns = cppjit.gbl.AccessAndOverload
 
       # used to produce uncompilable code
         class PyDerived(ns.Base):
@@ -1413,9 +1413,9 @@ class TestCROSSINHERITANCE:
     def test31_object_rebind(self):
         """Usage of bind_object to cast with Python derived objects"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        ns = cppyy.gbl.CrossInheritance
+        ns = cppjit.gbl.CrossInheritance
         ns.build_component.__creates__ = True
 
         assert ns.Component.get_count() == 0
@@ -1430,7 +1430,7 @@ class TestCROSSINHERITANCE:
 
       # introduce the actual component type; would have been a header,
       # but this simply has to match what is in crossinheritance.cxx
-        cppyy.cppdef("""namespace CrossInheritance {
+        cppjit.cppdef("""namespace CrossInheritance {
         class ComponentWithValue : public Component {
         public:
             ComponentWithValue(int value) : m_value(value) {}
@@ -1441,7 +1441,7 @@ class TestCROSSINHERITANCE:
         }; }""")
 
       # rebind cmp1 to its actual C++ class
-        act_cmp1 = cppyy.bind_object(cmp1, ns.ComponentWithValue)
+        act_cmp1 = cppjit.bind_object(cmp1, ns.ComponentWithValue)
         assert not cmp1.__python_owns__          # b/c transferred
         assert act_cmp1.__python_owns__
         assert act_cmp1.getValue() == 42
@@ -1470,7 +1470,7 @@ class TestCROSSINHERITANCE:
         gc.collect()
         assert ns.Component.get_count() == 0
 
-        cmp2 = cppyy.bind_object(cppyy.addressof(PyComponentWithValue(13)), ns.Component)
+        cmp2 = cppjit.bind_object(cppjit.addressof(PyComponentWithValue(13)), ns.Component)
         assert ns.Component.get_count() == 1
 
         cmp2 = ns.cycle_component(cmp2)     # causes auto down-cast
@@ -1478,7 +1478,7 @@ class TestCROSSINHERITANCE:
         #assert type(cmp2) != PyComponentWithValue
 
       # rebind cmp2 to the python type
-        act_cmp2 = cppyy.bind_object(cmp2, PyComponentWithValue)
+        act_cmp2 = cppjit.bind_object(cmp2, PyComponentWithValue)
         act_cmp2.__python_owns__ = True
         assert act_cmp2.getValue() == 13+12
 
@@ -1496,7 +1496,7 @@ class TestCROSSINHERITANCE:
             def getValue(self):
                 return self.m_value + self.m_pyvalue
 
-        cmp3 = cppyy.bind_object(PyComponentWithInit(77), PyComponentWithInit)
+        cmp3 = cppjit.bind_object(PyComponentWithInit(77), PyComponentWithInit)
         assert type(cmp3) == PyComponentWithInit
         assert ns.Component.get_count() == 1
 
@@ -1507,12 +1507,12 @@ class TestCROSSINHERITANCE:
         assert ns.Component.get_count() == 0
 
         pyc = PyComponentWithInit(88)
-        cmp4 = cppyy.bind_object(cppyy.addressof(pyc), ns.Component)
+        cmp4 = cppjit.bind_object(cppjit.addressof(pyc), ns.Component)
         assert type(cmp4) == ns.Component
         assert ns.Component.get_count() == 1
 
       # rebind cmp4 to the python type
-        act_cmp4 = cppyy.bind_object(cmp4, PyComponentWithInit)
+        act_cmp4 = cppjit.bind_object(cmp4, PyComponentWithInit)
         assert act_cmp4.getValue() == 88+11
 
         del cmp4, act_cmp4, pyc
@@ -1520,13 +1520,13 @@ class TestCROSSINHERITANCE:
         assert ns.Component.get_count() == 0
 
         ns.ComponentWithValue.__init__.__creates__ = False
-        cmp5 = cppyy.bind_object(cppyy.addressof(PyComponentWithInit(22)), ns.Component)
+        cmp5 = cppjit.bind_object(cppjit.addressof(PyComponentWithInit(22)), ns.Component)
         cmp5.__python_owns__ = True
         assert type(cmp5) == ns.Component
         assert ns.Component.get_count() == 1
 
       # rebind cmp5 to the python type
-        act_cmp5 = cppyy.bind_object(cmp5, PyComponentWithInit)
+        act_cmp5 = cppjit.bind_object(cmp5, PyComponentWithInit)
         assert not cmp5.__python_owns__
         assert act_cmp5.__python_owns__
         assert act_cmp5.getValue() == 22+11
@@ -1539,9 +1539,9 @@ class TestCROSSINHERITANCE:
     def test32_by_value_arguments(self):
         """Override base function taking by-value arguments"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CrossCallWithValue {
         struct Data {
             int value;
@@ -1557,7 +1557,7 @@ class TestCROSSINHERITANCE:
             virtual int extra_func(Data d) = 0;
         }; }""")
 
-        ns = cppyy.gbl.CrossCallWithValue
+        ns = cppjit.gbl.CrossCallWithValue
 
         class PyDerived(ns.CppBase):
             def extra_func(self, d):
@@ -1571,9 +1571,9 @@ class TestCROSSINHERITANCE:
     def test33_direct_base_methods(self):
         """Call base class methods directly"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace DirectCalls {
         struct A {
             virtual ~A() {}
@@ -1588,7 +1588,7 @@ class TestCROSSINHERITANCE:
             }
         }; }""")
 
-        ns = cppyy.gbl.DirectCalls
+        ns = cppjit.gbl.DirectCalls
 
         a = ns.A()
         assert a.func()     == 1
@@ -1614,9 +1614,9 @@ class TestCROSSINHERITANCE:
     def test34_no_ctors_in_base(self):
         """Base classes with no constructors"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace BlockedCtors {
         class Z {
         public:
@@ -1634,7 +1634,7 @@ class TestCROSSINHERITANCE:
             Y(const Y&&) = delete;
         }; }""")
 
-        ns = cppyy.gbl.BlockedCtors
+        ns = cppjit.gbl.BlockedCtors
 
         with raises(TypeError):
             ns.X()
@@ -1657,9 +1657,9 @@ class TestCROSSINHERITANCE:
     def test35_deletion(self):
         """C++ side deletion should propagate to the Python side"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace DeletionTest1 {
         class Base {
         public:
@@ -1670,7 +1670,7 @@ class TestCROSSINHERITANCE:
         void delete_it(Base *p) { delete p; }
         }""")
 
-        ns = cppyy.gbl.DeletionTest1
+        ns = cppjit.gbl.DeletionTest1
 
         class Derived(ns.Base):
             was_deleted = False
@@ -1691,9 +1691,9 @@ class TestCROSSINHERITANCE:
     def test36_custom_destruct(self):
         """C++ side deletion calls __destruct__"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace DeletionTest2 {
         class Base {
         public:
@@ -1704,7 +1704,7 @@ class TestCROSSINHERITANCE:
         void delete_it(Base *p) { delete p; }
         }""")
 
-        ns = cppyy.gbl.DeletionTest2
+        ns = cppjit.gbl.DeletionTest2
 
         class Derived(ns.Base):
             was_cpp_deleted = False
@@ -1732,9 +1732,9 @@ class TestCROSSINHERITANCE:
     def test37_deep_tree(self):
         """Find overridable methods deep in the tree"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace DeepTree {
 
         class Base {
@@ -1777,7 +1777,7 @@ class TestCROSSINHERITANCE:
             return res;
         } }""")
 
-        ns = cppyy.gbl.DeepTree
+        ns = cppjit.gbl.DeepTree
 
         cppsub = ns.CppSub()
         assert cppsub.f1() == "C++: CppSub::f1()"
@@ -1805,9 +1805,9 @@ class TestCROSSINHERITANCE:
     def test38_protected_data(self):
         """Multiple cross inheritance with protected data"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace multiple_inheritance_with_protected_data {
         class MyBaseClass {
         public:
@@ -1826,7 +1826,7 @@ class TestCROSSINHERITANCE:
             int get_z() { return z; }
         }; }""")
 
-        ns = cppyy.gbl.multiple_inheritance_with_protected_data
+        ns = cppjit.gbl.multiple_inheritance_with_protected_data
 
         class MyDerivedClass(ns.MyBaseClass):
             def __init__(self, x, y, z):
@@ -1842,9 +1842,9 @@ class TestCROSSINHERITANCE:
     def test39_returning_multi_keyword_types(self):
         """Supporting dispatcher for functions that return multi-keyword types like `unsigned int`"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
               class MyUIntBaseClass {
               public:
                  virtual ~MyUIntBaseClass() = default;
@@ -1855,6 +1855,6 @@ class TestCROSSINHERITANCE:
 
         # Compiling the dispatcher for the overridden member function used to
         # fail because of the `unsigned int` type, whose name has two keywords.
-        class MyUIntDerivedClass( cppyy.gbl.MyUIntBaseClass ):
+        class MyUIntDerivedClass( cppjit.gbl.MyUIntBaseClass ):
             def give_unsigned_int( self ):
                 return 1

@@ -1,6 +1,6 @@
 <lcgdict>
 
-  <class pattern="CppyyTest*" />
+  <class pattern="CppjitTest*" />
   <class name="FourVector" />
 
   <enum name="EFruit" />

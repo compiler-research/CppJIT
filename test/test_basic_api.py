@@ -15,11 +15,11 @@ def setup_module(mod):
 class TestBASICAPI:
     @mark.xfail(IS_MAC, reason="evaluate is broken on macos")
     def test01_evaluate(self):
-        import cppyy
+        import cppjit
 
         # we use evaluate as a way to set these flags in support, for example
         # for IS_CLANG_REPL, etc. let's make sure basic uses work
-        out = cppyy.evaluate("""#define TEST01_EVALUATE
+        out = cppjit.evaluate("""#define TEST01_EVALUATE
                                 #ifdef TEST01_EVALUATE
                                     true
                                 #else
@@ -27,43 +27,43 @@ class TestBASICAPI:
                                 #endif""")
         assert out
 
-        cppyy.evaluate("__cplusplus") >= 201100
+        cppjit.evaluate("__cplusplus") >= 201100
 
         x = 42
-        assert cppyy.evaluate(str(x)) == x
+        assert cppjit.evaluate(str(x)) == x
 
     @mark.xfail(IS_MAC, reason="unidentified IsDebugOutputEnabled issue on macos, also failing in test_fragile")
     def test02_cppdef(self):
-        import cppyy
-        assert cppyy.cppdef("namespace test02_NS { int x = 42; }")
-        assert cppyy.gbl.test02_NS.x == 42
+        import cppjit
+        assert cppjit.cppdef("namespace test02_NS { int x = 42; }")
+        assert cppjit.gbl.test02_NS.x == 42
 
     def test03_add_library_path(self):
-        import cppyy
+        import cppjit
         with raises(OSError, match="No such directory"):
-            cppyy.add_library_path("not/a/real/path")
+            cppjit.add_library_path("not/a/real/path")
 
         with tempfile.TemporaryDirectory() as tpath:
-            cppyy.add_library_path(tpath)
+            cppjit.add_library_path(tpath)
 
             # now we should actually see if load library can follow this...
             # first, try to load without moving to directory...
             with raises(RuntimeError, match="Could not load library"):
-                cppyy.load_library("test.so")
+                cppjit.load_library("test.so")
 
             # then copy to our rpath, and make sure it can be loaded now
             shutil.copyfile(test_dct + ".so", tpath + "/test.so")
-            cppyy.load_library("test.so")
+            cppjit.load_library("test.so")
 
     def test04_add_include_path(self):
-        import cppyy
+        import cppjit
 
         with tempfile.TemporaryDirectory() as tpath:
-            cppyy.add_include_path(tpath)
+            cppjit.add_include_path(tpath)
 
             header = "test_add_include_path.h"
             with open(tpath + "/" + header, "w") as out:
                 print("int test04f() { return 42; }", file=out)
 
-            assert cppyy.include(header)
-            assert cppyy.gbl.test04f() == 42
+            assert cppjit.include(header)
+            assert cppjit.gbl.test04f() == 42

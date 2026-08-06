@@ -12,16 +12,16 @@ def setup_module(mod):
 class TestClassPYTHONIZATION:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.pyzables = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.pyzables = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test00_api(self):
         """Test basic semantics of the pythonization API"""
 
-        import cppyy
+        import cppjit
 
-        raises(TypeError, cppyy.py.add_pythonization, 1)
+        raises(TypeError, cppjit.py.add_pythonization, 1)
 
         def pythonizor1(klass, name):
             pass
@@ -31,31 +31,31 @@ class TestClassPYTHONIZATION:
 
         pythonizor3 = pythonizor1
 
-        cppyy.py.add_pythonization(pythonizor1)
-        assert cppyy.py.remove_pythonization(pythonizor2) == False
-        assert cppyy.py.remove_pythonization(pythonizor3) == True
+        cppjit.py.add_pythonization(pythonizor1)
+        assert cppjit.py.remove_pythonization(pythonizor2) == False
+        assert cppjit.py.remove_pythonization(pythonizor3) == True
 
         def pythonizor(klass, name):
             if name == 'pyzables::SomeDummy1':
                 klass.test = 1
 
-        cppyy.py.add_pythonization(pythonizor)
-        assert cppyy.gbl.pyzables.SomeDummy1.test == 1
+        cppjit.py.add_pythonization(pythonizor)
+        assert cppjit.gbl.pyzables.SomeDummy1.test == 1
 
         def pythonizor(klass, name):
             if name == 'SomeDummy2':
                 klass.test = 2
-        cppyy.py.add_pythonization(pythonizor, 'pyzables')
+        cppjit.py.add_pythonization(pythonizor, 'pyzables')
 
       # global pythonizors are still run even if namespaced ones available
         def pythonizor(klass, name):
             if name == 'pyzables::SomeDummy2':
                 klass.test = 3
-        cppyy.py.add_pythonization(pythonizor)
+        cppjit.py.add_pythonization(pythonizor)
 
-        assert cppyy.gbl.pyzables.SomeDummy2.test == 3
+        assert cppjit.gbl.pyzables.SomeDummy2.test == 3
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             namespace pyzables {
                 class TObjString {
                 public:
@@ -70,24 +70,24 @@ class TestClassPYTHONIZATION:
             if name == 'pyzables::TObjString':
                 klass.__len__ = klass.Sizeof
 
-        cppyy.py.add_pythonization(root_pythonizor)
+        cppjit.py.add_pythonization(root_pythonizor)
 
-        assert len(cppyy.gbl.pyzables.TObjString("aap")) == 4     # include '\0'
+        assert len(cppjit.gbl.pyzables.TObjString("aap")) == 4     # include '\0'
 
     def test01_size_mapping(self):
         """Use composites to map GetSize() onto buffer returns"""
 
-        import cppyy
+        import cppjit
 
         def set_size(self, buf):
             buf.reshape((self.GetN(),))
             return buf
 
-        cppyy.py.add_pythonization(
-            cppyy.py.compose_method('NakedBuffers$', 'Get[XY]$', set_size), 'pyzables')
+        cppjit.py.add_pythonization(
+            cppjit.py.compose_method('NakedBuffers$', 'Get[XY]$', set_size), 'pyzables')
 
         bsize, xval, yval = 3, 2, 5
-        m = cppyy.gbl.pyzables.NakedBuffers(bsize, xval, yval)
+        m = cppjit.gbl.pyzables.NakedBuffers(bsize, xval, yval)
 
         x = m.GetX()
         assert len(x) == bsize
@@ -100,17 +100,17 @@ class TestClassPYTHONIZATION:
     def test02_size_mapping_of_templated_method(self):
         """Use composites to map GetSize() onto buffer returns"""
 
-        import cppyy
+        import cppjit
 
         def set_size(self, buf):
             buf.reshape((self.GetN(),))
             return buf
 
-        cppyy.py.add_pythonization(
-            cppyy.py.compose_method('NakedBuffers2.*Vector.*', 'Get[XY]$', set_size), 'pyzables')
+        cppjit.py.add_pythonization(
+            cppjit.py.compose_method('NakedBuffers2.*Vector.*', 'Get[XY]$', set_size), 'pyzables')
 
         bsize, xval, yval = 3, 2, 5
-        m = cppyy.gbl.pyzables.NakedBuffers2[cppyy.gbl.pyzables.Vector](bsize, xval, yval)
+        m = cppjit.gbl.pyzables.NakedBuffers2[cppjit.gbl.pyzables.Vector](bsize, xval, yval)
 
         x = m.GetX()
         assert len(x) == bsize
@@ -123,28 +123,28 @@ class TestClassPYTHONIZATION:
     def test03_type_pinning(self):
         """Verify pinnability of returns"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.gbl.pyzables.GimeDerived.__creates__ = True
+        cppjit.gbl.pyzables.GimeDerived.__creates__ = True
 
-        result = cppyy.gbl.pyzables.GimeDerived()
-        assert type(result) == cppyy.gbl.pyzables.MyDerived
+        result = cppjit.gbl.pyzables.GimeDerived()
+        assert type(result) == cppjit.gbl.pyzables.MyDerived
 
-        cppyy.py.pin_type(cppyy.gbl.pyzables.MyBase)
-        assert type(result) == cppyy.gbl.pyzables.MyDerived
+        cppjit.py.pin_type(cppjit.gbl.pyzables.MyBase)
+        assert type(result) == cppjit.gbl.pyzables.MyDerived
 
 
     def test04_transparency(self):
         """Transparent use of smart pointers"""
 
-        import cppyy
+        import cppjit
 
-        Countable = cppyy.gbl.pyzables.Countable
-        mine = cppyy.gbl.pyzables.mine
+        Countable = cppjit.gbl.pyzables.Countable
+        mine = cppjit.gbl.pyzables.mine
 
         assert type(mine) == Countable
         assert mine.m_check == 0xcdcdcdcd
-        assert type(mine.__smartptr__()) == cppyy.gbl.std.shared_ptr(Countable)
+        assert type(mine.__smartptr__()) == cppjit.gbl.std.shared_ptr(Countable)
         assert mine.__smartptr__().get().m_check == 0xcdcdcdcd
         assert mine.say_hi() == "Hi!"
 
@@ -152,9 +152,9 @@ class TestClassPYTHONIZATION:
     def test05_converters(self):
         """Smart pointer argument passing"""
 
-        import cppyy
+        import cppjit
 
-        pz = cppyy.gbl.pyzables
+        pz = cppjit.gbl.pyzables
         mine = pz.mine
 
         assert 0xcdcdcdcd == pz.pass_mine_rp_ptr(mine)
@@ -171,45 +171,45 @@ class TestClassPYTHONIZATION:
         assert 0xcdcdcdcd == pz.pass_mine_sp(mine.__smartptr__())
 
         # TODO:
-        # cppyy.gbl.mine = mine
+        # cppjit.gbl.mine = mine
         pz.renew_mine()
 
     @mark.xfail(run=False, condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLANG_REPL, reason="Fails with Valgrind with Clang-Repl ARM")
     def test06_executors(self):
         """Smart pointer return types"""
 
-        import cppyy
+        import cppjit
 
-        pz = cppyy.gbl.pyzables
+        pz = cppjit.gbl.pyzables
         Countable = pz.Countable
 
         mine = pz.gime_mine_ptr()
         assert type(mine) == Countable
         assert mine.m_check == 0xcdcdcdcd
-        assert type(mine.__smartptr__()) == cppyy.gbl.std.shared_ptr(Countable)
+        assert type(mine.__smartptr__()) == cppjit.gbl.std.shared_ptr(Countable)
         assert mine.__smartptr__().get().m_check == 0xcdcdcdcd
         assert mine.say_hi() == "Hi!"
 
         mine = pz.gime_mine_ref()
         assert type(mine) == Countable
         assert mine.m_check == 0xcdcdcdcd
-        assert type(mine.__smartptr__()) == cppyy.gbl.std.shared_ptr(Countable)
+        assert type(mine.__smartptr__()) == cppjit.gbl.std.shared_ptr(Countable)
         assert mine.__smartptr__().get().m_check == 0xcdcdcdcd
         assert mine.say_hi() == "Hi!"
 
         mine = pz.gime_mine()
         assert type(mine) == Countable
         assert mine.m_check == 0xcdcdcdcd
-        assert type(mine.__smartptr__()) == cppyy.gbl.std.shared_ptr(Countable)
+        assert type(mine.__smartptr__()) == cppjit.gbl.std.shared_ptr(Countable)
         assert mine.__smartptr__().get().m_check == 0xcdcdcdcd
         assert mine.say_hi() == "Hi!"
 
     def test07_creates_flag(self):
         """Effect of creates flag on return type"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        pz = cppyy.gbl.pyzables
+        pz = cppjit.gbl.pyzables
         Countable = pz.Countable
 
         gc.collect()
@@ -228,9 +228,9 @@ class TestClassPYTHONIZATION:
     def test08_base_class_pythonization(self):
         """Derived class should not re-pythonize base class pythonization"""
 
-        import cppyy
+        import cppjit
 
-        d = cppyy.gbl.pyzables.IndexableDerived()
+        d = cppjit.gbl.pyzables.IndexableDerived()
 
         assert d[0]  == 42
         assert d[-1] == 42
@@ -243,10 +243,10 @@ class TestClassPYTHONIZATION:
     def test09_cpp_side_pythonization(self):
         """Use of C++ side pythonizations"""
 
-        import cppyy
+        import cppjit
 
       # explicit pythonization
-        for kls in [cppyy.gbl.pyzables.WithCallback1, cppyy.gbl.pyzables.WithCallback2]:
+        for kls in [cppjit.gbl.pyzables.WithCallback1, cppjit.gbl.pyzables.WithCallback2]:
             w = kls(42)
             assert hasattr(w, 'GetInt')
             assert not hasattr(w, 'get_int')
@@ -260,7 +260,7 @@ class TestClassPYTHONIZATION:
             assert kls.klass_name == kls.__cpp_name__
 
       # up-the-hierarchy pythonization
-        w = cppyy.gbl.pyzables.WithCallback3(42)
+        w = cppjit.gbl.pyzables.WithCallback3(42)
         assert hasattr(w, 'GetInt')
         assert not hasattr(w, 'get_int')
         assert w.GetInt() == 2*42
@@ -270,7 +270,7 @@ class TestClassPYTHONIZATION:
         w.SetInt(17)
         assert w.GetInt() == 4*17
 
-        assert cppyy.gbl.pyzables.WithCallback2.klass_name == 'pyzables::WithCallback3'
+        assert cppjit.gbl.pyzables.WithCallback2.klass_name == 'pyzables::WithCallback3'
     
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test10_shared_ptr_reset(self):
@@ -278,11 +278,11 @@ class TestClassPYTHONIZATION:
         __smartptr__ member that can also be used to reset the underlying smart
         pointer."""
 
-        import cppyy
+        import cppjit
 
-        optr = cppyy.gbl.std.make_shared["std::string"]("hello smart pointer")
-        o2 = cppyy.gbl.std.string()
-        cppyy._backend.SetOwnership(o2, False)  # This object will be owned by the smart pointer
+        optr = cppjit.gbl.std.make_shared["std::string"]("hello smart pointer")
+        o2 = cppjit.gbl.std.string()
+        cppjit._backend.SetOwnership(o2, False)  # This object will be owned by the smart pointer
         optr.__smartptr__().reset(o2)
         assert optr == o2
 

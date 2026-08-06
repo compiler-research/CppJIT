@@ -11,20 +11,20 @@ if not (os.path.exists(os.path.join(os.path.sep, 'usr', 'include', 'boost')) or 
 @mark.skipif(noboost == True, reason="boost not found")
 class TestBOOSTANY:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
-        cppyy.include('boost/any.hpp')
+        cppjit.include('boost/any.hpp')
 
     @mark.skipif((IS_MAC_ARM or IS_MAC_X86), reason="Fails to include boost on OS X")
     def test01_any_class(self):
         """Availability of boost::any"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.boost.any
+        assert cppjit.gbl.boost.any
 
-        from cppyy.gbl import std
-        from cppyy.gbl.boost import any
+        from cppjit.gbl import std
+        from cppjit.gbl.boost import any
 
         assert std.list[any]
 
@@ -32,18 +32,18 @@ class TestBOOSTANY:
     def test02_any_usage(self):
         """boost::any assignment and casting"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.boost
+        assert cppjit.gbl.boost
 
-        from cppyy.gbl import std, boost
+        from cppjit.gbl import std, boost
 
         val = boost.any()
         # test both by-ref and by rvalue
         v = std.vector[int]()
         val.__assign__(v)
         val.__assign__(std.move(std.vector[int](range(100))))
-        assert val.type() == cppyy.typeid(std.vector[int])
+        assert val.type() == cppjit.typeid(std.vector[int])
 
         extract = boost.any_cast[std.vector[int]](val)
         assert type(extract) is std.vector[int]
@@ -71,48 +71,48 @@ class TestBOOSTANY:
 @mark.skipif(((noboost == True) or IS_MAC_ARM or IS_MAC_X86), reason="boost not found")
 class TestBOOSTOPERATORS:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
-        cppyy.include('boost/operators.hpp')
+        cppjit.include('boost/operators.hpp')
 
     def test01_ordered(self):
         """ordered_field_operators as base used to crash"""
 
-        import cppyy
+        import cppjit
 
         try:
-            cppyy.include("gmpxx.h")
+            cppjit.include("gmpxx.h")
         except ImportError:
             skip("gmpxx not installed")
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             namespace boost_test {
                class Derived : boost::ordered_field_operators<Derived>, boost::ordered_field_operators<Derived, mpq_class> {};
             }
         """)
 
-        assert cppyy.gbl.boost_test.Derived
+        assert cppjit.gbl.boost_test.Derived
 
 
 @mark.skipif(noboost == True, reason="boost not found")
 class TestBOOSTVARIANT:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
-        cppyy.include("boost/variant/variant.hpp")
-        cppyy.include("boost/variant/get.hpp")
+        cppjit.include("boost/variant/variant.hpp")
+        cppjit.include("boost/variant/get.hpp")
 
     @mark.xfail(run=False)
     def test01_variant_usage(self):
         """boost::variant usage"""
 
       # as posted on stackoverflow as example
-        import cppyy
+        import cppjit
 
-        cpp   = cppyy.gbl
+        cpp   = cppjit.gbl
         std   = cpp.std
         boost = cpp.boost
 
-        cppyy.cppdef("""namespace BV {
+        cppjit.cppdef("""namespace BV {
           class A { };
           class B { };
           class C { }; } """)
@@ -142,18 +142,18 @@ class TestBOOSTVARIANT:
 @mark.skipif(((noboost == True) or IS_MAC_ARM or IS_MAC_X86), reason="boost not found")
 class TestBOOSTERASURE:
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
-        cppyy.include("boost/type_erasure/any.hpp")
-        cppyy.include("boost/type_erasure/member.hpp")
-        cppyy.include("boost/mpl/vector.hpp")
+        cppjit.include("boost/type_erasure/any.hpp")
+        cppjit.include("boost/type_erasure/member.hpp")
+        cppjit.include("boost/mpl/vector.hpp")
 
     def test01_erasure_usage(self):
         """boost::type_erasure usage"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             BOOST_TYPE_ERASURE_MEMBER((has_member_f), f, 0)
 
             using LengthsInterface = boost::mpl::vector<
@@ -171,4 +171,4 @@ class TestBOOSTERASURE:
             }
         """)
 
-        assert cppyy.gbl.lengths() is not None
+        assert cppjit.gbl.lengths() is not None

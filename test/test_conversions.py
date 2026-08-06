@@ -12,27 +12,27 @@ def setup_module(mod):
 class TestCONVERSIONS:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.conversion = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.conversion = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_implicit_vector_conversions(self):
         """Test implicit conversions of std::vector"""
 
-        import cppyy
-        CNS = cppyy.gbl.CNS
+        import cppjit
+        CNS = cppjit.gbl.CNS
 
         N = 10
         total = float(sum(range(N)))
 
-        v = cppyy.gbl.std.vector['double'](range(N))
+        v = cppjit.gbl.std.vector['double'](range(N))
         assert CNS.sumit(v) == total
         assert sum(v) == total
         assert CNS.sumit(range(N)) == total
 
         M = 5
         total = float(sum(range(N)) + sum(range(M, N)))
-        v1 = cppyy.gbl.std.vector['double'](range(N))
-        v2 = cppyy.gbl.std.vector['double'](range(M, N))
+        v1 = cppjit.gbl.std.vector['double'](range(N))
+        v2 = cppjit.gbl.std.vector['double'](range(M, N))
         assert CNS.sumit(v1, v2) == total
         assert sum(v1)+sum(v2)   == total
         assert CNS.sumit(v1, range(M, N))       == total
@@ -42,8 +42,8 @@ class TestCONVERSIONS:
     def test02_memory_handling_of_temporaries(self):
         """Verify that memory of temporaries is properly cleaned up"""
 
-        import cppyy, gc
-        CNS, CC = cppyy.gbl.CNS, cppyy.gbl.CNS.Counter
+        import cppjit, gc
+        CNS, CC = cppjit.gbl.CNS, cppjit.gbl.CNS.Counter
 
         assert CC.s_count == 0
         c = CC()
@@ -63,8 +63,8 @@ class TestCONVERSIONS:
     def test03_error_handling(self):
         """Verify error handling"""
 
-        import cppyy, gc
-        CNS, CC = cppyy.gbl.CNS, cppyy.gbl.CNS.Counter
+        import cppjit, gc
+        CNS, CC = cppjit.gbl.CNS, cppjit.gbl.CNS.Counter
 
         N = 13
         total = sum(range(N))
@@ -93,9 +93,9 @@ class TestCONVERSIONS:
 
         # Note: fails on windows b/c the assignment operator for strings is
         # template, which ("operator=(std::string)") doesn't instantiate
-        import cppyy
+        import cppjit
 
-        m = cppyy.gbl.std.map[str, str]()
+        m = cppjit.gbl.std.map[str, str]()
         m.insert(('a', 'b'))      # implicit conversion to std::pair
 
         assert m['a'] == 'b'
@@ -103,9 +103,9 @@ class TestCONVERSIONS:
     def test05_bool_conversions(self):
         """Test operator bool() and null pointer behavior"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace BoolConversions {
         struct Test1 {};
         struct Test2 {
@@ -118,7 +118,7 @@ class TestCONVERSIONS:
         Test2* CreateNullTest2() { return nullptr; }
         }""")
 
-        ns = cppyy.gbl.BoolConversions
+        ns = cppjit.gbl.BoolConversions
 
         for t in [ns.CreateNullTest1(), ns.CreateNullTest2()]:
             assert not t

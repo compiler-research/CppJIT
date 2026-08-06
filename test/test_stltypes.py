@@ -195,19 +195,19 @@ def getslice_cpython_test(type2test):
 class TestSTLVECTOR:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = cppjit.gbl.N
 
     def test01_builtin_type_vector_types(self):
         """Test access to std::vector<int>/std::vector<double>"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.std        is cppyy.gbl.std
-        assert cppyy.gbl.std.vector is cppyy.gbl.std.vector
+        assert cppjit.gbl.std        is cppjit.gbl.std
+        assert cppjit.gbl.std.vector is cppjit.gbl.std.vector
 
-        assert callable(cppyy.gbl.std.vector)
+        assert callable(cppjit.gbl.std.vector)
 
         type_info = (
             ("int",     int),
@@ -216,10 +216,10 @@ class TestSTLVECTOR:
         )
 
         for c_type, p_type in type_info:
-            tv1 = getattr(cppyy.gbl.std, 'vector<%s>' % c_type)
-            tv2 = cppyy.gbl.std.vector(p_type)
+            tv1 = getattr(cppjit.gbl.std, 'vector<%s>' % c_type)
+            tv2 = cppjit.gbl.std.vector(p_type)
             assert tv1 is tv2
-            assert tv1.iterator is cppyy.gbl.std.vector(p_type).iterator
+            assert tv1.iterator is cppjit.gbl.std.vector(p_type).iterator
 
             #----- 
             v = tv1()
@@ -258,16 +258,16 @@ class TestSTLVECTOR:
     def test02_user_type_vector_type(self):
         """Test access to an std::vector<just_a_class>"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.std        is cppyy.gbl.std
-        assert cppyy.gbl.std.vector is cppyy.gbl.std.vector
+        assert cppjit.gbl.std        is cppjit.gbl.std
+        assert cppjit.gbl.std.vector is cppjit.gbl.std.vector
 
-        assert callable(cppyy.gbl.std.vector)
+        assert callable(cppjit.gbl.std.vector)
 
-        tv1 = getattr(cppyy.gbl.std, 'vector<just_a_class>')
-        tv2 = cppyy.gbl.std.vector('just_a_class')
-        tv3 = cppyy.gbl.std.vector(cppyy.gbl.just_a_class)
+        tv1 = getattr(cppjit.gbl.std, 'vector<just_a_class>')
+        tv2 = cppjit.gbl.std.vector('just_a_class')
+        tv3 = cppjit.gbl.std.vector(cppjit.gbl.just_a_class)
 
         assert tv1 is tv2
         assert tv2 is tv3
@@ -280,7 +280,7 @@ class TestSTLVECTOR:
         assert hasattr(v, 'end')
 
         for i in range(self.N):
-            v.push_back(cppyy.gbl.just_a_class())
+            v.push_back(cppjit.gbl.just_a_class())
             v[i].m_i = i
             assert v[i].m_i == i
 
@@ -290,23 +290,23 @@ class TestSTLVECTOR:
     def test03_empty_vector_type(self):
         """Test behavior of empty std::vector<>"""
 
-        import cppyy
+        import cppjit
 
-        v = cppyy.gbl.std.vector(int)()
+        v = cppjit.gbl.std.vector(int)()
         assert not v
         for arg in v:
             pass
         v.__destruct__()
 
-        for x in cppyy.gbl.std.vector["std::string*"]():
+        for x in cppjit.gbl.std.vector["std::string*"]():
             pass
 
     def test04_vector_iteration(self):
         """Test iteration over an std::vector<int>"""
 
-        import cppyy
+        import cppjit
 
-        v = cppyy.gbl.std.vector(int)()
+        v = cppjit.gbl.std.vector(int)()
 
         for i in range(self.N):
             v.push_back(i)
@@ -329,9 +329,9 @@ class TestSTLVECTOR:
     def test05_push_back_iterables_with_iadd(self):
         """Test usage of += of iterable on push_back-able container"""
 
-        import cppyy
+        import cppjit
 
-        v = cppyy.gbl.std.vector(int)()
+        v = cppjit.gbl.std.vector(int)()
 
         v += [1, 2, 3]
         assert len(v) == 3
@@ -348,7 +348,7 @@ class TestSTLVECTOR:
         raises(TypeError, v.__iadd__, (7, '8'))  # string shouldn't pass
         assert len(v) == 7   # TODO: decide whether this should roll-back
 
-        v2 = cppyy.gbl.std.vector(int)()
+        v2 = cppjit.gbl.std.vector(int)()
         v2 += [8, 9]
         assert len(v2) == 2
         assert v2[0] == 8
@@ -367,9 +367,9 @@ class TestSTLVECTOR:
     def test06_vector_indexing(self):
         """Test python-style indexing to an std::vector<int>"""
 
-        import cppyy
+        import cppjit
 
-        v = cppyy.gbl.std.vector(int)()
+        v = cppjit.gbl.std.vector(int)()
 
         for i in range(self.N):
             v.push_back(i)
@@ -395,9 +395,9 @@ class TestSTLVECTOR:
     def test07_vector_bool(self):
         """Usability of std::vector<bool> which can be a specialization"""
 
-        import cppyy
+        import cppjit
 
-        vb = cppyy.gbl.std.vector(bool)(8)
+        vb = cppjit.gbl.std.vector(bool)(8)
         assert [x for x in vb] == [False]*8
 
         vb[0] = True
@@ -414,42 +414,42 @@ class TestSTLVECTOR:
     def test08_vector_enum(self):
         """Usability of std::vector<> of some enums"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.VecTestEnum
-        for tp in ['VecTestEnum', cppyy.gbl.VecTestEnum]:
-            ve = cppyy.gbl.std.vector[tp]()
-            ve.push_back(cppyy.gbl.EVal1);
+        assert cppjit.gbl.VecTestEnum
+        for tp in ['VecTestEnum', cppjit.gbl.VecTestEnum]:
+            ve = cppjit.gbl.std.vector[tp]()
+            ve.push_back(cppjit.gbl.EVal1);
             assert ve[0] == 1
-            ve[0] = cppyy.gbl.EVal2
+            ve[0] = cppjit.gbl.EVal2
             assert ve[0] == 3
 
-        assert cppyy.gbl.VecTestEnumNS.VecTestEnum
-        for tp in ['VecTestEnumNS::VecTestEnum', cppyy.gbl.VecTestEnumNS.VecTestEnum]:
-            ve = cppyy.gbl.std.vector['VecTestEnumNS::VecTestEnum']()
-            ve.push_back(cppyy.gbl.VecTestEnumNS.EVal1);
+        assert cppjit.gbl.VecTestEnumNS.VecTestEnum
+        for tp in ['VecTestEnumNS::VecTestEnum', cppjit.gbl.VecTestEnumNS.VecTestEnum]:
+            ve = cppjit.gbl.std.vector['VecTestEnumNS::VecTestEnum']()
+            ve.push_back(cppjit.gbl.VecTestEnumNS.EVal1);
             assert ve[0] == 5
-            ve[0] = cppyy.gbl.VecTestEnumNS.EVal2
+            ve[0] = cppjit.gbl.VecTestEnumNS.EVal2
             assert ve[0] == 42
 
     @mark.xfail(run=not (IS_MAC_ARM or IS_MAC_X86), condition=IS_MAC, reason="Fails on OS X")
     def test09_vector_of_string(self):
         """Adverse effect of implicit conversion on vector<string>"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.vectest_ol1("")  == 2
-        assert cppyy.gbl.vectest_ol1("a") == 2
-        assert cppyy.gbl.vectest_ol2("")  == 2
-        assert cppyy.gbl.vectest_ol2("a") == 2
+        assert cppjit.gbl.vectest_ol1("")  == 2
+        assert cppjit.gbl.vectest_ol1("a") == 2
+        assert cppjit.gbl.vectest_ol2("")  == 2
+        assert cppjit.gbl.vectest_ol2("a") == 2
 
-        raises(TypeError, cppyy.gbl.std.vector["std::string"], "abc")
+        raises(TypeError, cppjit.gbl.std.vector["std::string"], "abc")
 
     def test10_vector_std_distance(self):
         """Use of std::distance with vector"""
 
-        import cppyy
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit.gbl import std
 
         v = std.vector[int]([1, 2, 3])
         assert v.size() == 3
@@ -459,10 +459,10 @@ class TestSTLVECTOR:
     def test11_vector_of_pair(self):
         """Use of std::vector<std::pair>"""
 
-        import cppyy
+        import cppjit
 
       # after the original bug report
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         class PairVector {
         public:
             std::vector<std::pair<double, double>> vector_pair(const std::vector<std::pair<double, double>>& a) {
@@ -471,7 +471,7 @@ class TestSTLVECTOR:
         };
         """)
 
-        from cppyy.gbl import PairVector
+        from cppjit.gbl import PairVector
         a = PairVector()
         ll = [[1., 2.], [2., 3.], [3., 4.], [4., 5.]]
         v = a.vector_pair(ll)
@@ -502,9 +502,9 @@ class TestSTLVECTOR:
     def test12_vector_lifeline(self):
         """Check lifeline setting on vectors of objects"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace Lifeline {
+        cppjit.cppdef("""namespace Lifeline {
         static int count = 0;
         template <typename T>
         struct C {
@@ -517,17 +517,17 @@ class TestSTLVECTOR:
         auto bar() { return std::vector<std::string>{1024, "hello"}; }
         }""")
 
-        assert cppyy.gbl.Lifeline.count == 0
-        assert not cppyy.gbl.Lifeline.foo()._getitem__unchecked.__set_lifeline__
-        assert cppyy.gbl.Lifeline.foo()[0].x == 1337
-        raises(IndexError, cppyy.gbl.Lifeline.foo().__getitem__, 1)
-        assert cppyy.gbl.Lifeline.foo()._getitem__unchecked.__set_lifeline__
+        assert cppjit.gbl.Lifeline.count == 0
+        assert not cppjit.gbl.Lifeline.foo()._getitem__unchecked.__set_lifeline__
+        assert cppjit.gbl.Lifeline.foo()[0].x == 1337
+        raises(IndexError, cppjit.gbl.Lifeline.foo().__getitem__, 1)
+        assert cppjit.gbl.Lifeline.foo()._getitem__unchecked.__set_lifeline__
 
         import gc
         gc.collect()
-        assert cppyy.gbl.Lifeline.count == 0
+        assert cppjit.gbl.Lifeline.count == 0
 
-        l = list(cppyy.gbl.Lifeline.bar())
+        l = list(cppjit.gbl.Lifeline.bar())
         for val in l:
             assert hasattr(val, '__lifeline')
 
@@ -535,9 +535,9 @@ class TestSTLVECTOR:
     def test13_vector_smartptr_iteration(self):
         """Iteration over smart pointers"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace VectorOfShared {
+        cppjit.cppdef("""namespace VectorOfShared {
         struct X {
             int y;
             X() : y(0) {}
@@ -551,7 +551,7 @@ class TestSTLVECTOR:
             }
         }; }""")
 
-        test = cppyy.gbl.VectorOfShared.X()
+        test = cppjit.gbl.VectorOfShared.X()
         result = test.gimeVec()
         assert 'shared' in type(result).__cpp_name__
         assert len(result) == 10
@@ -569,7 +569,7 @@ class TestSTLVECTOR:
     def test14_vector_of_vector_of_(self):
         """Nested vectors"""
 
-        from cppyy.gbl.std import vector
+        from cppjit.gbl.std import vector
 
         vv = vector[vector[int]](((1, 2), [3, 4]))
 
@@ -584,7 +584,7 @@ class TestSTLVECTOR:
     def test15_vector_slicing(self):
         """Advanced test of vector slicing"""
 
-        from cppyy.gbl.std import vector
+        from cppjit.gbl.std import vector
 
         l = list(range(10))
         v = vector[int](range(10))
@@ -610,31 +610,31 @@ class TestSTLVECTOR:
     def test16_vector_construction(self):
         """Vector construction following CPython's sequence"""
 
-        import cppyy
+        import cppjit
 
-        constructors_cpython_test(cppyy.gbl.std.vector[int])
+        constructors_cpython_test(cppjit.gbl.std.vector[int])
 
     def test17_vector_cpp17_style(self):
         """C++17 style initialization of std::vector"""
 
-        import cppyy
+        import cppjit
 
         l = [1.0, 2.0, 3.0]
-        v = cppyy.gbl.std.vector(l)
+        v = cppjit.gbl.std.vector(l)
         assert list(l) == l
 
     @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OSX-Cling")
     def test18_array_interface(self):
         """Test usage of __array__ from numpy"""
 
-        import cppyy
+        import cppjit
 
         try:
             import numpy as np
         except ImportError:
             skip('numpy is not installed')
 
-        a = cppyy.gbl.std.vector[int]((1, 2, 3))
+        a = cppjit.gbl.std.vector[int]((1, 2, 3))
 
         b = np.array(a)
         assert len(a) == len(b)
@@ -652,13 +652,13 @@ class TestSTLVECTOR:
         a[0] = 5
         assert b[0] == 5
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ImplicitVector {
         int func(std::vector<int> v) {
             return std::accumulate(v.begin(), v.end(), 0);
         } }""")
 
-        ns = cppyy.gbl.ImplicitVector
+        ns = cppjit.gbl.ImplicitVector
 
         v = np.array(range(10), dtype=np.intc)
         assert ns.func(v) == sum(v)
@@ -674,11 +674,11 @@ class TestSTLVECTOR:
     def test19_vector_point3d(self):
         """Iteration over a vector of by-value objects"""
 
-        import cppyy
+        import cppjit
 
         N = 10
 
-        cppyy.cppdef("""namespace vector_point3d {
+        cppjit.cppdef("""namespace vector_point3d {
         class Point3D {
             double x, y, z;
 
@@ -687,8 +687,8 @@ class TestSTLVECTOR:
             double square() { return x*x+y*y+z*z; }
         }; }""")
 
-        Point3D = cppyy.gbl.vector_point3d.Point3D
-        v = cppyy.gbl.std.vector[Point3D]()
+        Point3D = cppjit.gbl.vector_point3d.Point3D
+        v = cppjit.gbl.std.vector[Point3D]()
         for i in range(N):
             v.emplace_back(i, i*2, i*3)
 
@@ -706,14 +706,14 @@ class TestSTLVECTOR:
     def test20_vector_cstring(self):
         """Usage of a vector of const char*"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace VectorConstCharStar {
             std::vector<const char*> test = {"hello"};
         }""")
 
-        ns = cppyy.gbl.VectorConstCharStar
+        ns = cppjit.gbl.VectorConstCharStar
 
         assert len(ns.test) == 1
         assert ns.test[0] == "hello"
@@ -727,10 +727,10 @@ class TestSTLVECTOR:
     def test21_vector_of_structs_data(self):
         """Vector of structs data() should return array-like"""
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ArrayLike {
         struct __attribute__((__packed__)) Vector3f {
             float x, y, z;
@@ -738,7 +738,7 @@ class TestSTLVECTOR:
 
         N = 5
 
-        v = cppyy.gbl.std.vector['ArrayLike::Vector3f'](N)
+        v = cppjit.gbl.std.vector['ArrayLike::Vector3f'](N)
 
         for i in range(N):
             d = v[i]
@@ -752,19 +752,19 @@ class TestSTLVECTOR:
             assert d.z == float(i*N**2)
 
       # the following should not raise
-        mv = cppyy.ll.as_memoryview(data)
+        mv = cppjit.ll.as_memoryview(data)
 
       # length of the view is in bytes
         assert len(mv) == len(v)
-        assert mv.itemsize == cppyy.sizeof(cppyy.gbl.ArrayLike.Vector3f)
-        assert mv.nbytes   == cppyy.sizeof(cppyy.gbl.ArrayLike.Vector3f) * len(v)
+        assert mv.itemsize == cppjit.sizeof(cppjit.gbl.ArrayLike.Vector3f)
+        assert mv.nbytes   == cppjit.sizeof(cppjit.gbl.ArrayLike.Vector3f) * len(v)
 
     def test22_polymorphic(self):
         """Vector of polymorphic types should auto-cast"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace Polymorphic {
         class vertex {
         public:
@@ -780,7 +780,7 @@ class TestSTLVECTOR:
           const std::vector<vertex*>& vertices() { return verts; }
         }; }""")
 
-        ns = cppyy.gbl.Polymorphic
+        ns = cppjit.gbl.Polymorphic
         cont = ns.vCont()
         verts = cont.vertices()
 
@@ -789,7 +789,7 @@ class TestSTLVECTOR:
     def test23_copy_conversion(self):
         """Vector given an array of different type should copy convert"""
 
-        import cppyy
+        import cppjit
 
         try:
             import numpy as np
@@ -797,7 +797,7 @@ class TestSTLVECTOR:
             skip('numpy is not installed')
 
         x = np.array([5., 25., 125.])
-        v = cppyy.gbl.std.vector('float')(x)
+        v = cppjit.gbl.std.vector('float')(x)
 
         for f, d in zip(x, v):
             assert f == d
@@ -806,16 +806,16 @@ class TestSTLVECTOR:
     def test24_byte_vectors(self):
         """Vectors of "byte" types should return low level views"""
 
-        import cppyy
-        import cppyy.types
+        import cppjit
+        import cppjit.types
 
-        vector = cppyy.gbl.std.vector
+        vector = cppjit.gbl.std.vector
 
         for ctype in ('unsigned char', 'signed char', 'int8_t', 'uint8_t'):
             vc = vector[ctype](range(10))
             data = vc.data()
 
-            assert type(data) == cppyy.types.LowLevelView
+            assert type(data) == cppjit.types.LowLevelView
             assert len(data) == 10
 
             for i, d in enumerate(data):
@@ -825,7 +825,7 @@ class TestSTLVECTOR:
             vc = vector[ctype](range(-5, 5, 1))
             data = vc.data()
 
-            assert type(data) == cppyy.types.LowLevelView
+            assert type(data) == cppjit.types.LowLevelView
             assert len(data) == 10
 
             for i, d in zip(range(-5, 5, 1), data):
@@ -835,18 +835,18 @@ class TestSTLVECTOR:
 class TestSTLSTRING:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test01_string_argument_passing(self):
         """Test mapping of python strings and std::[w]string"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for stp, pystp in [(std.string, str), (std.wstring, pyunicode)]:
-            stringy_class = cppyy.gbl.stringy_class[stp]
+            stringy_class = cppjit.gbl.stringy_class[stp]
 
             c, s = stringy_class(pystp("")), stp(pystp("test1"))
 
@@ -876,11 +876,11 @@ class TestSTLSTRING:
     def test02_string_data_access(self):
         """Test access to std::string object data members"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for stp, pystp in [(std.string, str), (std.wstring, pyunicode)]:
-            stringy_class = cppyy.gbl.stringy_class[stp]
+            stringy_class = cppjit.gbl.stringy_class[stp]
 
             c, s = stringy_class(pystp("dummy")), stp(pystp("test string"))
 
@@ -898,9 +898,9 @@ class TestSTLSTRING:
     def test03_string_with_null_character(self):
         """Test that strings with NULL do not get truncated"""
 
-        import cppyy
-        std = cppyy.gbl.std
-        stringy_class = cppyy.gbl.stringy_class["std::string"]
+        import cppjit
+        std = cppjit.gbl.std
+        stringy_class = cppjit.gbl.stringy_class["std::string"]
 
         t0 = "aap\0noot"
         assert t0 == "aap\0noot"
@@ -919,10 +919,10 @@ class TestSTLSTRING:
     def test04_array_of_strings(self):
         """Access to global arrays of strings"""
 
-        import cppyy
+        import cppjit
 
-        assert tuple(cppyy.gbl.str_array_1) == ('a', 'b', 'c')
-        str_array_2 = cppyy.gbl.str_array_2
+        assert tuple(cppjit.gbl.str_array_1) == ('a', 'b', 'c')
+        str_array_2 = cppjit.gbl.str_array_2
         # fix up the size
         str_array_2.size = 4
         assert tuple(str_array_2) == ('d', 'e', 'f', 'g')
@@ -930,14 +930,14 @@ class TestSTLSTRING:
 
         # multi-dimensional
         vals = ['a', 'b', 'c', 'd', 'e', 'f']
-        str_array_3 = cppyy.gbl.str_array_3
+        str_array_3 = cppjit.gbl.str_array_3
         for i in range(3):
             for j in range(2):
                 assert str_array_3[i][j] == vals[i*2+j]
 
         vals = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
                 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p']
-        str_array_4 = cppyy.gbl.str_array_4
+        str_array_4 = cppjit.gbl.str_array_4
         for i in range(4):
             for j in range(2):
                 for k in range(2):
@@ -947,9 +947,9 @@ class TestSTLSTRING:
     def test05_stlstring_and_unicode(self):
         """Mixing unicode and std::string"""
 
-        import cppyy
+        import cppjit
 
-        uas = cppyy.gbl.UnicodeAndSTL
+        uas = cppjit.gbl.UnicodeAndSTL
 
         actlen = len(u'ℕ'.encode(encoding='UTF-8'))
         assert uas.get_size('ℕ')    == actlen
@@ -984,15 +984,15 @@ class TestSTLSTRING:
     def test06_stlstring_bytes_and_text(self):
         """Mixing of bytes and str"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace PyBytesTest {
         std::string string_field = "";
         }""")
 
-        ns = cppyy.gbl.PyBytesTest
-        assert type(ns.string_field) == cppyy.gbl.std.string
+        ns = cppjit.gbl.PyBytesTest
+        assert type(ns.string_field) == cppjit.gbl.std.string
 
         ns.string_field = b'\xe9'
         assert repr(ns.string_field) == repr(b'\xe9')
@@ -1002,9 +1002,9 @@ class TestSTLSTRING:
     def test07_stlstring_in_dictionaries(self):
         """Mixing str and std::string as dictionary keys"""
 
-        import cppyy
+        import cppjit
 
-        x = cppyy.gbl.std.string("x")
+        x = cppjit.gbl.std.string("x")
         d = { x : 0 }
 
         assert d[x] == 0
@@ -1014,12 +1014,12 @@ class TestSTLSTRING:
     def test08_string_operators(self):
         """Mixing of C++ and Python types in global operators"""
 
-        import cppyy
+        import cppjit
 
       # note order in these checks: the first is str then unicode, the other is
       # the reverse; this exercises both paths (once resolved, the operator+ can
       # handle both str and unicde
-        s1 = cppyy.gbl.std.string("Hello")
+        s1 = cppjit.gbl.std.string("Hello")
         s2 = ", World!"
 
         assert s1+s2 == "Hello, World!"
@@ -1029,7 +1029,7 @@ class TestSTLSTRING:
         assert s1+s2 == "Hello, World!"
         assert s2+s1 == ", World!Hello"
 
-        s1 = cppyy.gbl.std.wstring("Hello")
+        s1 = cppjit.gbl.std.wstring("Hello")
 
         assert s1+s2 == "Hello, World!"
         assert s2+s1 == ", World!Hello"
@@ -1042,9 +1042,9 @@ class TestSTLSTRING:
     def test09_string_as_str_bytes(self):
         """Python-style methods of str/bytes on std::string"""
 
-        import cppyy
+        import cppjit
 
-        S = cppyy.gbl.std.string
+        S = cppjit.gbl.std.string
 
       # check that object.method(*args) returns result
         def EQ(result, init, methodname, *args):
@@ -1105,9 +1105,9 @@ class TestSTLSTRING:
     def test10_string_in_repr_and_str_bytes(self):
         """Special cases for __str__/__repr__"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace ReprAndStr {
 
         struct Test1 {
@@ -1126,7 +1126,7 @@ class TestSTLSTRING:
         };
         }""")
 
-        ns = cppyy.gbl.ReprAndStr
+        ns = cppjit.gbl.ReprAndStr
 
         assert str (ns.Test1()) == "Test1"
         assert repr(ns.Test1()) == "Test1"
@@ -1141,15 +1141,15 @@ class TestSTLSTRING:
 class TestSTLLIST:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
         cls.N = 13
 
     def test01_builtin_list_type(self):
         """Test access to a list<int>"""
 
-        import cppyy
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit.gbl import std
 
         type_info = (
             ("int",     int),
@@ -1159,9 +1159,9 @@ class TestSTLLIST:
 
         for c_type, p_type in type_info:
             tl1 = getattr(std, 'list<%s>' % c_type)
-            tl2 = cppyy.gbl.std.list(p_type)
+            tl2 = cppjit.gbl.std.list(p_type)
             assert tl1 is tl2
-            assert tl1.iterator is cppyy.gbl.std.list(p_type).iterator
+            assert tl1.iterator is cppjit.gbl.std.list(p_type).iterator
 
             #-----
             a = tl1()
@@ -1185,8 +1185,8 @@ class TestSTLLIST:
     def test02_empty_list_type(self):
         """Test behavior of empty list<int>"""
 
-        import cppyy
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit.gbl import std
 
         a = std.list(int)()
         assert not a
@@ -1196,33 +1196,33 @@ class TestSTLLIST:
     def test03_replacement_of_eq(self):
         """A global templated function should work as a method"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""template<class C>
+        cppjit.cppdef("""template<class C>
             bool cont_eq(const typename C::iterator& a, const typename C::iterator& b) {
                 return a != b;
             }""")
 
-        a = cppyy.gbl.std.list[int]()
+        a = cppjit.gbl.std.list[int]()
         icls = a.begin().__class__
         oldeq = icls.__eq__
-        icls.__eq__ = cppyy.gbl.cont_eq[cppyy.gbl.std.list[int]]
+        icls.__eq__ = cppjit.gbl.cont_eq[cppjit.gbl.std.list[int]]
         assert not (a.begin() == a.end())
 
-        a = cppyy.gbl.std.list[float]()
+        a = cppjit.gbl.std.list[float]()
         assert a.begin() == a.end()
-        assert not cppyy.gbl.cont_eq[cppyy.gbl.std.list[float]](a.begin(), a.begin())
+        assert not cppjit.gbl.cont_eq[cppjit.gbl.std.list[float]](a.begin(), a.begin())
         a.push_back(1)
-        assert     cppyy.gbl.cont_eq[cppyy.gbl.std.list[float]](a.begin(), a.end())
+        assert     cppjit.gbl.cont_eq[cppjit.gbl.std.list[float]](a.begin(), a.end())
 
         icls.__eq__ = oldeq
 
     def test04_iter_of_iter(self):
         """Iteration using iter()"""
 
-        import cppyy
+        import cppjit
 
-        l = cppyy.gbl.std.list['int']((1, 2, 3))
+        l = cppjit.gbl.std.list['int']((1, 2, 3))
         assert [x for x in l] == [1, 2, 3]
 
         i = 1
@@ -1234,40 +1234,40 @@ class TestSTLLIST:
     def test05_list_cpp17_style(self):
         """C++17 style initialization of std::list"""
 
-        import cppyy
+        import cppjit
 
         l = [1.0, 2.0, 3.0]
-        v = cppyy.gbl.std.list(l)
+        v = cppjit.gbl.std.list(l)
         assert list(l) == l
 
     @mark.xfail(condition=IS_MAC, reason="Fails with OSX")
     def test06_convert_list_of_strings(self):
         """Convert list of strings from C++ to Python types"""
 
-        import cppyy
+        import cppjit
 
         contents = ["aap", "noot", "mies"]
 
-        l = cppyy.gbl.std.list[str]()
+        l = cppjit.gbl.std.list[str]()
         l += contents
 
       # the following used to fail on Windows (TODO: currently worked around in
-      # cppyy-backend/clingwrapper; need to see whether Clang9 solves the issue)
+      # cppjit-backend/clingwrapper; need to see whether Clang9 solves the issue)
         assert [str(x) for x in l] == contents
 
 
 class TestSTLMAP:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
         cls.N = 13
 
     def test01_builtin_map_type(self):
         """Test access to a map<int,int>"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for mtype in (std.map, std.unordered_map):
             a = mtype(int, int)()
@@ -1305,8 +1305,8 @@ class TestSTLMAP:
     def test02_keyed_maptype(self):
         """Test access to a map<std::string,int>"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for mtype in (std.map, std.unordered_map):
             a = mtype(std.string, int)()
@@ -1326,8 +1326,8 @@ class TestSTLMAP:
     def test03_empty_maptype(self):
         """Test behavior of empty map<int,int>"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for mtype in (std.map, std.unordered_map):
             m = mtype(int, int)()
@@ -1339,8 +1339,8 @@ class TestSTLMAP:
     def test04_unsignedvalue_typemap_types(self):
         """Test assignability of maps with unsigned value types"""
 
-        import cppyy, math, sys
-        std = cppyy.gbl.std
+        import cppjit, math, sys
+        std = cppjit.gbl.std
 
         for mtype in (std.map, std.unordered_map):
             mui = mtype(str, 'unsigned int')()
@@ -1365,8 +1365,8 @@ class TestSTLMAP:
     def test05_STL_like_class_indexing_overloads(self):
         """Test overloading of operator[] in STL like class"""
 
-        import cppyy
-        stl_like_class = cppyy.gbl.stl_like_class
+        import cppjit
+        stl_like_class = cppjit.gbl.stl_like_class
 
         a = stl_like_class(int)()
         assert a["some string" ] == 'string'
@@ -1376,8 +1376,8 @@ class TestSTLMAP:
     def test06_initialize_from_dict(self):
         """Test std::map initializion from Python dict"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for mtype in (std.map, std.unordered_map):
             m = mtype[str, int]({'1' : 1, '2' : 2})
@@ -1395,8 +1395,8 @@ class TestSTLMAP:
         if ispypy:
             skip('emulated class crash')
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         for mtype in (std.map, std.unordered_map):
             m = mtype({'1': 2, '2':1})
@@ -1407,10 +1407,10 @@ class TestSTLMAP:
     def test08_map_derived_objects(self):
         """Enter derived objects through an initializer list"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace MapInitializer {
         class Base {
         public:
@@ -1420,7 +1420,7 @@ class TestSTLMAP:
         class Derived : public Base { };
         } """)
 
-        ns = cppyy.gbl.MapInitializer
+        ns = cppjit.gbl.MapInitializer
 
         for mtype in (std.map, std.unordered_map):
           # dictionary style initializer; allow derived through assignment (this may slice
@@ -1448,14 +1448,14 @@ class TestSTLMAP:
 class TestSTLITERATOR:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_builtin_vector_iterators(self):
         """Test iterator comparison with operator== reflected"""
 
-        import cppyy
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit.gbl import std
 
         v = std.vector(int)()
         v.resize(1)
@@ -1481,16 +1481,16 @@ class TestSTLITERATOR:
     def test02_STL_like_class_iterators(self):
         """Test the iterator protocol mapping for an STL like class"""
 
-        import cppyy
+        import cppjit
 
-        a = cppyy.gbl.stl_like_class(int)()
+        a = cppjit.gbl.stl_like_class(int)()
         assert len(a) == 4
         for i, j in enumerate(a):
             assert i == j
 
         assert i == len(a)-1
 
-        for cls in [cppyy.gbl.stl_like_class2, cppyy.gbl.stl_like_class3]:
+        for cls in [cppjit.gbl.stl_like_class2, cppjit.gbl.stl_like_class3]:
             b = cls[float, 2]()
             b[0] = 27; b[1] = 42
             limit = len(b)+1
@@ -1502,13 +1502,13 @@ class TestSTLITERATOR:
             del x, b
 
         for num in [4, 5, 6, 7]:
-            cls = getattr(cppyy.gbl, 'stl_like_class%d' % num)
+            cls = getattr(cppjit.gbl, 'stl_like_class%d' % num)
             count = 0
             for i in cls():
                 count += 1
             assert count == 10
 
-        for cls in [cppyy.gbl.stl_like_class8, cppyy.gbl.stl_like_class9]:
+        for cls in [cppjit.gbl.stl_like_class8, cppjit.gbl.stl_like_class9]:
             b = cls()
             for i in [1, 2, 3]:
                 b.push_back(i)
@@ -1519,9 +1519,9 @@ class TestSTLITERATOR:
     def test03_stllike_preinc(self):
         """STL-like class with preinc by-ref returns"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace PreIncrement {
         struct Token {
             int value;
@@ -1544,7 +1544,7 @@ class TestSTLITERATOR:
             Iterator end() { return Iterator{10}; }
         }; }""")
 
-        ns = cppyy.gbl.PreIncrement
+        ns = cppjit.gbl.PreIncrement
 
         stream = ns.Stream()
         assert [x.value for x in stream] == list(range(10))
@@ -1558,9 +1558,9 @@ class TestSTLITERATOR:
     def test04_stllike_confusing_name(self):
         """Having "iterator" in the container name used to fail"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ConstainerOfIterators {
         template<typename TI>
         class iterator_range {
@@ -1599,7 +1599,7 @@ class TestSTLITERATOR:
             std::array<int, 4> fArray;
         }; }""")
 
-        ns = cppyy.gbl.ConstainerOfIterators
+        ns = cppjit.gbl.ConstainerOfIterators
 
         a = ns.A()
         m = a.members()
@@ -1609,14 +1609,14 @@ class TestSTLITERATOR:
 class TestSTLARRAY:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_array_of_basic_types(self):
         """Usage of std::array of basic types"""
 
-        import cppyy
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit.gbl import std
 
         a = std.array[int, 4]()
         assert len(a) == 4
@@ -1627,9 +1627,9 @@ class TestSTLARRAY:
     def test02_array_of_pods(self):
         """Usage of std::array of PODs"""
 
-        import cppyy
-        from cppyy import gbl
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit import gbl
+        from cppjit.gbl import std
 
         a = std.array[gbl.ArrayTest.Point, 4]()
         assert len(a) == 4
@@ -1655,9 +1655,9 @@ class TestSTLARRAY:
     def test03_array_of_pointer_to_pods(self):
         """Usage of std::array of pointer to PODs"""
 
-        import cppyy
-        from cppyy import gbl
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit import gbl
+        from cppjit.gbl import std
 
         ll = [gbl.ArrayTest.Point() for i in range(4)]
         for i in range(len(ll)):
@@ -1685,51 +1685,51 @@ class TestSTLARRAY:
     def test04_array_from_aggregate(self):
         """Initialize an array from an aggregate contructor"""
 
-        import cppyy
+        import cppjit
 
         l = [1.0, 1.0, 1.0]
-        t = cppyy.gbl.std.array["double",3](l)
+        t = cppjit.gbl.std.array["double",3](l)
         assert list(t) == l
 
         with raises(ValueError):
-            cppyy.gbl.std.array["double",3]([1.0, 1.0, 1.0, 1.0])
+            cppjit.gbl.std.array["double",3]([1.0, 1.0, 1.0, 1.0])
 
         with raises(TypeError):
-            cppyy.gbl.std.array["double",3](['a', 1.0, 1.0])
+            cppjit.gbl.std.array["double",3](['a', 1.0, 1.0])
 
     def test05_array_of_chrono_types_should_be_iterable(self):
-        import cppyy
-        cppyy.cppdef("""
+        import cppjit
+        cppjit.cppdef("""
         #include <chrono>
         using namespace std::chrono_literals;
         std::vector<std::chrono::nanoseconds>   vtimes  = {10ns, 500ns, 1us};
         std::array<std::chrono::nanoseconds, 3> atimes = {10ns, 500ns, 1us};
         """)
-        assert sum([v.count() for v in cppyy.gbl.vtimes]) == 1510
-        assert sum([v.count() for v in cppyy.gbl.atimes]) == 1510
+        assert sum([v.count() for v in cppjit.gbl.vtimes]) == 1510
+        assert sum([v.count() for v in cppjit.gbl.atimes]) == 1510
 
 
 class TestSTLSTRING_VIEW:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test01_string_through_string_view(self):
         """Usage of std::string_view as formal argument"""
 
-        import cppyy
+        import cppjit
 
-        countit = cppyy.gbl.StringViewTest.count
-        countit_cr = cppyy.gbl.StringViewTest.count_cr
+        countit = cppjit.gbl.StringViewTest.count
+        countit_cr = cppjit.gbl.StringViewTest.count_cr
 
         assert countit("aap")    == 3
         assert countit_cr("aap") == 3
-        s = cppyy.gbl.std.string("noot")
+        s = cppjit.gbl.std.string("noot")
         assert countit(s)    == 4
         assert countit_cr(s) == 4
-        v = cppyy.gbl.std.string_view(s.data(), s.size())
+        v = cppjit.gbl.std.string_view(s.data(), s.size())
         assert v[0] == 'n'
         assert countit(v)    == 4
         assert countit_cr(v) == 4
@@ -1738,10 +1738,10 @@ class TestSTLSTRING_VIEW:
     def test02_string_view_from_unicode(self):
         """Life-time management of converted unicode strings"""
 
-        import cppyy, gc
+        import cppjit, gc
 
         # view on (converted) unicode
-        text = cppyy.gbl.std.string_view('''\
+        text = cppjit.gbl.std.string_view('''\
         The standard Lorem Ipsum passage, used since the 1500s
 
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
@@ -1757,7 +1757,7 @@ class TestSTLSTRING_VIEW:
         assert "Lorem ipsum dolor sit amet" in str(text)
 
         # view on bytes
-        text = cppyy.gbl.std.string_view(b'''\
+        text = cppjit.gbl.std.string_view(b'''\
         The standard Lorem Ipsum passage, used since the 1500s
 
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
@@ -1776,39 +1776,39 @@ class TestSTLSTRING_VIEW:
     def  test03_string_view_pythonize(self):
         """Pythonization of std::string_view"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         std::string_view s = "Hello, World!";
         """)
 
-        from cppyy.gbl import s
+        from cppjit.gbl import s
 
         assert(s == "Hello, World!")
         assert(str(s) == "Hello, World!")
         
-        cppyy.cppdef(
+        cppjit.cppdef(
         """
         bool is_equal_cpp = s == "Hello, World!";
         """)
 
-        from cppyy.gbl import is_equal_cpp
+        from cppjit.gbl import is_equal_cpp
         assert(is_equal_cpp)
 
 class TestSTLDEQUE:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = cppjit.gbl.N
 
     def test01_deque_byvalue_regression(self):
         """Return by value of a deque used to crash"""
 
-        import cppyy
-        assert cppyy.cppdef("""std::deque<long double> emptyf() {
+        import cppjit
+        assert cppjit.cppdef("""std::deque<long double> emptyf() {
             std::deque<long double> d; d.push_back(0); return d ; }""")
-        x = cppyy.gbl.emptyf()
+        x = cppjit.gbl.emptyf()
         assert x
         del x
 
@@ -1816,26 +1816,26 @@ class TestSTLDEQUE:
     def test02_deque_cpp17_style(self):
         """C++17 style initialization of std::deque"""
 
-        import cppyy
+        import cppjit
 
         l = [1.0, 2.0, 3.0]
-        v = cppyy.gbl.std.deque(l)
+        v = cppjit.gbl.std.deque(l)
         assert list(l) == l
 
 
 class TestSTLSET:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = cppjit.gbl.N
 
     def test01_set_iteration(self):
         """Iterate over a set"""
 
-        import cppyy
+        import cppjit
 
-        s = cppyy.gbl.std.set[int]()
+        s = cppjit.gbl.std.set[int]()
         r = range(self.N)
         for i in r:
             s.insert(i)
@@ -1850,10 +1850,10 @@ class TestSTLSET:
     def test02_set_iterators(self):
         """Access to set iterators and their comparisons"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.include("iterator")
-        s = cppyy.gbl.std.set[int]()
+        cppjit.include("iterator")
+        s = cppjit.gbl.std.set[int]()
 
         assert s.begin()  == s.end()
         assert s.rbegin() == s.rend()
@@ -1873,40 +1873,40 @@ class TestSTLSET:
     def test03_initialize_from_set(self):
         """Test std::set initializion from Python set"""
 
-        import cppyy
+        import cppjit
 
         N = 10
 
-        s = cppyy.gbl.std.set[int](set(range(N)))
+        s = cppjit.gbl.std.set[int](set(range(N)))
         assert list(range(N)) == list(s)
 
-        s = cppyy.gbl.std.set[int](range(10))
+        s = cppjit.gbl.std.set[int](range(10))
         assert list(range(N)) == list(s)
 
         with raises(TypeError):
-            s = cppyy.gbl.std.set[int](set([1, "2"]))
+            s = cppjit.gbl.std.set[int](set([1, "2"]))
 
         with raises(TypeError):
-            s = cppyy.gbl.std.set[int](set(["aap", "noot", "mies"]))
+            s = cppjit.gbl.std.set[int](set(["aap", "noot", "mies"]))
 
     @mark.xfail(run=False, condition=IS_MAC and IS_CLING, reason="Crashes with OSX-Cling")
     def test04_set_cpp17_style(self):
         """C++17 style initialization of std::set"""
 
-        import cppyy
+        import cppjit
 
         l = [1.0, 2.0, 3.0]
-        v = cppyy.gbl.std.set(l)
+        v = cppjit.gbl.std.set(l)
         assert list(l) == l
 
     def test05_contains(self):
         """Contains check should not iterate and compare"""
 
-        import cppyy
+        import cppjit
 
-        assert '__contains__' in cppyy.gbl.std.set[int].__dict__
+        assert '__contains__' in cppjit.gbl.std.set[int].__dict__
 
-        S = cppyy.gbl.std.set[int](range(2**20))
+        S = cppjit.gbl.std.set[int](range(2**20))
 
         assert 1337 in S
         assert not (2**30 in S)
@@ -1920,16 +1920,16 @@ class TestSTLSET:
 class TestSTLTUPLE:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = cppjit.gbl.N
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test01_tuple_creation_and_access(self):
         """Create tuples and access their elements"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         t1 = std.make_tuple(1, 'a')
         assert t1
@@ -1963,8 +1963,8 @@ class TestSTLTUPLE:
     def test02_tuple_size(self):
         """Usage of tuple_size helper class"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         t = std.make_tuple("aap", 42, 5.)
         assert std.tuple_size(type(t)).value == 3
@@ -1973,8 +1973,8 @@ class TestSTLTUPLE:
     def test03_tuple_iter(self):
         """Pack/unpack tuples"""
 
-        import cppyy, ctypes
-        std = cppyy.gbl.std
+        import cppjit, ctypes
+        std = cppjit.gbl.std
 
         t = std.make_tuple(1, '2', 5.)
         assert len(t) == 3
@@ -1987,10 +1987,10 @@ class TestSTLTUPLE:
     def test04_tuple_lifeline(self):
         """Tuple memory management"""
 
-        import cppyy, gc
-        std = cppyy.gbl.std
+        import cppjit, gc
+        std = cppjit.gbl.std
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace TupleLifeLine {
         struct Simple {
           Simple() : fInt(42) {}
@@ -2000,7 +2000,7 @@ class TestSTLTUPLE:
           int fInt;
         }; }""")
 
-        Simple = cppyy.gbl.TupleLifeLine.Simple
+        Simple = cppjit.gbl.TupleLifeLine.Simple
 
         s1, s2 = std.make_tuple(Simple(), Simple())
 
@@ -2013,15 +2013,15 @@ class TestSTLTUPLE:
 class TestSTLPAIR:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = cppyy.gbl.N
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = cppjit.gbl.N
 
     def test01_pair_pack_unpack(self):
         """Pack/unpack pairs"""
 
-        import cppyy
-        std = cppyy.gbl.std
+        import cppjit
+        std = cppjit.gbl.std
 
         p = std.make_pair(1, 2)
         a, b = p
@@ -2033,103 +2033,103 @@ class TestSTLPAIR:
 class TestSTLEXCEPTION:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.stltypes = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.stltypes = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_basics(self):
         """Test behavior of std::exception derived classes"""
 
-        import cppyy
+        import cppjit
 
-        assert issubclass(cppyy.gbl.std.exception, BaseException)
-        assert cppyy.gbl.std.exception is cppyy.gbl.std.exception
+        assert issubclass(cppjit.gbl.std.exception, BaseException)
+        assert cppjit.gbl.std.exception is cppjit.gbl.std.exception
 
-        MyError = cppyy.gbl.MyError
-        assert MyError is cppyy.gbl.MyError
+        MyError = cppjit.gbl.MyError
+        assert MyError is cppjit.gbl.MyError
         assert issubclass(MyError, BaseException)
-        assert issubclass(MyError, cppyy.gbl.std.exception)
+        assert issubclass(MyError, cppjit.gbl.std.exception)
         assert MyError.__name__     == 'MyError'
         assert MyError.__cpp_name__ == 'MyError'
-        assert MyError.__module__   == 'cppyy.gbl'
+        assert MyError.__module__   == 'cppjit.gbl'
 
-        YourError = cppyy.gbl.YourError
-        assert YourError is cppyy.gbl.YourError
+        YourError = cppjit.gbl.YourError
+        assert YourError is cppjit.gbl.YourError
         assert issubclass(YourError, MyError)
         assert YourError.__name__     == 'YourError'
         assert YourError.__cpp_name__ == 'YourError'
-        assert YourError.__module__   == 'cppyy.gbl'
+        assert YourError.__module__   == 'cppjit.gbl'
 
-        MyError = cppyy.gbl.ErrorNamespace.MyError
-        assert MyError is not cppyy.gbl.MyError
-        assert MyError is cppyy.gbl.ErrorNamespace.MyError
+        MyError = cppjit.gbl.ErrorNamespace.MyError
+        assert MyError is not cppjit.gbl.MyError
+        assert MyError is cppjit.gbl.ErrorNamespace.MyError
         assert issubclass(MyError, BaseException)
-        assert issubclass(MyError, cppyy.gbl.std.exception)
+        assert issubclass(MyError, cppjit.gbl.std.exception)
         assert MyError.__name__     == 'MyError'
         assert MyError.__cpp_name__ == 'ErrorNamespace::MyError'
-        assert MyError.__module__   == 'cppyy.gbl.ErrorNamespace'
+        assert MyError.__module__   == 'cppjit.gbl.ErrorNamespace'
 
-        YourError = cppyy.gbl.ErrorNamespace.YourError
-        assert YourError is not cppyy.gbl.YourError
-        assert YourError is cppyy.gbl.ErrorNamespace.YourError
+        YourError = cppjit.gbl.ErrorNamespace.YourError
+        assert YourError is not cppjit.gbl.YourError
+        assert YourError is cppjit.gbl.ErrorNamespace.YourError
         assert issubclass(YourError, MyError)
         assert YourError.__name__     == 'YourError'
         assert YourError.__cpp_name__ == 'ErrorNamespace::YourError'
-        assert YourError.__module__   == 'cppyy.gbl.ErrorNamespace'
+        assert YourError.__module__   == 'cppjit.gbl.ErrorNamespace'
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test02_raising(self):
         """Raise a C++ std::exception derived class as a Python excption"""
 
-        import cppyy
+        import cppjit
 
-        assert issubclass(cppyy.gbl.MyError, BaseException)
+        assert issubclass(cppjit.gbl.MyError, BaseException)
 
         def raiseit(cls):
             raise cls('Oops')
 
         with raises(Exception):
-            raiseit(cppyy.gbl.MyError)
+            raiseit(cppjit.gbl.MyError)
 
-        with raises(cppyy.gbl.MyError):
-            raiseit(cppyy.gbl.MyError)
+        with raises(cppjit.gbl.MyError):
+            raiseit(cppjit.gbl.MyError)
 
         try:
-            raiseit(cppyy.gbl.MyError)
+            raiseit(cppjit.gbl.MyError)
         except Exception as e:
             assert e.what() == 'Oops'
 
         try:
-            raiseit(cppyy.gbl.MyError)
-        except cppyy.gbl.MyError as e:
+            raiseit(cppjit.gbl.MyError)
+        except cppjit.gbl.MyError as e:
             assert e.what() == 'Oops'
 
         try:
-            raiseit(cppyy.gbl.YourError)
-        except cppyy.gbl.MyError as e:
+            raiseit(cppjit.gbl.YourError)
+        except cppjit.gbl.MyError as e:
             assert e.what() == 'Oops'
 
         try:
-            raiseit(cppyy.gbl.YourError)
-        except cppyy.gbl.YourError as e:
+            raiseit(cppjit.gbl.YourError)
+        except cppjit.gbl.YourError as e:
             assert e.what() == 'Oops'
 
     @mark.xfail(condition=(IS_MAC_ARM or IS_MAC_X86), reason="Fails with OS X")
     def test03_memory(self):
         """Memory handling of C++ c// helper for exception base class testing"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        MyError   = cppyy.gbl.MyError
-        YourError = cppyy.gbl.YourError
+        MyError   = cppjit.gbl.MyError
+        YourError = cppjit.gbl.YourError
 
         gc.collect()
-        assert cppyy.gbl.GetMyErrorCount() == 0
+        assert cppjit.gbl.GetMyErrorCount() == 0
 
         m = MyError('Oops')
-        assert cppyy.gbl.GetMyErrorCount() == 1
+        assert cppjit.gbl.GetMyErrorCount() == 1
         del m
         gc.collect()
-        assert cppyy.gbl.GetMyErrorCount() == 0
+        assert cppjit.gbl.GetMyErrorCount() == 0
 
         def raiseit(cls):
             raise cls('Oops')
@@ -2149,14 +2149,14 @@ class TestSTLEXCEPTION:
             with raises(t2):
                 raiseit(t1)
             gc.collect()
-            assert cppyy.gbl.GetMyErrorCount() == 0
+            assert cppjit.gbl.GetMyErrorCount() == 0
 
             run_raiseit(t1, t2)
             gc.collect()
-            assert cppyy.gbl.GetMyErrorCount() == 0
+            assert cppjit.gbl.GetMyErrorCount() == 0
 
         gc.collect()
-        assert cppyy.gbl.GetMyErrorCount() == 0
+        assert cppjit.gbl.GetMyErrorCount() == 0
 
     @mark.xfail(run=False, condition=IS_MAC_ARM, reason="Seg Faults on OSX-ARM")
     def test04_from_cpp(self):
@@ -2165,51 +2165,51 @@ class TestSTLEXCEPTION:
         if ispypy:
             skip('currently terminates')
 
-        import cppyy, gc
+        import cppjit, gc
 
         gc.collect()
-        assert cppyy.gbl.GetMyErrorCount() == 0
+        assert cppjit.gbl.GetMyErrorCount() == 0
 
-        with raises(cppyy.gbl.MyError):
-            cppyy.gbl.ErrorNamespace.throw_error(0)
+        with raises(cppjit.gbl.MyError):
+            cppjit.gbl.ErrorNamespace.throw_error(0)
 
-        with raises(cppyy.gbl.MyError):
-            cppyy.gbl.ErrorNamespace.throw_error(1)
+        with raises(cppjit.gbl.MyError):
+            cppjit.gbl.ErrorNamespace.throw_error(1)
 
-        with raises(cppyy.gbl.YourError):
-            cppyy.gbl.ErrorNamespace.throw_error(1)
+        with raises(cppjit.gbl.YourError):
+            cppjit.gbl.ErrorNamespace.throw_error(1)
 
-        with raises(cppyy.gbl.ErrorNamespace.MyError):
-            cppyy.gbl.ErrorNamespace.throw_error(2)
+        with raises(cppjit.gbl.ErrorNamespace.MyError):
+            cppjit.gbl.ErrorNamespace.throw_error(2)
 
-        with raises(cppyy.gbl.ErrorNamespace.MyError):
-            cppyy.gbl.ErrorNamespace.throw_error(3)
+        with raises(cppjit.gbl.ErrorNamespace.MyError):
+            cppjit.gbl.ErrorNamespace.throw_error(3)
 
-        with raises(cppyy.gbl.ErrorNamespace.YourError):
-            cppyy.gbl.ErrorNamespace.throw_error(3)
+        with raises(cppjit.gbl.ErrorNamespace.YourError):
+            cppjit.gbl.ErrorNamespace.throw_error(3)
 
         gc.collect()
-        assert cppyy.gbl.GetMyErrorCount() == 0
+        assert cppjit.gbl.GetMyErrorCount() == 0
 
 def has_cpp_20():
-    import cppyy
+    import cppjit
 
-    return cppyy.evaluate("__cplusplus") >= 202002
+    return cppjit.evaluate("__cplusplus") >= 202002
 
 
 @mark.skipif(not has_cpp_20(), reason="std::span requires C++20")
 class TestSTLSPAN:
-    import cppyy
+    import cppjit
 
     def test01_span_iterators(self):
         """
         Test that std::span::begin() and std::span::end() can be used.
         """
-        import cppyy
+        import cppjit
 
         l1 = [1, 2, 3]
-        v = cppyy.gbl.std.vector(int)(l1)
-        s = cppyy.gbl.std.span(int)(v)
+        v = cppjit.gbl.std.vector(int)(l1)
+        s = cppjit.gbl.std.span(int)(v)
         s.begin()
         s.end()
         # Check that the iteration also works, which uses begin() and end()
@@ -2228,12 +2228,12 @@ class TestSTLSPAN:
         5) std::vector implicit conversion
         6) const std::span behavior
         """
-        import cppyy
+        import cppjit
         import numpy as np
         import array
         import pytest
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         #include <span>
         #include <vector>
 
@@ -2258,33 +2258,33 @@ class TestSTLSPAN:
         expected = sum(data)
 
         # 1) Python proxy span
-        v = cppyy.gbl.std.vector["double"](data)
-        s = cppyy.gbl.std.span["double"](v)
-        assert cppyy.gbl.sum_span["double"](s) == expected
-        assert cppyy.gbl.sum_span_const["double"](s) == expected
+        v = cppjit.gbl.std.vector["double"](data)
+        s = cppjit.gbl.std.span["double"](v)
+        assert cppjit.gbl.sum_span["double"](s) == expected
+        assert cppjit.gbl.sum_span_const["double"](s) == expected
 
         # 2) NumPy array
         np_arr = np.array(data, dtype=np.float64)
-        assert cppyy.gbl.sum_span["double"](np_arr) == expected
-        assert cppyy.gbl.sum_span_const["double"](np_arr) == expected
+        assert cppjit.gbl.sum_span["double"](np_arr) == expected
+        assert cppjit.gbl.sum_span_const["double"](np_arr) == expected
 
         # 3) array.array
         arr = array.array('d', data)
-        assert cppyy.gbl.sum_span["double"](arr) == expected
-        assert cppyy.gbl.sum_span_const["double"](arr) == expected
+        assert cppjit.gbl.sum_span["double"](arr) == expected
+        assert cppjit.gbl.sum_span_const["double"](arr) == expected
 
         # 4) Type mismatch → should raise TypeError
         np_double = np.array([1.0, 2.0, 3.0], dtype=np.float32)
         with pytest.raises(TypeError):
-            cppyy.gbl.sum_span["double"](np_double)
+            cppjit.gbl.sum_span["double"](np_double)
 
         # 5) std::vector implicit conversion
-        v2 = cppyy.gbl.std.vector["double"](data)
-        assert cppyy.gbl.sum_span["double"](v2) == expected
-        assert cppyy.gbl.sum_span_const["double"](v2) == expected
+        v2 = cppjit.gbl.std.vector["double"](data)
+        assert cppjit.gbl.sum_span["double"](v2) == expected
+        assert cppjit.gbl.sum_span_const["double"](v2) == expected
 
         # 6) const span behaves the same (already checked above, but explicit case)
-        assert cppyy.gbl.sum_span_const["double"](np_arr) == expected
+        assert cppjit.gbl.sum_span_const["double"](np_arr) == expected
 
 
 class TestSTLANY:
@@ -2293,9 +2293,9 @@ class TestSTLANY:
         """
         Test that std::make_any can be used for class types.
         """
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         #include <any>
 
         namespace STLANY {
@@ -2305,6 +2305,6 @@ class TestSTLANY:
         } // namespace STLANY
         """)
 
-        my_inst = cppyy.gbl.STLANY.MyClass()
+        my_inst = cppjit.gbl.STLANY.MyClass()
 
-        cppyy.gbl.std.make_any["STLANY::MyClass*", "STLANY::MyClass*"](my_inst)
+        cppjit.gbl.std.make_any["STLANY::MyClass*", "STLANY::MyClass*"](my_inst)

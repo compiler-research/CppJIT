@@ -7,7 +7,7 @@ class TestREGRESSION:
     helpout = []
 
     def setup_class(cls):
-        import cppyy
+        import cppjit
 
         if sys.hexversion < 0x30d0000:
             def stringpager(text, cls=cls):
@@ -23,7 +23,7 @@ class TestREGRESSION:
     def test01_kdcraw(self):
         """Doc strings for KDcrawIface (used to crash)."""
 
-        import cppyy, pydoc
+        import cppjit, pydoc
 
         # TODO: run a find for these paths
         qtpath = "/usr/include/qt5"
@@ -33,15 +33,15 @@ class TestREGRESSION:
 
         # need to resolve qt_version_tag for the incremental compiler; since
         # it's not otherwise used, just make something up
-        cppyy.cppdef("int qt_version_tag = 42;")
-        cppyy.add_include_path(qtpath)
-        cppyy.include(kdcraw_h)
+        cppjit.cppdef("int qt_version_tag = 42;")
+        cppjit.add_include_path(qtpath)
+        cppjit.include(kdcraw_h)
 
         # bring in some symbols to resolve the class
-        cppyy.load_library("libQt5Core.so")
-        cppyy.load_library("libKF5KDcraw.so")
+        cppjit.load_library("libQt5Core.so")
+        cppjit.load_library("libKF5KDcraw.so")
 
-        from cppyy.gbl import KDcrawIface
+        from cppjit.gbl import KDcrawIface
 
         self.__class__.helpout = []
         pydoc.doc(KDcrawIface.KDcraw)
@@ -55,9 +55,9 @@ class TestREGRESSION:
         if ispypy:
             skip('hangs (??) in pypy')
 
-        import cppyy, pydoc
+        import cppjit, pydoc
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             namespace docs {
             struct MyDocs {
                 void fn() {}
@@ -66,57 +66,57 @@ class TestREGRESSION:
             }
         """)
 
-        assert not '__abstractmethods__' in dir(cppyy.gbl.docs.ptrDocs)
-        assert '__class__' in dir(cppyy.gbl.docs.ptrDocs)
+        assert not '__abstractmethods__' in dir(cppjit.gbl.docs.ptrDocs)
+        assert '__class__' in dir(cppjit.gbl.docs.ptrDocs)
 
         self.__class__.helpout = []
-        pydoc.doc(cppyy.gbl.docs.ptrDocs)
+        pydoc.doc(cppjit.gbl.docs.ptrDocs)
         helptext = ''.join(self.__class__.helpout)
         assert 'MyDocs' in helptext
         assert 'CPPInstance' in helptext
         assert 'fn' in helptext
 
-        cppyy.cppdef("namespace cppyy_regression_test { void iii() {}; }")
+        cppjit.cppdef("namespace cppjit_regression_test { void iii() {}; }")
 
-        assert not 'iii' in cppyy.gbl.cppyy_regression_test.__dict__
-        assert not '__abstractmethods__' in dir(cppyy.gbl.cppyy_regression_test)
-        assert '__class__' in dir(cppyy.gbl.cppyy_regression_test)
-        assert 'iii' in dir(cppyy.gbl.cppyy_regression_test)
+        assert not 'iii' in cppjit.gbl.cppjit_regression_test.__dict__
+        assert not '__abstractmethods__' in dir(cppjit.gbl.cppjit_regression_test)
+        assert '__class__' in dir(cppjit.gbl.cppjit_regression_test)
+        assert 'iii' in dir(cppjit.gbl.cppjit_regression_test)
 
-        assert not 'iii' in cppyy.gbl.cppyy_regression_test.__dict__
-        assert cppyy.gbl.cppyy_regression_test.iii
-        assert 'iii' in cppyy.gbl.cppyy_regression_test.__dict__
+        assert not 'iii' in cppjit.gbl.cppjit_regression_test.__dict__
+        assert cppjit.gbl.cppjit_regression_test.iii
+        assert 'iii' in cppjit.gbl.cppjit_regression_test.__dict__
 
         self.__class__.helpout = []
-        pydoc.doc(cppyy.gbl.cppyy_regression_test)
+        pydoc.doc(cppjit.gbl.cppjit_regression_test)
         helptext = ''.join(self.__class__.helpout)
-        # TODO: it's deeply silly that namespaces inherit from CPPInstance (in CPyCppyy)
+        # TODO: it's deeply silly that namespaces inherit from CPPInstance (in cpyrt)
         assert ('CPPInstance' in helptext or 'CPPNamespace' in helptext)
 
     def test03_pyfunc_doc(self):
         """Help on a generated pyfunc used to crash."""
 
-        import cppyy, pydoc, sys
+        import cppjit, pydoc, sys
         import sysconfig as sc
 
-        cppyy.add_include_path(sc.get_config_var("INCLUDEPY"))
+        cppjit.add_include_path(sc.get_config_var("INCLUDEPY"))
         if sys.hexversion < 0x3000000:
-            cppyy.cppdef("#undef _POSIX_C_SOURCE")
-            cppyy.cppdef("#undef _XOPEN_SOURCE")
+            cppjit.cppdef("#undef _POSIX_C_SOURCE")
+            cppjit.cppdef("#undef _XOPEN_SOURCE")
         else:
-            cppyy.cppdef("#undef slots")     # potentially pulled in by Qt/xapian.h
+            cppjit.cppdef("#undef slots")     # potentially pulled in by Qt/xapian.h
 
-        cppyy.cppdef("""#include "Python.h"
+        cppjit.cppdef("""#include "Python.h"
            long py2long(PyObject* obj) { return PyLong_AsLong(obj); }""")
 
-        pydoc.doc(cppyy.gbl.py2long)
+        pydoc.doc(cppjit.gbl.py2long)
 
-        assert 1 == cppyy.gbl.py2long(1)
+        assert 1 == cppjit.gbl.py2long(1)
 
     def test04_avx(self):
         """Test usability of AVX by default."""
 
-        import cppyy, subprocess
+        import cppjit, subprocess
 
         has_avx = False
         try:
@@ -134,15 +134,15 @@ class TestREGRESSION:
                 pass
 
         if has_avx:
-            assert cppyy.cppdef('int check_avx() { return (int) __AVX__; }')
-            assert cppyy.gbl.check_avx()   # attribute error if compilation failed
+            assert cppjit.cppdef('int check_avx() { return (int) __AVX__; }')
+            assert cppjit.gbl.check_avx()   # attribute error if compilation failed
 
     def test05_default_template_arguments(self):
         """Calling a templated method on a templated class with all defaults used to crash."""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         template<typename T>
         class AllDefault {
         public:
@@ -154,16 +154,16 @@ class TestREGRESSION:
             T m_t;
         };""")
 
-        a = cppyy.gbl.AllDefault[int](24)
+        a = cppjit.gbl.AllDefault[int](24)
         a.m_t = 21;
         assert a.do_stuff() == 24
 
     def test06_default_float_or_unsigned_argument(self):
         """Calling with default argument for float or unsigned, which not parse"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace Defaulters {
             float take_float(float a=5.f, int b=2) { return a*b; }
             double take_double(double a=5.f, int b=2) { return a*b; }
@@ -171,7 +171,7 @@ class TestREGRESSION:
             unsigned long take_ulong(unsigned long a=5ul, int b=2) { return a*b; }
         }""")
 
-        ns = cppyy.gbl.Defaulters
+        ns = cppjit.gbl.Defaulters
 
       # the following default argument used to fail to parse
         assert ns.take_float()     == 10.
@@ -186,9 +186,9 @@ class TestREGRESSION:
     def test07_class_refcounting(self):
         """The memory regulator would leave an additional refcount on classes"""
 
-        import cppyy, gc, sys
+        import cppjit, gc, sys
 
-        x = cppyy.gbl.std.vector['float']
+        x = cppjit.gbl.std.vector['float']
         old_refcnt = sys.getrefcount(x)
 
         y = x()
@@ -201,26 +201,26 @@ class TestREGRESSION:
     def test08_typedef_identity(self):
         """Nested typedefs should retain identity"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace PyABC {
         struct S1 {};
         struct S2 {
             typedef std::vector<const PyABC::S1*> S1_coll;
         }; }""")
 
-        from cppyy.gbl import PyABC
+        from cppjit.gbl import PyABC
 
         assert PyABC.S2.S1_coll
         assert 'S1_coll' in dir(PyABC.S2)
         assert not 'vector<const PyABC::S1*>' in dir(PyABC.S2)
-        assert PyABC.S2.S1_coll is cppyy.gbl.std.vector('const PyABC::S1*')
+        assert PyABC.S2.S1_coll is cppjit.gbl.std.vector('const PyABC::S1*')
 
     def test09_gil_not_released(self):
         """GIL was released by accident for by-value returns"""
 
-        import cppyy
+        import cppjit
 
         something = 5.0
 
@@ -236,8 +236,8 @@ class TestREGRESSION:
             }
             """.replace("ADDRESS", str(id(something)))
 
-        cppyy.cppdef(code)
-        cppyy.gbl.some_foo_calling_python()
+        cppjit.cppdef(code)
+        cppjit.gbl.some_foo_calling_python()
 
     @mark.xfail(run = False, condition = IS_CLING, reason="Crashes on Cling")
     def test10_enum_in_global_space(self):
@@ -246,40 +246,40 @@ class TestREGRESSION:
         if IS_WINDOWS:
             return           # no such enum in MSVC's search.h
 
-        import cppyy
+        import cppjit
 
-        cppyy.include('search.h')
+        cppjit.include('search.h')
 
-        assert cppyy.gbl.ACTION
-        assert hasattr(cppyy.gbl, 'ENTER')
-        assert hasattr(cppyy.gbl, 'FIND')
+        assert cppjit.gbl.ACTION
+        assert hasattr(cppjit.gbl, 'ENTER')
+        assert hasattr(cppjit.gbl, 'FIND')
 
     def test11_cobject_addressing(self):
         """AsCObject (now as_cobject) had a deref too many"""
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
 
-        cppyy.cppdef('struct CObjA { CObjA() : m_int(42) {} int m_int; };')
-        a = cppyy.gbl.CObjA()
-        co = cppyy.ll.as_cobject(a)
+        cppjit.cppdef('struct CObjA { CObjA() : m_int(42) {} int m_int; };')
+        a = cppjit.gbl.CObjA()
+        co = cppjit.ll.as_cobject(a)
 
-        assert a is cppyy.bind_object(co, 'CObjA')
+        assert a is cppjit.bind_object(co, 'CObjA')
         assert a.m_int == 42
-        assert cppyy.bind_object(co, 'CObjA').m_int == 42
+        assert cppjit.bind_object(co, 'CObjA').m_int == 42
 
     def test12_exception_while_exception(self):
         """Exception from SetDetailedException during exception handling used to crash"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("namespace AnExceptionNamespace { }")
+        cppjit.cppdef("namespace AnExceptionNamespace { }")
 
         try:
-            cppyy.gbl.blabla
+            cppjit.gbl.blabla
         except AttributeError:
             try:
-                cppyy.gbl.AnExceptionNamespace.blabla
+                cppjit.gbl.AnExceptionNamespace.blabla
             except AttributeError:
                 pass
 
@@ -292,9 +292,9 @@ class TestREGRESSION:
       # original bug report is here:
       #    https://bitbucket.org/wlav/cppyy/issues/127/string-argument-resolves-incorrectly
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace csoc1 {
             std::string call(char) { return "char"; }
         }
@@ -310,21 +310,21 @@ class TestREGRESSION:
         }
         """)
 
-        assert cppyy.gbl.csoc1.call('0') == 'char'
-        raises(ValueError, cppyy.gbl.csoc1.call, '00')
+        assert cppjit.gbl.csoc1.call('0') == 'char'
+        raises(ValueError, cppjit.gbl.csoc1.call, '00')
 
-        assert cppyy.gbl.csoc2.call('0')  == 'const char*'
-        assert cppyy.gbl.csoc2.call('00') == 'const char*'
+        assert cppjit.gbl.csoc2.call('0')  == 'const char*'
+        assert cppjit.gbl.csoc2.call('00') == 'const char*'
 
-        assert cppyy.gbl.csoc3.call('0')  == 'string'
-        assert cppyy.gbl.csoc3.call('00') == 'string'
+        assert cppjit.gbl.csoc3.call('0')  == 'string'
+        assert cppjit.gbl.csoc3.call('00') == 'string'
 
     def test14_struct_direct_definition(self):
         """Struct defined directly in a scope miseed scope in renormalized name"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace struct_direct_definition {
         struct Bar {
             struct Baz {
@@ -347,7 +347,7 @@ class TestREGRESSION:
 
         }; }""")
 
-        from cppyy.gbl import struct_direct_definition as sds
+        from cppjit.gbl import struct_direct_definition as sds
 
         b = sds.Bar()
 
@@ -364,9 +364,9 @@ class TestREGRESSION:
     def test15_vector_vs_initializer_list(self):
         """Prefer vector in template and initializer_list in formal arguments"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace vec_vs_init {
            template<class T>
            std::string nameit1(const T& t) {
@@ -382,24 +382,24 @@ class TestREGRESSION:
            }
         }""")
 
-        nameit1 = cppyy.gbl.vec_vs_init.nameit1
+        nameit1 = cppjit.gbl.vec_vs_init.nameit1
         assert 'vector' in nameit1(list(range(10)))
-        assert 'vector' in nameit1(cppyy.gbl.std.vector[int]())
+        assert 'vector' in nameit1(cppjit.gbl.std.vector[int]())
 
-        nameit2 = cppyy.gbl.vec_vs_init.nameit2
+        nameit2 = cppjit.gbl.vec_vs_init.nameit2
         assert 'vector' in nameit2(list(range(10)))
-        assert 'vector' in nameit2(cppyy.gbl.std.vector[int]())
+        assert 'vector' in nameit2(cppjit.gbl.std.vector[int]())
 
-        sizeit = cppyy.gbl.vec_vs_init.sizeit
+        sizeit = cppjit.gbl.vec_vs_init.sizeit
         assert sizeit(list(range(10))) == 10
 
     def test16_iterable_enum(self):
         """Use template to iterate over an enum"""
       # from: https://stackoverflow.com/questions/52459530/pybind11-emulate-python-enum-behaviour
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         template <typename Enum>
         struct my_iter_enum {
             struct iterator {
@@ -440,7 +440,7 @@ class TestREGRESSION:
             Unknown
         };""")
 
-        Color = cppyy.gbl.my_iter_enum['MyColorEnum']
+        Color = cppjit.gbl.my_iter_enum['MyColorEnum']
         assert Color.iterator
 
         c_iterable = Color()
@@ -454,9 +454,9 @@ class TestREGRESSION:
     def test17_operator_eq_pickup(self):
         """Base class python-side operator== interered with derived one"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace SelectOpEq {
         class Base {};
 
@@ -470,7 +470,7 @@ class TestREGRESSION:
             bool operator!=(Derived2&) { return true; }
         }; }""")
 
-        soe = cppyy.gbl.SelectOpEq
+        soe = cppjit.gbl.SelectOpEq
 
         soe.Base.__eq__ = lambda first, second: False
         soe.Base.__ne__ = lambda first, second: False
@@ -489,26 +489,26 @@ class TestREGRESSION:
     def test18_operator_plus_overloads(self):
         """operator+(string, string) should return a string"""
 
-        import cppyy
+        import cppjit
 
-        a = cppyy.gbl.std.string("a")
-        b = cppyy.gbl.std.string("b")
+        a = cppjit.gbl.std.string("a")
+        b = cppjit.gbl.std.string("b")
 
         assert a == 'a'
         assert b == 'b'
 
-        assert type(a+b) == cppyy.gbl.std.string
+        assert type(a+b) == cppjit.gbl.std.string
         assert a+b == 'ab'
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test19_std_string_hash(self):
         """Hashing of std::string"""
 
-        import cppyy
+        import cppjit
 
-        import cppyy
+        import cppjit
 
-        s = cppyy.gbl.std.string("text")
+        s = cppjit.gbl.std.string("text")
         d = {}
 
       # hashes of std::string larger than 2**31 would fail; run a couple of
@@ -520,9 +520,9 @@ class TestREGRESSION:
     def test20_signed_char_ref(self):
         """Signed char executor was self-referencing"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         class SignedCharRefGetter {
         public:
             void setter(signed char sc) { m_c = sc; }
@@ -530,7 +530,7 @@ class TestREGRESSION:
             signed char m_c;
         };""")
 
-        obj = cppyy.gbl.SignedCharRefGetter()
+        obj = cppjit.gbl.SignedCharRefGetter()
         obj.setter('c')
 
         assert obj.getter() == 'c'
@@ -539,22 +539,22 @@ class TestREGRESSION:
     def test21_temporaries_and_vector(self):
         """Extend a life line to references into a vector if needed"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             std::vector<std::string> get_some_temporary_vector() { return { "x", "y", "z" }; }
         """)
 
-        l = [e for e in cppyy.gbl.get_some_temporary_vector()]
+        l = [e for e in cppjit.gbl.get_some_temporary_vector()]
         assert l == ['x', 'y', 'z']
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test22_initializer_list_and_temporary(self):
         """Conversion rules when selecting intializer_list v.s. temporary"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace regression_test21 {
         std::string what_called = "";
         class Foo {
@@ -586,7 +586,7 @@ class TestREGRESSION:
             }
         }; }""")
 
-        r21 = cppyy.gbl.regression_test21
+        r21 = cppjit.gbl.regression_test21
 
         assert len(r21.what_called) == 0
 
@@ -600,9 +600,9 @@ class TestREGRESSION:
     def test23_copy_constructor(self):
         """Copy construct an object into an empty (NULL) proxy"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace regression_test22 {
         struct Countable {
             static int s_count;
@@ -618,7 +618,7 @@ class TestREGRESSION:
         void destroyit() { delete c; }
         }""")
 
-        r22 = cppyy.gbl.regression_test22
+        r22 = cppjit.gbl.regression_test22
 
         assert r22.Countable.s_count == 0
         c = r22.Countable()
@@ -642,7 +642,7 @@ class TestREGRESSION:
         gc.collect()
         assert r22.Countable.s_count == 0
 
-        c = cppyy.bind_object(cppyy.nullptr, r22.Countable)
+        c = cppjit.bind_object(cppjit.nullptr, r22.Countable)
         assert r22.Countable.s_count == 0
         c.__init__(r22.Countable())
         gc.collect()
@@ -666,15 +666,15 @@ class TestREGRESSION:
         assert r22.Countable.s_count == 1
 
         r22.destroyit()
-        r22.c = cppyy.nullptr
+        r22.c = cppjit.nullptr
         assert r22.Countable.s_count == 0
 
     def test24_C_style_enum(self):
         """Support C-style enum variable declarations"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace CStyleEnum {
            enum MyEnum { kOne, kTwo };
            MyEnum my_enum = kOne;
@@ -683,7 +683,7 @@ class TestREGRESSION:
            enum YourEnum your_enum = kThree;
         }""")
 
-        CSE = cppyy.gbl.CStyleEnum
+        CSE = cppjit.gbl.CStyleEnum
 
         assert CSE.my_enum == CSE.MyEnum.kOne
         CSE.my_enum = CSE.MyEnum.kTwo
@@ -697,9 +697,9 @@ class TestREGRESSION:
     def test25_const_iterator(self):
         """const_iterator failed to resolve the proper return type"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace RooStuff {
         struct RooArg {};
 
@@ -712,20 +712,20 @@ class TestREGRESSION:
             const_iterator end() const { return _list.end(); }
         }; }""")
 
-        l = cppyy.gbl.RooStuff.RooCollection()
+        l = cppjit.gbl.RooStuff.RooCollection()
 
         i = 0
         for e in l:
-            assert type(e) == cppyy.gbl.RooStuff.RooArg
+            assert type(e) == cppjit.gbl.RooStuff.RooArg
             i += 1
         assert i
 
     def test26_const_charptr_data(self):
         """const char* is not const; const char* const is"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace ConstCharStar {
         struct ImGuiIO1 {
             ImGuiIO1() : BackendPlatformName(nullptr) {}
@@ -736,7 +736,7 @@ class TestREGRESSION:
             const char* const BackendPlatformName;
         }; }""")
 
-        io = cppyy.gbl.ConstCharStar.ImGuiIO1()
+        io = cppjit.gbl.ConstCharStar.ImGuiIO1()
 
         io.BackendPlatformName = "aap"
         assert io.BackendPlatformName == "aap"
@@ -744,16 +744,16 @@ class TestREGRESSION:
         io.BackendPlatformName = "aap\0noot"
         io.BackendPlatformName = "aap\0noot"
 
-        io = cppyy.gbl.ConstCharStar.ImGuiIO2()
+        io = cppjit.gbl.ConstCharStar.ImGuiIO2()
         with raises(TypeError):
             io.BackendPlatformName = "aap"
 
     def test27_exception_by_value(self):
         """Proper memory management of exception return by value"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ExceptionByValue {
         class Countable : std::exception {
         public:
@@ -773,7 +773,7 @@ class TestREGRESSION:
         int count() { return Countable::s_count; }
         }""")
 
-        ns = cppyy.gbl.ExceptionByValue
+        ns = cppjit.gbl.ExceptionByValue
 
         assert ns.count() == 0
         c = ns.create_one()
@@ -786,25 +786,25 @@ class TestREGRESSION:
     def test28_exception_as_shared_ptr(self):
         """shared_ptr of an exception object null-checking"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace exception_as_shared_ptr {
             std::shared_ptr<std::exception> get_shared_null() {
                 return std::shared_ptr<std::exception>();
             }
         }""")
 
-        null = cppyy.gbl.exception_as_shared_ptr.get_shared_null()
+        null = cppjit.gbl.exception_as_shared_ptr.get_shared_null()
         assert not null
 
     @mark.xfail(run=False, condition=(IS_CLING and IS_MAC) or IS_MAC_ARM, reason="Dispatcher fix #53 introduces canonical types with std:: namespace that introduces OS X exceptions similar to test_stltypes")
     def test29_callback_pointer_values(self):
         """Make sure pointer comparisons in callbacks work as expected"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace addressof_regression {
         class ChangeBroadcaster;
 
@@ -845,9 +845,9 @@ class TestREGRESSION:
             DerivedClass derived;
         }; }""")
 
-        ns = cppyy.gbl.addressof_regression
+        ns = cppjit.gbl.addressof_regression
 
-        class Glue(cppyy.multi(ns.Implementation, ns.ChangeListener)):
+        class Glue(cppjit.multi(ns.Implementation, ns.ChangeListener)):
             def __init__(self):
                 super(ns.Implementation, self).__init__()
                 self.derived.addChangeListener(self)
@@ -859,7 +859,7 @@ class TestREGRESSION:
             def changeCallback(self, b):
                 assert type(b) == type(self.derived)
                 assert b == self.derived
-                cast = cppyy.gbl.std.addressof[type(b)]
+                cast = cppjit.gbl.std.addressof[type(b)]
                 assert cast(b) == cast(self.derived)
                 self.success = True
 
@@ -872,9 +872,9 @@ class TestREGRESSION:
     def test30_uint64_t(self):
         """Failure due to typo"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         #include <limits>
         namespace UInt64_Typo {
             uint64_t Test(uint64_t v) { return v; }
@@ -882,12 +882,12 @@ class TestREGRESSION:
             template <typename T> Struct<T> TTest(T t) { return Struct<T>{t}; }
         }""")
 
-        from cppyy.gbl import UInt64_Typo as ns
+        from cppjit.gbl import UInt64_Typo as ns
 
-        std = cppyy.gbl.std
-        uint64_t = cppyy.gbl.uint64_t
+        std = cppjit.gbl.std
+        uint64_t = cppjit.gbl.uint64_t
         umax64   = std.numeric_limits[uint64_t].max()
-        int64_t  = cppyy.gbl.int64_t
+        int64_t  = cppjit.gbl.int64_t
         max64    = std.numeric_limits[int64_t].max()
         min64    = std.numeric_limits[int64_t].min()
 
@@ -905,9 +905,9 @@ class TestREGRESSION:
     def test31_enum_in_dir(self):
         """Failed to pick up enum data"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace enum_in_dir {
             long prod (long a, long b) { return a * b; }
             long prod (long a, long b, long c) { return a * b * c; }
@@ -919,7 +919,7 @@ class TestREGRESSION:
             enum smth my_enum = smth::ONE;
         }""")
 
-        all_names = set(dir(cppyy.gbl.enum_in_dir))
+        all_names = set(dir(cppjit.gbl.enum_in_dir))
 
         required = {'prod', 'a', 'b', 'smth', 'my_enum'}
         assert all_names.intersection(required) == required
@@ -927,9 +927,9 @@ class TestREGRESSION:
     def test32_typedef_class_enum(self):
         """Use of class enum with typedef'd type"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace typedef_typed_enum {
         enum class Foo1 : uint16_t       { BAZ = 1, BAR = 2 };
         enum class Foo2 : unsigned short { BAZ = 3, BAR = 4 };
@@ -941,7 +941,7 @@ class TestREGRESSION:
             uint8_t y;
         }; } """)
 
-        ns = cppyy.gbl.typedef_typed_enum
+        ns = cppjit.gbl.typedef_typed_enum
 
         Info = ns.Info
 
@@ -964,9 +964,9 @@ class TestREGRESSION:
     def test33_explicit_template_in_namespace(self):
         """Lookup of explicit template in namespace"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace libchemist {
         namespace type {
             template<typename T> class tensor {};
@@ -1004,21 +1004,21 @@ class TestREGRESSION:
         } } // namespace type, property_types
         """)
 
-        assert cppyy.gbl.property_types.type.canonical_mos['double']
-        assert cppyy.gbl.std.get[0](cppyy.gbl.libchemist.produce())     == 10.
-        assert cppyy.gbl.std.get[0](cppyy.gbl.property_types.produce()) ==  5.
+        assert cppjit.gbl.property_types.type.canonical_mos['double']
+        assert cppjit.gbl.std.get[0](cppjit.gbl.libchemist.produce())     == 10.
+        assert cppjit.gbl.std.get[0](cppjit.gbl.property_types.produce()) ==  5.
 
-        pt_type = cppyy.gbl.property_types.ReferenceWavefunction['double']
-        assert cppyy.gbl.std.get[0](cppyy.gbl.property_types.run_as[pt_type]()) ==  20.
+        pt_type = cppjit.gbl.property_types.ReferenceWavefunction['double']
+        assert cppjit.gbl.std.get[0](cppjit.gbl.property_types.run_as[pt_type]()) ==  20.
 
     @mark.xfail(run=False, reason="Crashes on ClangRepl with 'toString not implemented', and on Cling")
     def test34_print_empty_collection(self):
         """Print empty collection through Cling"""
 
-        import cppyy
+        import cppjit
 
       # printing an empty collection used to have a missing symbol on 64b Windows
-        v = cppyy.gbl.std.vector[int]()
+        v = cppjit.gbl.std.vector[int]()
         str(v)
 
     @mark.xfail(run=IS_CLANG_REPL, condition=IS_MAC or IS_CLING, reason="Crashes on Cling")
@@ -1029,9 +1029,9 @@ class TestREGRESSION:
             # TODO: this is b/c of the mangling: it's looking for '_std', but name is '__'
             skip('fails due to missing _std_fs_convert_narrow_to_wide symbol')
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         #include <filesystem>
         std::string stack_std_path() {
             std::filesystem::path p = "/usr";
@@ -1040,21 +1040,21 @@ class TestREGRESSION:
             return os.str();
         }""")
 
-        assert cppyy.gbl.stack_std_path() == '"/usr"'
+        assert cppjit.gbl.stack_std_path() == '"/usr"'
 
     def test36_ctypes_sizeof(self):
-        """cppyy.sizeof forwards to ctypes.sizeof where necessary"""
+        """cppjit.sizeof forwards to ctypes.sizeof where necessary"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace test36_ctypes_sizeof {
             void func(uint32_t* param) {
                 *param = 42;
             }
         }""")
 
-        ns = cppyy.gbl.test36_ctypes_sizeof
+        ns = cppjit.gbl.test36_ctypes_sizeof
 
         holder = ctypes.c_uint32(17)
         param = ctypes.pointer(holder)
@@ -1066,42 +1066,42 @@ class TestREGRESSION:
         ns.func(holder)
         assert holder.value == 42
 
-        assert cppyy.sizeof(param) == ctypes.sizeof(param)
+        assert cppjit.sizeof(param) == ctypes.sizeof(param)
 
     def test37_array_of_pointers_argument(self):
         """Passing an array of pointers used to crash"""
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ArrayOfPointers {
            void* test(int *arr[8], bool is_int=true) { return is_int ? (void*)arr : nullptr; }
            void* test(uint8_t *arr[8], bool is_int=false) { return is_int ? nullptr : (void*)arr; }
         }""")
 
-        ns = cppyy.gbl.ArrayOfPointers
+        ns = cppjit.gbl.ArrayOfPointers
 
         N = 9
 
         for t, b in (('int*', True), ('uint8_t*', False)):
-            arr = cppyy.ll.array_new[t](N, managed=True)
+            arr = cppjit.ll.array_new[t](N, managed=True)
             assert arr.shape[0] == N
             assert len(arr) == N
 
             res = ns.test(arr, b)
 
-            assert cppyy.addressof(res) == cppyy.addressof(arr)
+            assert cppjit.addressof(res) == cppjit.addressof(arr)
 
     @mark.xfail(run = False, condition = (IS_MAC and IS_CLING), reason = "Crashes on OS X Cling")
     def test38_char16_arrays(self):
         """Access to fixed-size char16 arrays as data members"""
 
-        import cppyy
-        import cppyy.ll
+        import cppjit
+        import cppjit.ll
         import warnings
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace Char16Fixed {
         struct AxisInformation {
             char16_t name[6];
@@ -1115,7 +1115,7 @@ class TestREGRESSION:
 
         N = 10
 
-        ns = cppyy.gbl.Char16Fixed
+        ns = cppjit.gbl.Char16Fixed
 
         ai = ns.AxisInformation()
         for s in [u'hello', u'hellow']:
@@ -1132,34 +1132,34 @@ class TestREGRESSION:
             assert 'too long' in str(exc.value)
 
         # vector of objects
-        va = cppyy.gbl.std.vector[ns.AxisInformation](N)
+        va = cppjit.gbl.std.vector[ns.AxisInformation](N)
         ns.fillem(va.data(), N)
         for ai in va:
             assert len(ai.name) == 6
             assert ai.name[:5] == u'hello'
 
         # array of objects
-        aa = cppyy.gbl.std.array[ns.AxisInformation, N]()
+        aa = cppjit.gbl.std.array[ns.AxisInformation, N]()
         ns.fillem(aa.data(), N)
         for ai in aa:
             assert len(ai.name) == 6
             assert ai.name[:5] == u'hello'
 
         # low-level array of objects
-        aa = cppyy.ll.array_new[ns.AxisInformation](N)
+        aa = cppjit.ll.array_new[ns.AxisInformation](N)
         ns.fillem(aa, N)
         for ai in aa:
             assert len(ai.name) == 6
             assert ai.name[:5] == u'hello'
-        cppyy.ll.array_delete(aa)
+        cppjit.ll.array_delete(aa)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test39_vector_of_pointers_conversion(self):
         """vector<T*>'s const T*& used to be T**, now T*"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace VectorOfPointers {
         struct Base1 { std::string name; explicit Base1(const std::string& name) : name(name) { }};
         struct Derived1 : Base1 { explicit Derived1(const std::string& name) : Base1(name) { } };
@@ -1169,8 +1169,8 @@ class TestREGRESSION:
             std::vector<const Base1*> GetVector() { return { &d1, &d2 }; }
         }; }""")
 
-        cppyy.gbl.VectorOfPointers
-        from cppyy.gbl.VectorOfPointers import Base1, Derived1, Owner
+        cppjit.gbl.VectorOfPointers
+        from cppjit.gbl.VectorOfPointers import Base1, Derived1, Owner
 
         o = Owner()
 
@@ -1194,7 +1194,7 @@ class TestREGRESSION:
         assert l[0].name == "d1"
         assert l[1].name == "d2"
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace VectorOfPointers {
         struct Base2 { };
         struct Derived2 : Base2 { };
@@ -1207,8 +1207,8 @@ class TestREGRESSION:
         std::vector<const Base3*> vec3 { &d3 };
         }""")
 
-        from cppyy.gbl import std
-        from cppyy.gbl.VectorOfPointers import Base2, Derived2, Base3, Derived3, vec2, vec3
+        from cppjit.gbl import std
+        from cppjit.gbl.VectorOfPointers import Base2, Derived2, Base3, Derived3, vec2, vec3
 
         assert len(vec2)     == 1
         assert type(vec2[0]) == Base2
@@ -1226,9 +1226,9 @@ class TestREGRESSION:
     def test40_explicit_initializer_list(self):
         """Construct and pass an explicit initializer list"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace ExplicitInitializer {
         enum class TestEnum { Foo, Bar };
 
@@ -1239,17 +1239,17 @@ class TestREGRESSION:
             TestClass(TestDictClass x) {}
         }; }""")
 
-        ns = cppyy.gbl.ExplicitInitializer
+        ns = cppjit.gbl.ExplicitInitializer
 
-        TestPair = cppyy.gbl.std.pair[ns.TestEnum, int]
+        TestPair = cppjit.gbl.std.pair[ns.TestEnum, int]
         arg = ns.TestDictClass([TestPair(ns.TestEnum.Bar, 4), TestPair(ns.TestEnum.Foo, 12)])
         assert ns.TestClass(arg)
 
     def test41_typedefed_enums(self):
         """Typedef-ed enums do not have enum tag in declarations"""
 
-        import cppyy
-        cppyy.cppdef("""\
+        import cppjit
+        cppjit.cppdef("""\
         namespace TypedefedEnum {
         typedef enum {
             MONDAY    = 0,
@@ -1260,16 +1260,16 @@ class TestREGRESSION:
         int func(const Day day) { return (int)day; }
         }""")
 
-        ns = cppyy.gbl.TypedefedEnum
+        ns = cppjit.gbl.TypedefedEnum
 
         assert ns.func(ns.WEDNESDAY) == 2
 
     def test42_char_arrays_consistence(self):
         """Consistent usage of char[] arrays"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace CharArrays {
         struct Foo {
             char val[10], *ptr;
@@ -1288,7 +1288,7 @@ class TestREGRESSION:
             foo->pointers[1] = foo->values[1];
         } }""")
 
-        ns = cppyy.gbl.CharArrays
+        ns = cppjit.gbl.CharArrays
 
         foo = ns.Foo()
         ns.set_pointers(foo)
@@ -1308,15 +1308,15 @@ class TestREGRESSION:
     def test43_static_with_default(self):
         """Call a static method with default args on an instance"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace StaticWithDefault {
         struct MyClass {
             void static smethod(const std::string& s1, const std::string& s2="") {}
         }; }""")
 
-        ns = cppyy.gbl.StaticWithDefault
+        ns = cppjit.gbl.StaticWithDefault
         obj = ns.MyClass()
 
         obj.smethod("one", "two")
@@ -1325,9 +1325,9 @@ class TestREGRESSION:
     def test44_heuristic_mem_policy(self):
         """Ownership of arguments with heuristic memory policy"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace MemTester {
            void CallRef( std::string&) {}
            void CallConstRef( const std::string&) {}
@@ -1339,7 +1339,7 @@ class TestREGRESSION:
         try:
             # The scope with the heuristic memory policy is in a try-except-finally block
             # to ensure the memory policy is always reset.
-            old_memory_policy = cppyy._backend.SetMemoryPolicy(cppyy._backend.kMemoryHeuristics)
+            old_memory_policy = cppjit._backend.SetMemoryPolicy(cppjit._backend.kMemoryHeuristics)
 
             # Validate the intended behavior for different argument types:
             #   const ref : caller keeps ownership
@@ -1348,50 +1348,50 @@ class TestREGRESSION:
             #   ptr       : caller passed ownership to callee
 
             # The actual type doesn't matter
-            args = [cppyy.gbl.std.string() for i in range(4)]
+            args = [cppjit.gbl.std.string() for i in range(4)]
 
-            cppyy.gbl.MemTester.CallConstRef(args[0])
+            cppjit.gbl.MemTester.CallConstRef(args[0])
             assert args[0].__python_owns__
 
-            cppyy.gbl.MemTester.CallConstPtr(args[1])
+            cppjit.gbl.MemTester.CallConstPtr(args[1])
             assert args[1].__python_owns__
 
-            cppyy.gbl.MemTester.CallRef(args[2])
+            cppjit.gbl.MemTester.CallRef(args[2])
             assert args[2].__python_owns__
 
-            cppyy.gbl.MemTester.CallPtr(args[3])
+            cppjit.gbl.MemTester.CallPtr(args[3])
             assert not args[3].__python_owns__
             # Let's give back the ownership to Python here so there is no leak
-            cppyy._backend.SetOwnership(args[3], True)
+            cppjit._backend.SetOwnership(args[3], True)
         except:
             raise # rethrow the exception
         finally:
-            cppyy._backend.SetMemoryPolicy(old_memory_policy)
+            cppjit._backend.SetMemoryPolicy(old_memory_policy)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test45_typedef_resolution(self):
         """Typedefs starting with 'c'"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
-        namespace Cppyy {
+        cppjit.cppdef("""\
+        namespace cppjit::interop {
             std::string ResolveName(const std::string& name);
         }
         typedef const int my_custom_type_t;
         typedef const int cmy_custom_type_t;
         """)
 
-        assert cppyy.gbl.Cppyy.ResolveName("my_custom_type_t") == "const int"
-        assert cppyy.gbl.Cppyy.ResolveName("cmy_custom_type_t") == "const int"
+        assert cppjit.gbl.cppjit.interop.ResolveName("my_custom_type_t") == "const int"
+        assert cppjit.gbl.cppjit.interop.ResolveName("cmy_custom_type_t") == "const int"
 
     @mark.xfail(run=False, condition=IS_MAC_ARM, reason="Crashes with exception not being caught on Apple Silicon")
     def test46_exception_narrowing(self):
         """Exception narrowing to C++ exception of all overloads"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace OverloadThrows {
         class Foo {
         public:
@@ -1399,18 +1399,18 @@ class TestREGRESSION:
             void bar() const { throw std::logic_error("This is fine"); }
         }; }""")
 
-        ns = cppyy.gbl.OverloadThrows
+        ns = cppjit.gbl.OverloadThrows
 
         foo = ns.Foo()
-        with raises(cppyy.gbl.std.logic_error):
+        with raises(cppjit.gbl.std.logic_error):
             foo.bar()
     
     def test47_initializer_list_fail(self, capfd):
         """Conversion to intializer_list requires default constructor"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace regression_test47 {
         std::size_t size = 0;
         struct IntWrapper { IntWrapper(int i) : fInt(i) {} int fInt; };
@@ -1418,7 +1418,7 @@ class TestREGRESSION:
         void f(std::vector<IntWrapper> l) { size = l.size(); }
         }""")
 
-        r47 = cppyy.gbl.regression_test47
+        r47 = cppjit.gbl.regression_test47
 
         assert r47.size == 0
         capfd.readouterr()  # discard any output produced so far
@@ -1432,10 +1432,10 @@ class TestREGRESSION:
     def test48_templated_using_with_const(self):
         """Test parsing of template arguments mixed with using clause and constants"""
 
-        import cppyy
-        from cppyy import gbl
+        import cppjit
+        from cppjit import gbl
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
             template <typename T, int N>
             struct NN {
               bool F = true;
@@ -1458,9 +1458,9 @@ class TestREGRESSION:
         pointer, corrupting memory and crashing on destruction.
         """
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace UsingDeclThisOffset {
 
         // Fat first base so that SecondBase lands at a non-zero offset in Derived.
@@ -1494,7 +1494,7 @@ class TestREGRESSION:
 
         } """)
 
-        ns = cppyy.gbl.UsingDeclThisOffset
+        ns = cppjit.gbl.UsingDeclThisOffset
 
         # the bug only manifests when SecondBase is at a non-zero offset
         assert ns.secondbase_offset() != 0
@@ -1533,9 +1533,9 @@ class TestREGRESSION:
         wrapper ("failed to resolve function").
         """
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace NonTypeEnumTmpl {
             enum class EOp { Add = 0, Sub = 1, Mul = 2 };
 
@@ -1551,7 +1551,7 @@ class TestREGRESSION:
 
             // Factory returning a *raw* base pointer whose dynamic type carries
             // a non-type enum template argument. Auto-downcasting it back to
-            // Python makes cppyy resolve the actual type by name, i.e. the
+            // Python makes cppjit resolve the actual type by name, i.e. the
             // cast-form "Impl<float, (EOp)0>".
             Base* get(int which) {
                 static Impl<float, EOp::Add> a;
@@ -1568,7 +1568,7 @@ class TestREGRESSION:
         }
         """)
 
-        ns = cppyy.gbl.NonTypeEnumTmpl
+        ns = cppjit.gbl.NonTypeEnumTmpl
 
         # resolving the derived template type during the auto-downcast must not
         # crash and must yield the actual (derived) class...

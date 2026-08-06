@@ -14,27 +14,27 @@ if IS_LINUX_ARM and IS_VALGRIND:
 
 class TestREFLEX:
     def setup_class(cls):
-        import cppyy
-        import cppyy.reflex
+        import cppjit
+        import cppjit.reflex
 
     def test01_instance_box_unbox(self):
         """Access to box/unbox methods"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.addressof('Instance_AsVoidPtr')
-        assert cppyy.addressof('Instance_FromVoidPtr')
+        assert cppjit.addressof('Instance_AsVoidPtr')
+        assert cppjit.addressof('Instance_FromVoidPtr')
 
         with raises(TypeError):
-            cppyy.addressof('doesnotexist')
+            cppjit.addressof('doesnotexist')
 
     def test02_method_reflection(self):
         """Method reflection tooling"""
 
-        import cppyy
-        import cppyy.reflex as r
+        import cppjit
+        import cppjit.reflex as r
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ReflexTest {
         int free1() { return 42; }
         double free2() { return 42.; }
@@ -42,7 +42,7 @@ class TestREFLEX:
         class MyData_m1 {};
         }""")
 
-        ns = cppyy.gbl.ReflexTest
+        ns = cppjit.gbl.ReflexTest
 
         assert ns.free1.__cpp_reflex__(r.RETURN_TYPE) == 'int'
         assert ns.free2.__cpp_reflex__(r.RETURN_TYPE) == 'double'
@@ -55,10 +55,10 @@ class TestREFLEX:
     def test03_datamember_reflection(self):
         """Data member reflection tooling"""
 
-        import cppyy
-        import cppyy.reflex as r
+        import cppjit
+        import cppjit.reflex as r
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ReflexTest {
         class MyData_d1 {
         public:
@@ -66,21 +66,21 @@ class TestREFLEX:
            double m_double;
         }; }""")
 
-        ns = cppyy.gbl.ReflexTest
+        ns = cppjit.gbl.ReflexTest
 
         assert ns.MyData_d1.__dict__['m_int'].__cpp_reflex__(r.TYPE)    == 'int'
         assert ns.MyData_d1.__dict__['m_double'].__cpp_reflex__(r.TYPE) == 'double'
 
-        d = ns.MyData_d1(); daddr = cppyy.addressof(d)
+        d = ns.MyData_d1(); daddr = cppjit.addressof(d)
         assert ns.MyData_d1.__dict__['m_int'].__cpp_reflex__(r.OFFSET)    == 0
-        assert ns.MyData_d1.__dict__['m_double'].__cpp_reflex__(r.OFFSET) == cppyy.addressof(d, 'm_double') - daddr
+        assert ns.MyData_d1.__dict__['m_double'].__cpp_reflex__(r.OFFSET) == cppjit.addressof(d, 'm_double') - daddr
 
 
 @mark.skipif(has_numba == False, reason="numba not found")
 class TestNUMBA:
     def setup_class(cls):
-        import cppyy
-        import cppyy.numba_ext
+        import cppjit
+        import cppjit.numba_ext
 
     def compare(self, go_slow, go_fast, N, *args):
         t0 = time.time()
@@ -98,7 +98,7 @@ class TestNUMBA:
     def test01_compiled_free_func(self):
         """Numba-JITing of a compiled free function"""
 
-        import cppyy
+        import cppjit
         import numpy as np
 
         def go_slow(a):
@@ -111,7 +111,7 @@ class TestNUMBA:
         def go_fast(a):
             trace = 0.0
             for i in range(a.shape[0]):
-                trace += cppyy.gbl.tanh(a[i, i])
+                trace += cppjit.gbl.tanh(a[i, i])
             return a + trace
 
         x = np.arange(100, dtype=np.float64).reshape(10, 10)
@@ -122,10 +122,10 @@ class TestNUMBA:
     def test02_JITed_template_free_func(self):
         """Numba-JITing of Cling-JITed templated free function"""
 
-        import cppyy
+        import cppjit
         import numpy as np
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         template<class T>
         T add42(T t) {
             return T(t+42);
@@ -144,7 +144,7 @@ class TestNUMBA:
         def go_fast(a):
             trace = 0.0
             for i in range(a.shape[0]):
-                trace += cppyy.gbl.add42(a[i, i]) + cppyy.gbl.add42(int(a[i, i]))
+                trace += cppjit.gbl.add42(a[i, i]) + cppjit.gbl.add42(int(a[i, i]))
             return a + trace
 
         x = np.arange(100, dtype=np.float64).reshape(10, 10)
@@ -155,10 +155,10 @@ class TestNUMBA:
     def test03_proxy_argument_for_field(self):
         """Numba-JITing of a free function taking a proxy argument for field access"""
 
-        import cppyy
+        import cppjit
         import numpy as np
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         struct MyNumbaData03 {
             MyNumbaData03(int64_t i1, int64_t i2) : fField1(i1), fField2(i2) {}
             int64_t fField1;
@@ -180,7 +180,7 @@ class TestNUMBA:
 
       # note: need a sizable array to outperform given the unboxing overhead
         x = np.arange(10000, dtype=np.float64).reshape(100, 100)
-        d = cppyy.gbl.MyNumbaData03(42, 27)
+        d = cppjit.gbl.MyNumbaData03(42, 27)
 
         assert((go_fast(x, d) == go_slow(x, d)).all())
         assert self.compare(go_slow, go_fast, 10000, x, d)
@@ -188,10 +188,10 @@ class TestNUMBA:
     def test04_proxy_argument_for_method(self):
         """Numba-JITing of a free function taking a proxy argument for method access"""
 
-        import cppyy
+        import cppjit
         import numpy as np
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         struct MyNumbaData04 {
             MyNumbaData04(int64_t i) : fField(i) {}
             int64_t get_field() { return fField; }
@@ -213,7 +213,7 @@ class TestNUMBA:
 
       # note: need a sizable array to outperform given the unboxing overhead
         x = np.arange(10000, dtype=np.float64).reshape(100, 100)
-        d = cppyy.gbl.MyNumbaData04(42)
+        d = cppjit.gbl.MyNumbaData04(42)
 
         assert((go_fast(x, d) == go_slow(x, d)).all())
         assert self.compare(go_slow, go_fast, 10000, x, d)
@@ -221,10 +221,10 @@ class TestNUMBA:
     def test05_multiple_arguments_function(self):
         """Numba-JITing of functions with multiple arguments"""
 
-        import cppyy
+        import cppjit
         import numpy as np
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
                double add_double(double a, double b, double c) {
                    double d = a + b + c;
                    return d;
@@ -234,7 +234,7 @@ class TestNUMBA:
         def loop_add(x):
             sum = 0
             for row in x:
-                sum += cppyy.gbl.add_double(row[0], row[1], row[2])
+                sum += cppjit.gbl.add_double(row[0], row[1], row[2])
             return sum
 
         x = np.arange(3000, dtype=np.float64).reshape(1000, 3)
@@ -247,9 +247,9 @@ class TestNUMBA:
     def test06_multiple_arguments_template_freefunction(self):
         """Numba-JITing of a free template function that recieves more than one template arg"""
 
-        import cppyy
+        import cppjit
         import numpy as np
-        cppyy.cppdef("""
+        cppjit.cppdef("""
                 namespace NumbaSupportExample {
                 template<typename T1>
                 T1 add(T1 a, T1 b) { return a + b; }
@@ -259,7 +259,7 @@ class TestNUMBA:
         def tma(x):
             sum = 0
             for row in x:
-                sum += cppyy.gbl.NumbaSupportExample.add(row[0], row[1])
+                sum += cppjit.gbl.NumbaSupportExample.add(row[0], row[1])
             return sum
 
         x = np.arange(2000, dtype=np.float64).reshape(1000, 2)
@@ -272,7 +272,7 @@ class TestNUMBA:
     def test07_datatype_mapping(self):
         """Numba-JITing of various data types"""
 
-        import cppyy
+        import cppjit
 
         @numba.jit(nopython=True)
         def access_field(d):
@@ -284,8 +284,8 @@ class TestNUMBA:
              %s buf, fField;
         }; }"""
 
-        cppyy.cppdef("namespace NumbaDTT { }")
-        ns = cppyy.gbl.NumbaDTT
+        cppjit.cppdef("namespace NumbaDTT { }")
+        ns = cppjit.gbl.NumbaDTT
 
         types = (
             # 'int8_t', 'uint8_t',     # TODO b/c check using return type fails
@@ -295,9 +295,9 @@ class TestNUMBA:
             'float', 'double',
         )
 
-        nl = cppyy.gbl.std.numeric_limits
+        nl = cppjit.gbl.std.numeric_limits
         for i, ntype in enumerate(types):
-            cppyy.cppdef(code % (i, i, ntype, ntype))
+            cppjit.cppdef(code % (i, i, ntype, ntype))
             for m in ('min', 'max'):
                 val = getattr(nl[ntype], m)()
                 assert access_field(getattr(ns, 'M%d'%i)(val)) == val
@@ -305,10 +305,10 @@ class TestNUMBA:
     def test08_object_returns(self):
         """Numba-JITing of a function that returns an object"""
 
-        import cppyy
+        import cppjit
         import numpy as np
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         struct MyNumbaData06 {
             MyNumbaData06(int64_t i1) : fField(i1) {}
             int64_t fField;
@@ -320,14 +320,14 @@ class TestNUMBA:
         def go_slow(a):
             trace = 0.0
             for i in range(a.shape[0]):
-                trace += cppyy.gbl.get_numba_data_06().fField
+                trace += cppjit.gbl.get_numba_data_06().fField
             return a + trace
 
         @numba.jit(nopython=True)
         def go_fast(a):
             trace = 0.0
             for i in range(a.shape[0]):
-                trace += cppyy.gbl.get_numba_data_06().fField
+                trace += cppjit.gbl.get_numba_data_06().fField
             return a + trace
 
         x = np.arange(100, dtype=np.float64).reshape(10, 10)
@@ -338,9 +338,9 @@ class TestNUMBA:
     def test09_non_typed_templates(self):
         """Numba-JITing of a free template function that recieves multiple template args with non types"""
 
-        import cppyy
+        import cppjit
         import numpy as np
-        cppyy.cppdef("""
+        cppjit.cppdef("""
                 namespace NumbaSupportExample {
                 template<typename T1, typename T2>
                 double add(double a, T1 b, T2 c) { return a + b + c; }
@@ -350,7 +350,7 @@ class TestNUMBA:
         def tma(x):
             sum = 0
             for row in x:
-                sum += cppyy.gbl.NumbaSupportExample.add(row[0], row[1], row[2])
+                sum += cppjit.gbl.NumbaSupportExample.add(row[0], row[1], row[2])
             return sum
 
         x = np.arange(3000, dtype=np.float64).reshape(1000, 3)
@@ -361,11 +361,11 @@ class TestNUMBA:
         assert sum == tma(x)
 
     def test10_returning_a_reference(self):
-        import cppyy
+        import cppjit
         import numpy as np
         import numba
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         int64_t& ref_add(int64_t x, int64_t y) {
         int64_t c = x + y;
         static int64_t result = 0;
@@ -389,7 +389,7 @@ class TestNUMBA:
             for row in X:
                 a = row[0]
                 b = row[1]
-                k = cppyy.gbl.ref_add(a, b)
+                k = cppjit.gbl.ref_add(a, b)
                 res.append(k[0])
             return res
 
@@ -398,11 +398,11 @@ class TestNUMBA:
 
     def test11_ptr_ref_support(self):
         """Numba-JITing of a increment method belonging to a class, and also swaps the pointers and reflects the change on the python ctypes variables"""
-        import cppyy
+        import cppjit
         import ctypes
         import random
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
            namespace RefTest {
                class Box{
                    public:
@@ -428,9 +428,9 @@ class TestNUMBA:
                }
            """)
 
-        ns = cppyy.gbl.RefTest
-        assert ns.Box.__dict__['a'].__cpp_reflex__(cppyy.reflex.TYPE) == 'long'
-        assert ns.Box.__dict__['b'].__cpp_reflex__(cppyy.reflex.TYPE) == 'long *'
+        ns = cppjit.gbl.RefTest
+        assert ns.Box.__dict__['a'].__cpp_reflex__(cppjit.reflex.TYPE) == 'long'
+        assert ns.Box.__dict__['b'].__cpp_reflex__(cppjit.reflex.TYPE) == 'long *'
 
         @numba.njit()
         def inc_b(d, k):
@@ -465,12 +465,12 @@ class TestNUMBA:
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crash in llvmlite on Linux ARM")
     def test12_std_vector_pass_by_ref(self):
         """Numba-JITing of a method that performs scalar addition to a std::vector initialised through pointers """
-        import cppyy
+        import cppjit
         import ctypes
         import numba
         import numpy as np
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         template<typename T>
         std::vector<T> make_vector(const std::vector<T>& v, std::vector<T> l) {
            std::vector<T> u(l);
@@ -504,7 +504,7 @@ class TestNUMBA:
                        };
                    }
            """)
-        ns = cppyy.gbl.RefTest
+        ns = cppjit.gbl.RefTest
         @numba.njit()
         def add_vec_fast(d):
             for i in range(10000):
@@ -527,7 +527,7 @@ class TestNUMBA:
                 x = np.square(x)
             return x
 
-        assert ns.BoxVector.__dict__['a'].__cpp_reflex__(cppyy.reflex.TYPE) == 'std::vector<long> *'
+        assert ns.BoxVector.__dict__['a'].__cpp_reflex__(cppjit.reflex.TYPE) == 'std::vector<long> *'
 
         add_vec_fast(ns.BoxVector())
         square_vec_fast(ns.BoxVector())
@@ -536,8 +536,8 @@ class TestNUMBA:
         a = np.random.randint(1, 100, size=10000, dtype=np.int64)
         b = np.random.randint(1, 4, size=10, dtype=np.int64)
 
-        x = cppyy.gbl.std.vector['long'](a.flatten())
-        y = cppyy.gbl.std.vector['long'](b.flatten())
+        x = cppjit.gbl.std.vector['long'](a.flatten())
+        y = cppjit.gbl.std.vector['long'](b.flatten())
 
         t0 = time.time()
         add_vec_fast(ns.BoxVector(x))
@@ -560,13 +560,13 @@ class TestNUMBA:
 
     def test13_std_vector_dot_product(self):
         """Numba-JITing of a dot_product method of a class that stores pointers to std::vectors on the python side"""
-        import cppyy, cppyy.ll
+        import cppjit, cppjit.ll
         import ctypes
-        import cppyy.numba_ext
+        import cppjit.numba_ext
         import numba
         import numpy as np
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace RefTest {
             class DotVector{
                 private:
@@ -612,7 +612,7 @@ class TestNUMBA:
                 res += np.dot(x, y)
             return res
 
-        ns = cppyy.gbl.RefTest
+        ns = cppjit.gbl.RefTest
 
         a = np.arange(20000, dtype=np.int64)
         b = np.arange(20000, dtype=np.int64)
@@ -623,8 +623,8 @@ class TestNUMBA:
         # for i in a:
         #     vec_list.append([vector['long'](i[0]), vector['long'](i[1])])
 
-        x = cppyy.gbl.std.vector['long'](a.flatten())
-        y = cppyy.gbl.std.vector['long'](b.flatten())
+        x = cppjit.gbl.std.vector['long'](a.flatten())
+        y = cppjit.gbl.std.vector['long'](b.flatten())
         d = ns.DotVector(x, y)
         dot_product_fast(d)
         res = 0
@@ -643,12 +643,12 @@ class TestNUMBA:
 
     @mark.skip(reason="Fails at ImplCLassType Boxing call in lowering")
     def test14_eigen_numba(self):
-        """Numba-JITing of a function that uses a cppyy declared Eigen Vector"""
+        """Numba-JITing of a function that uses a cppjit declared Eigen Vector"""
 
         import numpy as np
         import time
-        import cppyy, numba, warnings
-        import cppyy.numba_ext
+        import cppjit, numba, warnings
+        import cppjit.numba_ext
         import os
 
         inc_paths = [os.path.join(os.path.sep, 'usr', 'include'),
@@ -660,20 +660,20 @@ class TestNUMBA:
             if os.path.exists(p):
                 eigen_path = p
 
-        cppyy.add_include_path(eigen_path)
+        cppjit.add_include_path(eigen_path)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            cppyy.include('Eigen/Dense')
+            cppjit.include('Eigen/Dense')
 
         # Define the templated function that takes Eigen objects
-        cppyy.cppdef('''
+        cppjit.cppdef('''
         template<typename T>
         T multiply_scalar(T value, int64_t scalar) {
             return value * scalar;
         }
         ''')
 
-        cppyy.cppdef('''
+        cppjit.cppdef('''
         #include <iostream>
         #include <vector>
         namespace EigenFake {
@@ -704,17 +704,17 @@ class TestNUMBA:
 
         @numba.jit(nopython=True)
         def mul_njit(m, x):
-            matrix = cppyy.gbl.multiply_scalar(m, x)
+            matrix = cppjit.gbl.multiply_scalar(m, x)
             return matrix
 
-        mat = cppyy.gbl.EigenFake.Matrix(int, 2, 2)
+        mat = cppjit.gbl.EigenFake.Matrix(int, 2, 2)
         mat = {1.0, 2.0, 3.0, 4.0}
 
-        vector = cppyy.gbl.Eigen.VectorXd(2)
+        vector = cppjit.gbl.Eigen.VectorXd(2)
         vector[0] = 4.0
         vector[1] = 2.0
         vector[2] = 3.0
-        matrix2 = cppyy.gbl.multiply_scalar(vector, 5)
+        matrix2 = cppjit.gbl.multiply_scalar(vector, 5)
         result = mul_njit(vector, 5)
         assert(result == matrix2)
 
@@ -722,17 +722,17 @@ class TestNUMBA:
 @mark.skipif(has_numba == False, reason="numba not found")
 class TestNUMBA_DOC:
     def setup_class(cls):
-        import cppyy
-        import cppyy.numba_ext
+        import cppjit
+        import cppjit.numba_ext
 
     def test01_templated_freefunction(self):
         """Numba support documentation example: free templated function"""
 
-        import cppyy
+        import cppjit
         import numba
         import numpy as np
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace NumbaSupportExample {
         template<typename T>
         T square(T t) { return t*t; }
@@ -742,7 +742,7 @@ class TestNUMBA_DOC:
         def tsa(a):
             total = type(a[0])(0)
             for i in range(len(a)):
-                total += cppyy.gbl.NumbaSupportExample.square(a[i])
+                total += cppjit.gbl.NumbaSupportExample.square(a[i])
             return total
 
         a = np.array(range(10), dtype=np.float32)
@@ -756,11 +756,11 @@ class TestNUMBA_DOC:
     def test02_class_features(self):
         """Numba support documentation example: class features"""
 
-        import cppyy
+        import cppjit
         import numba
         import numpy as np
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace NumbaSupportExample {
         class MyData {
         public:
@@ -785,7 +785,7 @@ class TestNUMBA_DOC:
                 total += a[i] + d.fField1 + d.fField2
             return total
 
-        d = cppyy.gbl.NumbaSupportExample.MyData(5, 6)
+        d = cppjit.gbl.NumbaSupportExample.MyData(5, 6)
         a = np.array(range(10), dtype=np.int32)
 
         assert tsdf(a, d) == 155

@@ -12,15 +12,15 @@ def setup_module(mod):
 class TestCPP11FEATURES:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.cpp11features = cppyy.load_reflection_info(cls.test_dct)
+        import cppjit
+        cls.cpp11features = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
     def test01_smart_ptr(self):
         """Usage and access of std::shared/unique_ptr<>"""
 
-        from cppyy.gbl import TestSmartPtr
-        from cppyy.gbl import create_shared_ptr_instance, create_unique_ptr_instance
+        from cppjit.gbl import TestSmartPtr
+        from cppjit.gbl import create_shared_ptr_instance, create_unique_ptr_instance
         import gc
 
         for cf in [create_shared_ptr_instance, create_unique_ptr_instance]:
@@ -48,7 +48,7 @@ class TestCPP11FEATURES:
     def test02_smart_ptr_construction(self):
         """Shared/Unique pointer ctor is templated, requiring special care"""
 
-        from cppyy.gbl import std, TestSmartPtr
+        from cppjit.gbl import std, TestSmartPtr
         import gc
 
         class C(TestSmartPtr):
@@ -76,7 +76,7 @@ class TestCPP11FEATURES:
     def test03_smart_ptr_memory_handling(self):
         """Test shared/unique pointer memory ownership"""
 
-        from cppyy.gbl import std, TestSmartPtr
+        from cppjit.gbl import std, TestSmartPtr
         import gc
 
         class C(TestSmartPtr):
@@ -107,8 +107,8 @@ class TestCPP11FEATURES:
     def test04_shared_ptr_passing(self):
         """Ability to pass shared_ptr<Derived> through shared_ptr<Base>"""
 
-        from cppyy.gbl import std, TestSmartPtr, DerivedTestSmartPtr
-        from cppyy.gbl import pass_shared_ptr, move_shared_ptr, create_TestSmartPtr_by_value
+        from cppjit.gbl import std, TestSmartPtr, DerivedTestSmartPtr
+        from cppjit.gbl import pass_shared_ptr, move_shared_ptr, create_TestSmartPtr_by_value
         import gc
 
         for ff, mv in [(pass_shared_ptr, lambda x: x), (move_shared_ptr, std.move)]:
@@ -146,9 +146,9 @@ class TestCPP11FEATURES:
     def test05_unique_ptr_passing(self):
         """Ability to pass unique_ptr<Derived> through unique_ptr<Base>"""
 
-        from cppyy.gbl import std, TestSmartPtr, DerivedTestSmartPtr
-        from cppyy.gbl import move_unique_ptr, move_unique_ptr_derived
-        from cppyy.gbl import create_TestSmartPtr_by_value
+        from cppjit.gbl import std, TestSmartPtr, DerivedTestSmartPtr
+        from cppjit.gbl import move_unique_ptr, move_unique_ptr_derived
+        from cppjit.gbl import create_TestSmartPtr_by_value
         import gc
 
         assert TestSmartPtr.s_counter == 0
@@ -199,26 +199,26 @@ class TestCPP11FEATURES:
     def test06_nullptr(self):
         """Allow the programmer to pass NULL in certain cases"""
 
-        import cppyy
+        import cppjit
 
       # test existence
-        nullptr = cppyy.nullptr
-      # assert not hasattr(cppyy.gbl, 'nullptr')
+        nullptr = cppjit.nullptr
+      # assert not hasattr(cppjit.gbl, 'nullptr')
 
-        assert     cppyy.bind_object(cppyy.nullptr, 'std::vector<int>') == cppyy.nullptr
-        assert not cppyy.bind_object(cppyy.nullptr, 'std::vector<int>') != cppyy.nullptr
+        assert     cppjit.bind_object(cppjit.nullptr, 'std::vector<int>') == cppjit.nullptr
+        assert not cppjit.bind_object(cppjit.nullptr, 'std::vector<int>') != cppjit.nullptr
 
       # further usage is tested in datatypes.py:test15_nullptr_passing
 
     def test07_move(self):
         """Move construction, assignment, and methods"""
 
-        import cppyy, gc
+        import cppjit, gc
 
         def moveit(T):
             assert T.s_instance_counter == 0
 
-            from cppyy.gbl import std
+            from cppjit.gbl import std
 
           # move constructor
             i1 = T()
@@ -258,23 +258,23 @@ class TestCPP11FEATURES:
 
       # order of moving and normal functions are reversed in 1, 2, for
       # overload resolution testing
-        moveit(cppyy.gbl.TestMoving1)
-        moveit(cppyy.gbl.TestMoving2)
+        moveit(cppjit.gbl.TestMoving1)
+        moveit(cppjit.gbl.TestMoving2)
 
       # implicit conversion and move
-        assert cppyy.gbl.TestMoving1.s_instance_counter == 0
-        assert cppyy.gbl.TestMoving2.s_instance_counter == 0
-        cppyy.gbl.implicit_converion_move(cppyy.gbl.TestMoving1())
-        cppyy.gbl.implicit_converion_move(cppyy.gbl.TestMoving2())
+        assert cppjit.gbl.TestMoving1.s_instance_counter == 0
+        assert cppjit.gbl.TestMoving2.s_instance_counter == 0
+        cppjit.gbl.implicit_converion_move(cppjit.gbl.TestMoving1())
+        cppjit.gbl.implicit_converion_move(cppjit.gbl.TestMoving2())
         gc.collect()
-        assert cppyy.gbl.TestMoving1.s_instance_counter == 0
-        assert cppyy.gbl.TestMoving2.s_instance_counter == 0
+        assert cppjit.gbl.TestMoving1.s_instance_counter == 0
+        assert cppjit.gbl.TestMoving2.s_instance_counter == 0
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test08_initializer_list(self):
         """Initializer list construction"""
 
-        from cppyy.gbl import std, TestData, TestData2, WithInitList
+        from cppjit.gbl import std, TestData, TestData2, WithInitList
 
         v = std.vector[int]((1, 2, 3, 4))
         assert list(v) == [1, 2, 3, 4]
@@ -295,15 +295,15 @@ class TestCPP11FEATURES:
                 for i in range(len(l)):
                     assert v[i].m_int == l[i].m_int
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace InitializerListTest {
         std::vector<std::string> foo(const std::initializer_list<std::string>& vals) {
             return std::vector<std::string>{vals};
         } }""")
 
-        ns = cppyy.gbl.InitializerListTest
+        ns = cppjit.gbl.InitializerListTest
 
         for l in (['x'], ['x', 'y', 'z']):
             assert ns.foo(l) == std.vector['std::string'](l)
@@ -311,53 +311,53 @@ class TestCPP11FEATURES:
     def test09_lambda_calls(self):
         """Call (global) lambdas"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("auto gMyLambda = [](int a) { return 40 + a; };")
+        cppjit.cppdef("auto gMyLambda = [](int a) { return 40 + a; };")
 
-        assert cppyy.gbl.gMyLambda
-        assert cppyy.gbl.gMyLambda(2)  == 42
-        assert cppyy.gbl.gMyLambda(40) == 80
+        assert cppjit.gbl.gMyLambda
+        assert cppjit.gbl.gMyLambda(2)  == 42
+        assert cppjit.gbl.gMyLambda(40) == 80
 
-        cppyy.cppdef("auto gime_a_lambda1() { return []() { return 42; }; }")
-        l1 = cppyy.gbl.gime_a_lambda1()
+        cppjit.cppdef("auto gime_a_lambda1() { return []() { return 42; }; }")
+        l1 = cppjit.gbl.gime_a_lambda1()
         assert l1
         assert l1() == 42
 
-        cppyy.cppdef("auto gime_a_lambda2() { int a = 4; return [a](int b) { return 42+a+b; }; }")
-        l2 = cppyy.gbl.gime_a_lambda2()
+        cppjit.cppdef("auto gime_a_lambda2() { int a = 4; return [a](int b) { return 42+a+b; }; }")
+        l2 = cppjit.gbl.gime_a_lambda2()
         assert l2
         assert l2(2) == 48
 
-        cppyy.cppdef("auto gime_a_lambda3(int a ) { return [a](int b) { return 42+a+b; }; }")
-        l3 = cppyy.gbl.gime_a_lambda3(4)
+        cppjit.cppdef("auto gime_a_lambda3(int a ) { return [a](int b) { return 42+a+b; }; }")
+        l3 = cppjit.gbl.gime_a_lambda3(4)
         assert l3
         assert l3(2) == 48
 
     def test10_optional(self):
         """Use of optional and nullopt"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.gbl.std.optional
-        assert cppyy.gbl.std.nullopt
+        assert cppjit.gbl.std.optional
+        assert cppjit.gbl.std.nullopt
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         enum Enum { A = -1 };
         bool callopt(std::optional<Enum>) { return true; }
         """)
 
-        a = cppyy.gbl.std.optional[cppyy.gbl.Enum]()
-        assert cppyy.gbl.callopt(a)
+        a = cppjit.gbl.std.optional[cppjit.gbl.Enum]()
+        assert cppjit.gbl.callopt(a)
 
-        c = cppyy.gbl.std.nullopt
-        assert cppyy.gbl.callopt(c)
+        c = cppjit.gbl.std.nullopt
+        assert cppjit.gbl.callopt(c)
 
     def test11_chrono(self):
         """Use of chrono and overloaded operator+"""
 
-        import cppyy
-        from cppyy.gbl import std
+        import cppjit
+        from cppjit.gbl import std
 
         t = std.chrono.system_clock.now() - std.chrono.seconds(1)
         # following used to fail with compilation error
@@ -366,8 +366,8 @@ class TestCPP11FEATURES:
     def test12_stdfunction(self):
         """Use of std::function with arguments in a namespace"""
 
-        import cppyy
-        from cppyy.gbl import FunctionNS, FNTestStruct, FNCreateTestStructFunc
+        import cppjit
+        from cppjit.gbl import FunctionNS, FNTestStruct, FNCreateTestStructFunc
 
         t = FNTestStruct(42)
         f = FNCreateTestStructFunc()
@@ -378,12 +378,12 @@ class TestCPP11FEATURES:
         assert f(t) == 13
 
       # and for good measure, inline
-        cppyy.cppdef("""namespace FunctionNS2 {
+        cppjit.cppdef("""namespace FunctionNS2 {
         struct FNTestStruct { FNTestStruct(int i) : t(i) {} int t; };
         std::function<int(const FNTestStruct& t)> FNCreateTestStructFunc() { return [](const FNTestStruct& t) { return t.t; }; }
         }""")
 
-        from cppyy.gbl import FunctionNS2
+        from cppjit.gbl import FunctionNS2
 
         t = FunctionNS.FNTestStruct(27)
         f = FunctionNS.FNCreateTestStructFunc()
@@ -392,8 +392,8 @@ class TestCPP11FEATURES:
     def test13_stdhash(self):
         """Use of std::hash"""
 
-        import cppyy
-        from cppyy.gbl import StructWithHash, StructWithoutHash
+        import cppjit
+        from cppjit.gbl import StructWithHash, StructWithoutHash
 
         for i in range(3):   # to test effect of caching
             swo = StructWithoutHash()
@@ -408,8 +408,8 @@ class TestCPP11FEATURES:
     def test14_shared_ptr_passing(self):
         """Ability to pass normal pointers through shared_ptr by value"""
 
-        from cppyy.gbl import std, TestSmartPtr, DerivedTestSmartPtr
-        from cppyy.gbl import pass_shared_ptr
+        from cppjit.gbl import std, TestSmartPtr, DerivedTestSmartPtr
+        from cppjit.gbl import pass_shared_ptr
         import gc
 
         for cls, val in [(lambda: TestSmartPtr(), 17), (lambda: DerivedTestSmartPtr(24), 100)]:
@@ -434,28 +434,28 @@ class TestCPP11FEATURES:
     def test15_unique_ptr_template_deduction(self):
         """Argument type deduction with std::unique_ptr"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace UniqueTempl {
+        cppjit.cppdef("""namespace UniqueTempl {
         template <typename T>
         std::unique_ptr<T> returnptr(std::unique_ptr<T>&& a) {
           return std::move(a);
         } }""")
 
-        uptr_in = cppyy.gbl.std.make_unique[int]()
-        uptr_out = cppyy.gbl.UniqueTempl.returnptr["int"](cppyy.gbl.std.move(uptr_in))
+        uptr_in = cppjit.gbl.std.make_unique[int]()
+        uptr_out = cppjit.gbl.UniqueTempl.returnptr["int"](cppjit.gbl.std.move(uptr_in))
         assert not not uptr_out
 
-        uptr_in = cppyy.gbl.std.make_unique['int']()
+        uptr_in = cppjit.gbl.std.make_unique['int']()
         with raises(ValueError):  # not an RValue
-            cppyy.gbl.UniqueTempl.returnptr[int](uptr_in)
+            cppjit.gbl.UniqueTempl.returnptr[int](uptr_in)
 
     @mark.xfail(IS_MAC, reason = "Fails on Mac platforms")
     def test16_unique_ptr_moves(self):
         """std::unique_ptr requires moves"""
 
-        import cppyy
-        cppyy.cppdef("""namespace unique_ptr_moves {
+        import cppjit
+        cppjit.cppdef("""namespace unique_ptr_moves {
         template <typename T>
         std::unique_ptr<T> returnptr_value(std::unique_ptr<T> a) {
           return std::move(a);
@@ -465,12 +465,12 @@ class TestCPP11FEATURES:
           return std::move(a);
         } }""")
 
-        up = cppyy.gbl.std.make_unique[int](42)
+        up = cppjit.gbl.std.make_unique[int](42)
 
-        ns = cppyy.gbl.unique_ptr_moves
+        ns = cppjit.gbl.unique_ptr_moves
         up = ns.returnptr_value(up)                    ; assert up and up.get()[0] == 42
-        up = ns.returnptr_value(cppyy.gbl.std.move(up)); assert up and up.get()[0] == 42
-        up = ns.returnptr_move(cppyy.gbl.std.move(up)) ; assert up and up.get()[0] == 42
+        up = ns.returnptr_value(cppjit.gbl.std.move(up)); assert up and up.get()[0] == 42
+        up = ns.returnptr_move(cppjit.gbl.std.move(up)) ; assert up and up.get()[0] == 42
 
         with raises(TypeError):
             ns.returnptr_move(up)
@@ -478,9 +478,9 @@ class TestCPP11FEATURES:
     def test17_unique_ptr_data(self):
         """std::unique_ptr as data means implicitly no copy ctor"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""namespace unique_ptr_data{
+        cppjit.cppdef("""namespace unique_ptr_data{
         class Example {
         private:
           std::unique_ptr<double> x;
@@ -490,7 +490,7 @@ class TestCPP11FEATURES:
           double y = 66.;
         }; }""")
 
-        class Inherit(cppyy.gbl.unique_ptr_data.Example):
+        class Inherit(cppjit.gbl.unique_ptr_data.Example):
             pass
 
         a = Inherit()
@@ -500,9 +500,9 @@ class TestCPP11FEATURES:
     def test18_unique_ptr_identity(self):
         """std::unique_ptr identity preservation"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace UniqueIdentity {
         struct A {
             A(int _a) : a(_a) {}
@@ -524,7 +524,7 @@ class TestCPP11FEATURES:
             std::unique_ptr<A> fPtr;
         }; }""")
 
-        ns = cppyy.gbl.UniqueIdentity
+        ns = cppjit.gbl.UniqueIdentity
 
         x = ns.create()
         assert x.a == 37
@@ -541,9 +541,9 @@ class TestCPP11FEATURES:
     def test19_smartptr_from_callback(self):
         """Return a smart pointer from a callback"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace SmartPtrCallback {
         struct Dummy {
             virtual ~Dummy() = default;
@@ -559,8 +559,8 @@ class TestCPP11FEATURES:
             return func();
         }}""")
 
-        std = cppyy.gbl.std
-        ns = cppyy.gbl.SmartPtrCallback
+        std = cppjit.gbl.std
+        ns = cppjit.gbl.SmartPtrCallback
 
         def pyfunc() -> std.shared_ptr[ns.Dummy]:
              return ns.dummy_create()
@@ -570,9 +570,9 @@ class TestCPP11FEATURES:
     def test21_smart_ptr_downcast(self):
         """Object returned through a smart pointer is auto-downcast"""
 
-        import cppyy
+        import cppjit
 
-        gbl = cppyy.gbl
+        gbl = cppjit.gbl
 
         # unique_ptr<Base> holding a Derived comes back as Derived, with the
         # derived-only method callable, just like a raw pointer return

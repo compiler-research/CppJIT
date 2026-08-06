@@ -11,7 +11,7 @@ except ImportError:
 @mark.skipif(nopsutil == True, reason="module psutil not installed")
 class TestLEAKCHECK:
     def setup_class(cls):
-        import cppyy, psutil
+        import cppjit, psutil
 
         cls.process = psutil.Process(os.getpid())
 
@@ -75,9 +75,9 @@ class TestLEAKCHECK:
     def test01_free_functions(self):
         """Leak test of free functions"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
         void free_f() {}
         void free_f_ol(int) {}
@@ -87,7 +87,7 @@ class TestLEAKCHECK:
         std::string free_f_ret2() { return "aap"; }
         }""")
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         self.check_func(ns, 'free_f')
         self.check_func(ns, 'free_f_ol', 42)
@@ -100,9 +100,9 @@ class TestLEAKCHECK:
     def test02_test_static_methods(self):
         """Leak test of static methods"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
         class MyClass02 {
         public:
@@ -113,7 +113,7 @@ class TestLEAKCHECK:
             static std::string static_method_ret() { return "aap"; }
         }; }""")
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         for m in [ns.MyClass02, ns.MyClass02()]:
             self.check_func(m, 'static_method')
@@ -126,9 +126,9 @@ class TestLEAKCHECK:
     def test03_test_methods(self):
         """Leak test of methods"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
         class MyClass03 {
         public:
@@ -139,7 +139,7 @@ class TestLEAKCHECK:
             template<class T> void method_ol(T) {}
         }; }""")
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         m = ns.MyClass03()
         self.check_func(m, 'method')
@@ -152,9 +152,9 @@ class TestLEAKCHECK:
     def test04_default_arguments(self):
         """Leak test for functions with default arguments"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
         double free_default(int a=11, float b=22.f, double c=33.) {
             return a*b*c;
@@ -170,7 +170,7 @@ class TestLEAKCHECK:
             }
         }; }""")
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         self.check_func(ns, 'free_default')
         self.check_func(ns, 'free_default', a=-99)
@@ -193,9 +193,9 @@ class TestLEAKCHECK:
     def test05_aggregates(self):
         """Leak test of aggregate creation"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
         typedef enum _TYPE { DATA=0, SHAPE } TYPE;
 
@@ -210,7 +210,7 @@ class TestLEAKCHECK:
             TYPE buf_type;
         }; }""")
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         self.check_func(ns, 'SomePOD')
         self.check_func(ns, 'SomePOD', fInt=42)
@@ -227,16 +227,16 @@ class TestLEAKCHECK:
         if sys.hexversion < 0x03000000:
             skip("too slow on py2 and won't be fixed as py2 has reached eol")
 
-        import cppyy
+        import cppjit
 
-        self.check_func(cppyy.gbl, '__dir__', cppyy.gbl)
+        self.check_func(cppjit.gbl, '__dir__', cppjit.gbl)
 
     def test07_string_handling(self):
         """Leak check of returning an std::string by value"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
         class Leaker {
         public:
@@ -247,7 +247,7 @@ class TestLEAKCHECK:
             }
         }; }""")
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         obj = ns.Leaker()
         self.check_func(obj, 'leak_string', 2048)
@@ -255,14 +255,14 @@ class TestLEAKCHECK:
     def test08_list_creation(self):
         """Leak check of creating a python list from an std::list"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace LeakCheck {
             std::list<int> list_by_value() { return std::list<int>(3); }
         } """)
 
-        ns = cppyy.gbl.LeakCheck
+        ns = cppjit.gbl.LeakCheck
 
         def wrapped_list_by_value():
             return list(ns.list_by_value())

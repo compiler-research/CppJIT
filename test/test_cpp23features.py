@@ -3,17 +3,17 @@ from pytest import mark
 
 
 # C++23 isn't the stack's default and the interpreter is a process-wide
-# singleton pinned at the first `import cppyy`. So TestCPP23Driver re-runs the
+# singleton pinned at the first `import cppjit`. So TestCPP23Driver re-runs the
 # whole class once in a child process that selects C++23 before import
 # (EXTRA_CLING_ARGS for cling, CPPINTEROP_EXTRA_INTERPRETER_ARGS for clang-repl);
 # all tests then share that one interpreter. To iterate locally, run the tests
 # directly in "child mode":
 #
-#     CPPYY_TEST_CPP23_CHILD=1 EXTRA_CLING_ARGS=-std=c++23 \
+#     CPPJIT_TEST_CPP23_CHILD=1 EXTRA_CLING_ARGS=-std=c++23 \
 #     CPPINTEROP_EXTRA_INTERPRETER_ARGS=-std=c++23 \
 #     pytest -v test_cpp23features.py
 
-_CPP23_CHILD = "CPPYY_TEST_CPP23_CHILD"
+_CPP23_CHILD = "CPPJIT_TEST_CPP23_CHILD"
 _IN_CHILD = bool(os.environ.get(_CPP23_CHILD))
 
 
@@ -21,24 +21,24 @@ _IN_CHILD = bool(os.environ.get(_CPP23_CHILD))
              reason="C++23 tests run in the child interpreter launched by "
                     "TestCPP23Driver")
 class TestCPP23FEATURES:
-    """C++23 features driven via cppyy.cppdef through the JIT (clang-repl/cling).
+    """C++23 features driven via cppjit.cppdef through the JIT (clang-repl/cling).
 
     The class owns one C++23 interpreter (booted in setup_class); tests share
-    it via ``self.cppyy``.
+    it via ``self.cppjit``.
     """
 
     @classmethod
     def setup_class(cls):
         # In the child process C++23 is already selected, so this one-time boot
         # is the C++23 interpreter every test shares.
-        import cppyy
-        cls.cppyy = cppyy
+        import cppjit
+        cls.cppjit = cppjit
 
     def test01_deducing_this_basic(self):
         """Explicit object parameter on a member function (P0847R7)"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct Widget {
             int value = 42;
@@ -47,15 +47,15 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.Widget()
+        w = cppjit.gbl.Cpp23DeducingThis.Widget()
         assert w.value == 42
         assert w.get() == 42
 
     def test02_deducing_this_const(self):
         """const explicit object parameter (this const Widget& self)"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct CWidget {
             int value = 7;
@@ -64,14 +64,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.CWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.CWidget()
         assert w.read() == 7
 
     def test03_deducing_this_by_value(self):
         """by-value explicit object parameter (this Widget self)"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct VWidget {
             int value = 5;
@@ -80,15 +80,15 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.VWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.VWidget()
         w.value = 11
         assert w.snapshot() == 11
 
     def test04_deducing_this_with_extra_args(self):
         """explicit object parameter alongside regular arguments"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct AWidget {
             int base = 100;
@@ -97,14 +97,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.AWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.AWidget()
         assert w.add(20, 3) == 123
 
     def test05_deducing_this_rvalue_ref(self):
         """rvalue-ref-qualified explicit object parameter (this Widget&&)"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct RWidget {
             int value = 13;
@@ -113,14 +113,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.RWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.RWidget()
         assert w.consume() == 13
 
     def test05b_traditional_rvalue_ref_qualifier(self):
         """traditional rvalue-ref-qualified member (int f() &&), no deducing this"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct QWidget {
             int value = 17;
@@ -129,14 +129,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.QWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.QWidget()
         assert w.consume() == 17
 
     def test06_deducing_this_chaining(self):
         """builder-style chaining: explicit object parameter returns self"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct BWidget {
             int value = 0;
@@ -145,16 +145,16 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.BWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.BWidget()
         r = w.set(5).set(8)
         assert r.value == 8
         assert w.value == 8           # same object returned by reference
 
     def test07_deducing_this_default_arg(self):
         """explicit object parameter with a defaulted regular argument"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct DWidget {
             int base = 3;
@@ -163,15 +163,15 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.DWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.DWidget()
         assert w.scale() == 12        # default factor=4
         assert w.scale(10) == 30
 
     def test08_deducing_this_call_operator(self):
         """call operator with an explicit object parameter"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct Adder {
             int base = 100;
@@ -180,14 +180,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        a = cppyy.gbl.Cpp23DeducingThis.Adder()
+        a = cppjit.gbl.Cpp23DeducingThis.Adder()
         assert a(23) == 123
 
     def test09_deducing_this_mixed_overload(self):
         """overload set mixing an explicit-object and a normal member function"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct MWidget {
             int value = 50;
@@ -197,15 +197,15 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.MWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.MWidget()
         assert w.get() == 50          # explicit-object overload
         assert w.get(7) == 57         # normal overload
 
     def test10_deducing_this_templated(self):
         """templated explicit object parameter (the CRTP-replacement idiom)"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct TWidget {
             int value = 9;
@@ -215,14 +215,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.TWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.TWidget()
         assert w.via() == 9
 
     def test11_deducing_this_templated_with_args(self):
         """templated explicit object parameter alongside a regular argument"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct TAWidget {
             int base = 40;
@@ -232,14 +232,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.TAWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.TAWidget()
         assert w.plus(2) == 42
 
     def test12_deducing_this_templated_returns_self_type(self):
         """deduced Self drives the return: returns the deduced object's field"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct TRWidget {
             int value = 99;
@@ -249,14 +249,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.TRWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.TRWidget()
         assert w.identity() == 99
 
     def test13_deducing_this_abbreviated_auto(self):
         """abbreviated `this auto&&` form (the canonical CRTP-replacement idiom)"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct AAWidget {
             int value = 23;
@@ -265,14 +265,14 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.AAWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.AAWidget()
         assert w.get() == 23
 
     def test14_deducing_this_by_value_copy_semantics(self):
         """by-value `this W self` operates on an independent copy"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct CopyWidget {
             int value = 1;
@@ -281,15 +281,15 @@ class TestCPP23FEATURES:
         }
         """)
 
-        w = cppyy.gbl.Cpp23DeducingThis.CopyWidget()
+        w = cppjit.gbl.Cpp23DeducingThis.CopyWidget()
         assert w.bump() == 101        # the copy is mutated
         assert w.value == 1           # ... the original is untouched
 
     def test15_deducing_this_inheritance(self):
         """base-class explicit object method invoked on a derived object"""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct Base {
             int value = 8;
@@ -299,7 +299,7 @@ class TestCPP23FEATURES:
         }
         """)
 
-        d = cppyy.gbl.Cpp23DeducingThis.Derived()
+        d = cppjit.gbl.Cpp23DeducingThis.Derived()
         assert d.get() == 8
 
     # ------------------------------------------------------------------ #
@@ -309,9 +309,9 @@ class TestCPP23FEATURES:
 
     def test16_blog_deduplication(self):
         """Blog use-case 1: code de-duplication of cv/ref accessors."""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         #include <utility>
         namespace Cpp23DeducingThis {
         struct Optional {
@@ -328,7 +328,7 @@ class TestCPP23FEATURES:
         }
         """)
 
-        o = cppyy.gbl.Cpp23DeducingThis.Optional()
+        o = cppjit.gbl.Cpp23DeducingThis.Optional()
         assert o.read() == 5                 # forwarding read
         o.value()[0] = 17                    # write through the forwarded reference
         assert o.read() == 17                # ... mutation is visible on the object
@@ -339,9 +339,9 @@ class TestCPP23FEATURES:
         The using-declaration re-exposes the inherited postfix (standard name
         hiding); driven from C++ as Python has no postfix-increment syntax.
         """
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct add_postfix_increment {
             template <typename Self>
@@ -357,13 +357,13 @@ class TestCPP23FEATURES:
         }
         """)
 
-        assert cppyy.gbl.Cpp23DeducingThis.drive_postfix() == 1   # old.v=0, c.v=1
+        assert cppjit.gbl.Cpp23DeducingThis.drive_postfix() == 1   # old.v=0, c.v=1
 
     def test18_blog_recursive_lambda(self):
         """Blog use-case 4: recursive lambda via the explicit object parameter."""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         int fib(int n) {
             auto f = [](this auto const& self, int n) -> int {
@@ -374,7 +374,7 @@ class TestCPP23FEATURES:
         }
         """)
 
-        assert cppyy.gbl.Cpp23DeducingThis.fib(10) == 55
+        assert cppjit.gbl.Cpp23DeducingThis.fib(10) == 55
 
     def test19_blog_lambda_forwarding(self):
         """Blog use-case 3: closure with an explicit object parameter.
@@ -382,9 +382,9 @@ class TestCPP23FEATURES:
         The blog uses std::forward_like (not in the host libstdc++); this
         exercises the explicit-object closure mechanism itself.
         """
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         #include <utility>
         namespace Cpp23DeducingThis {
         struct Scheduler { int submitted = 0; int submit(int m) { submitted = m; return m; } };
@@ -399,13 +399,13 @@ class TestCPP23FEATURES:
         }
         """)
 
-        assert cppyy.gbl.Cpp23DeducingThis.run_callback() == 42
+        assert cppjit.gbl.Cpp23DeducingThis.run_callback() == 42
 
     def test20_blog_pass_by_value(self):
         """Blog use-case 5: pass the object by value for better codegen on small types."""
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         struct just_a_little_guy {
             int how_smol = 21;
@@ -414,17 +414,17 @@ class TestCPP23FEATURES:
         }
         """)
 
-        assert cppyy.gbl.Cpp23DeducingThis.just_a_little_guy().uwu() == 42
+        assert cppjit.gbl.Cpp23DeducingThis.just_a_little_guy().uwu() == 42
 
     def test21_blog_sfinae_friendly_transform(self):
         """Blog use-case 6: SFINAE-friendly optional::transform.
 
-        Driven from C++: cppyy can't resolve a two-template-parameter
+        Driven from C++: cppjit can't resolve a two-template-parameter
         explicit-object method against a Python callable.
         """
-        cppyy = self.cppyy
+        cppjit = self.cppjit
 
-        assert cppyy.cppdef("""
+        assert cppjit.cppdef("""
         namespace Cpp23DeducingThis {
         template <class T>
         struct Optional6 {
@@ -437,7 +437,7 @@ class TestCPP23FEATURES:
         }
         """)
 
-        assert cppyy.gbl.Cpp23DeducingThis.drive_transform() == 42
+        assert cppjit.gbl.Cpp23DeducingThis.drive_transform() == 42
 
 
 @mark.skipif(_IN_CHILD, reason="launcher runs only in the parent process")

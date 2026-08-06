@@ -74,85 +74,85 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 if(_python_platlib)
-    set(CPPINTEROP_INSTALL_DIR "${_python_platlib}/cppjit/cppyy_backend")
+    set(CPPINTEROP_INSTALL_DIR "${_python_platlib}/cppjit_backend")
 else()
-    set(CPPINTEROP_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend")
+    set(CPPINTEROP_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/cppjit_backend")
 endif()
 
 # Include cmake for CppInterOp config and build using ExternalProject.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddCppInterOp.cmake)
 cppjit_add_cppinterop()
 
-# this libcppyy.so merges both CPyCppyy and clingwrapper
-file(GLOB CPYCPPYY_SOURCES CONFIGURE_DEPENDS src/CPyCppyy/*.cxx)
-set(BACKEND_SOURCES
-    src/backend/clingwrapper.cxx
-    src/backend/cppinterop_dispatch.cxx
+# this libcppjit.so merges both cpyrt and the interop wrapper
+file(GLOB CPYRT_SOURCES CONFIGURE_DEPENDS src/cpyrt/*.cxx)
+set(INTEROP_SOURCES
+    src/interop/interop_wrapper.cxx
+    src/interop/cppinterop_dispatch.cxx
 )
 
-add_library(cppyy SHARED ${CPYCPPYY_SOURCES} ${BACKEND_SOURCES})
-add_dependencies(cppyy CppInterOp)
+add_library(cppjit SHARED ${CPYRT_SOURCES} ${INTEROP_SOURCES})
+add_dependencies(cppjit CppInterOp)
 
 
-target_compile_definitions(cppyy PRIVATE
+target_compile_definitions(cppjit PRIVATE
     CPPINTEROP_DIR="${CPPINTEROP_INSTALL_DIR}"
     CMAKE_SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}"
 )
 
-target_include_directories(cppyy PRIVATE
-    # src/ itself resolves the public "CPyCppyy/*.h" spellings against the
-    # flattened src/CPyCppyy/ directory
+target_include_directories(cppjit PRIVATE
+    # src/ itself resolves the public "cpyrt/*.h" spellings against the
+    # flattened src/cpyrt/ directory
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/CPyCppyy
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backend
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cpyrt
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/interop
     ${CPPINTEROP_INSTALL_DIR}/include
     ${Python_INCLUDE_DIRS}
 )
 
-target_compile_options(cppyy PRIVATE
+target_compile_options(cppjit PRIVATE
     -Wall -Wno-strict-aliasing -Wno-register
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-    target_link_options(cppyy PRIVATE -Wl,-Bsymbolic-functions)
+    target_link_options(cppjit PRIVATE -Wl,-Bsymbolic-functions)
 endif()
 
 # macOS needs to allow undefined Python symbols
 if(APPLE)
-    set_target_properties(cppyy PROPERTIES
+    set_target_properties(cppjit PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup"
         SUFFIX ".so"
     )
 endif()
 
-set_target_properties(cppyy PROPERTIES
-    OUTPUT_NAME "cppyy"
+set_target_properties(cppjit PROPERTIES
+    OUTPUT_NAME "cppjit"
     PREFIX "lib"
 )
 
-# libcppyy.so is installed in cppjit/ root (import cppjit.libcppyy)
-install(TARGETS cppyy
-    LIBRARY DESTINATION cppjit
+# libcppjit.so is installed at the site-packages root (import libcppjit)
+install(TARGETS cppjit
+    LIBRARY DESTINATION .
 )
 
 # install CppInterOp libraries and headers
 install(CODE "
     file(GLOB _interop_libs \"${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp*\")
     foreach(_lib \${_interop_libs})
-        file(INSTALL \${_lib} DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend/lib)
+        file(INSTALL \${_lib} DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit_backend/lib)
     endforeach()
 ")
 
 install(CODE "
-    file(INSTALL \"${CPPINTEROP_INSTALL_DIR}/include/\" DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/cppyy_backend/include)
+    file(INSTALL \"${CPPINTEROP_INSTALL_DIR}/include/\" DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit_backend/include)
 ")
 
-# the public CPyCppyy API headers keep their installed CPyCppyy/ prefix
+# the public cpyrt API headers keep their installed cpyrt/ prefix
 install(FILES
-    src/CPyCppyy/API.h
-    src/CPyCppyy/CommonDefs.h
-    src/CPyCppyy/DispatchPtr.h
-    src/CPyCppyy/PyException.h
-    src/CPyCppyy/Reflex.h
-    DESTINATION cppjit/cppyy_backend/include/CPyCppyy
+    src/cpyrt/API.h
+    src/cpyrt/CommonDefs.h
+    src/cpyrt/DispatchPtr.h
+    src/cpyrt/PyException.h
+    src/cpyrt/Reflex.h
+    DESTINATION cppjit_backend/include/cpyrt
 )

@@ -20,7 +20,7 @@ authors = [
 
 [tool.scikit-build]
 wheel.install-dir = "."
-wheel.packages = ["python/cppjit"]
+wheel.packages = ["python/cppjit", "python/cppjit_backend"]
 cmake.build-type = "Release"
 
 [tool.pytest.ini_options]

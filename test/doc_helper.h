@@ -1,5 +1,5 @@
-#ifndef CPPYY_TEST_DOCHELPER_H
-#define CPPYY_TEST_DOCHELPER_H
+#ifndef CPPJIT_TEST_DOCHELPER_H
+#define CPPJIT_TEST_DOCHELPER_H
 
 #include <exception>
 #include <string>
@@ -28,4 +28,4 @@ void throw_an_error(int i);
 
 } // namespace DocHelper
 
-#endif // !CPPYY_TEST_DOCHELPER_H
+#endif // !CPPJIT_TEST_DOCHELPER_H

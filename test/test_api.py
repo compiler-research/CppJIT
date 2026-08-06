@@ -8,17 +8,17 @@ class TestAPI:
         if ispypy:
             skip('C++ API only available on CPython')
 
-        import cppyy
-        cppyy.include('CPyCppyy/API.h')
+        import cppjit
+        cppjit.include('cpyrt/API.h')
 
     def test01_type_checking(self):
         """Python class type checks"""
 
-        import cppyy
-        cpp = cppyy.gbl
-        API = cpp.CPyCppyy
+        import cppjit
+        cpp = cppjit.gbl
+        API = cpp.cppjit.cpyrt
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         class APICheck {
         public:
           void some_method() {}
@@ -39,8 +39,8 @@ class TestAPI:
     def test02_interpreter_access(self):
         """Access to the python interpreter"""
 
-        import cppyy
-        API = cppyy.gbl.CPyCppyy
+        import cppjit
+        API = cppjit.gbl.cppjit.cpyrt
 
         assert API.Exec('import sys')
 
@@ -48,11 +48,11 @@ class TestAPI:
     def test03_instance_conversion(self):
         """Proxy object conversions"""
 
-        import cppyy
-        cpp = cppyy.gbl
-        API = cpp.CPyCppyy
+        import cppjit
+        cpp = cppjit.gbl
+        API = cpp.cppjit.cpyrt
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         class APICheck2 {
         public:
           virtual ~APICheck2() {}
@@ -68,10 +68,10 @@ class TestAPI:
     def test04_custom_converter(self):
         """Custom type converter"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
-        #include "CPyCppyy/API.h"
+        cppjit.cppdef("""
+        #include "cpyrt/API.h"
 
         class APICheck3 {
             int fFlags;
@@ -87,10 +87,10 @@ class TestAPI:
             bool wasToMemoryCalled()   { return fFlags & 0x04; }
         };
 
-        class APICheck3Converter : public CPyCppyy::Converter {
+        class APICheck3Converter : public cppjit::cpyrt::Converter {
         public:
-            virtual bool SetArg(PyObject* pyobject, CPyCppyy::Parameter& para, CPyCppyy::CallContext* = nullptr) {
-                APICheck3* a3 = (APICheck3*)CPyCppyy::Instance_AsVoidPtr(pyobject);
+            virtual bool SetArg(PyObject* pyobject, cppjit::cpyrt::Parameter& para, cppjit::cpyrt::CallContext* = nullptr) {
+                APICheck3* a3 = (APICheck3*)cppjit::cpyrt::Instance_AsVoidPtr(pyobject);
                 a3->setSetArgCalled();
                 para.fValue.fVoidp = a3;
                 para.fTypeCode = 'V';
@@ -100,57 +100,57 @@ class TestAPI:
             virtual PyObject* FromMemory(void* address) {
                 APICheck3* a3 = (APICheck3*)address;
                 a3->setFromMemoryCalled();
-                return CPyCppyy::Instance_FromVoidPtr(a3, "APICheck3");
+                return cppjit::cpyrt::Instance_FromVoidPtr(a3, "APICheck3");
             }
 
             virtual bool ToMemory(PyObject* value, void* address) {
                 APICheck3* a3 = (APICheck3*)address;
                 a3->setToMemoryCalled();
-                *a3 = *(APICheck3*)CPyCppyy::Instance_AsVoidPtr(value);
+                *a3 = *(APICheck3*)cppjit::cpyrt::Instance_AsVoidPtr(value);
                 return true;
             }
         };
 
-        typedef CPyCppyy::ConverterFactory_t cf_t;
+        typedef cppjit::cpyrt::ConverterFactory_t cf_t;
         void register_a3() {
-            CPyCppyy::RegisterConverter("APICheck3",  (cf_t)+[](CPyCppyy::cdims_t) { static APICheck3Converter c{}; return &c; });
-            CPyCppyy::RegisterConverter("APICheck3&", (cf_t)+[](CPyCppyy::cdims_t) { static APICheck3Converter c{}; return &c; });
+            cppjit::cpyrt::RegisterConverter("APICheck3",  (cf_t)+[](cppjit::cpyrt::cdims_t) { static APICheck3Converter c{}; return &c; });
+            cppjit::cpyrt::RegisterConverter("APICheck3&", (cf_t)+[](cppjit::cpyrt::cdims_t) { static APICheck3Converter c{}; return &c; });
         }
         void unregister_a3() {
-            CPyCppyy::UnregisterConverter("APICheck3");
-            CPyCppyy::UnregisterConverter("APICheck3&");
+            cppjit::cpyrt::UnregisterConverter("APICheck3");
+            cppjit::cpyrt::UnregisterConverter("APICheck3&");
         }
 
         APICheck3 gA3a, gA3b;
         void CallWithAPICheck3(APICheck3&) {}
         """)
 
-        cppyy.gbl.register_a3()
+        cppjit.gbl.register_a3()
 
-        gA3a = cppyy.gbl.gA3a
+        gA3a = cppjit.gbl.gA3a
         assert gA3a
-        assert type(gA3a) == cppyy.gbl.APICheck3
+        assert type(gA3a) == cppjit.gbl.APICheck3
         assert gA3a.wasFromMemoryCalled()
 
         assert not gA3a.wasSetArgCalled()
-        cppyy.gbl.CallWithAPICheck3(gA3a)
+        cppjit.gbl.CallWithAPICheck3(gA3a)
         assert gA3a.wasSetArgCalled()
 
-        cppyy.gbl.unregister_a3()
+        cppjit.gbl.unregister_a3()
 
-        gA3b = cppyy.gbl.gA3b
+        gA3b = cppjit.gbl.gA3b
         assert gA3b
-        assert type(gA3b) == cppyy.gbl.APICheck3
+        assert type(gA3b) == cppjit.gbl.APICheck3
         assert not gA3b.wasFromMemoryCalled()
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
     def test05_custom_executor(self):
         """Custom type executor"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
-        #include "CPyCppyy/API.h"
+        cppjit.cppdef("""
+        #include "cpyrt/API.h"
 
         class APICheck4 {
             int fFlags;
@@ -162,49 +162,49 @@ class TestAPI:
             bool wasExecutorCalled() { return fFlags & 0x01; }
         };
 
-        class APICheck4Executor : public CPyCppyy::Executor {
+        class APICheck4Executor : public cppjit::cpyrt::Executor {
         public:
-             virtual PyObject* Execute(Cppyy::TCppMethod_t meth, Cppyy::TCppObject_t obj, CPyCppyy::CallContext* ctxt) {
-                 APICheck4* a4 = (APICheck4*)CPyCppyy::CallVoidP(meth, obj, ctxt);
+             virtual PyObject* Execute(cppjit::interop::TCppMethod_t meth, cppjit::interop::TCppObject_t obj, cppjit::cpyrt::CallContext* ctxt) {
+                 APICheck4* a4 = (APICheck4*)cppjit::cpyrt::CallVoidP(meth, obj, ctxt);
                  a4->setExecutorCalled();
-                 return CPyCppyy::Instance_FromVoidPtr(a4, "APICheck4", true);
+                 return cppjit::cpyrt::Instance_FromVoidPtr(a4, "APICheck4", true);
              }
         };
 
-        typedef CPyCppyy::ExecutorFactory_t ef_t;
+        typedef cppjit::cpyrt::ExecutorFactory_t ef_t;
         void register_a4() {
-            CPyCppyy::RegisterExecutor("APICheck4*", (ef_t)+[](CPyCppyy::cdims_t) { static APICheck4Executor c{}; return &c; });
+            cppjit::cpyrt::RegisterExecutor("APICheck4*", (ef_t)+[](cppjit::cpyrt::cdims_t) { static APICheck4Executor c{}; return &c; });
         }
         void unregister_a4() {
-            CPyCppyy::UnregisterExecutor("APICheck4*");
+            cppjit::cpyrt::UnregisterExecutor("APICheck4*");
         }
 
         APICheck4* CreateAPICheck4() { return new APICheck4{}; }
         APICheck4* CreateAPICheck4b() { return new APICheck4{}; }
         """)
 
-        cppyy.gbl.register_a4()
+        cppjit.gbl.register_a4()
 
-        a4 = cppyy.gbl.CreateAPICheck4()
+        a4 = cppjit.gbl.CreateAPICheck4()
         assert a4
-        assert type(a4) == cppyy.gbl.APICheck4
+        assert type(a4) == cppjit.gbl.APICheck4
         assert a4.wasExecutorCalled();
         del a4
 
-        cppyy.gbl.unregister_a4()
+        cppjit.gbl.unregister_a4()
 
-        a4 = cppyy.gbl.CreateAPICheck4b()
+        a4 = cppjit.gbl.CreateAPICheck4b()
         assert a4
-        assert type(a4) == cppyy.gbl.APICheck4
+        assert type(a4) == cppjit.gbl.APICheck4
         assert not a4.wasExecutorCalled();
 
     def test06_custom_executor(self):
         """Custom type executor"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
-        #include "CPyCppyy/API.h"
+        cppjit.cppdef("""
+        #include "cpyrt/API.h"
 
         namespace ArrayLike {
         class MyClass{};
@@ -216,13 +216,13 @@ class TestAPI:
             int operator[](int) { return 42; }
         }; }""")
 
-        ns = cppyy.gbl.ArrayLike;
-        Sequence_Check = cppyy.gbl.CPyCppyy.Sequence_Check
+        ns = cppjit.gbl.ArrayLike;
+        Sequence_Check = cppjit.gbl.cppjit.cpyrt.Sequence_Check
 
         assert not Sequence_Check(ns.my)
         assert     Sequence_Check(ns.myA)
         assert not Sequence_Check(ns.MyClass())
         assert     Sequence_Check(ns.MyArray())
         assert     Sequence_Check(tuple())
-        assert     Sequence_Check(cppyy.gbl.std.vector[ns.MyClass]())
-        assert not Sequence_Check(cppyy.gbl.std.list[ns.MyClass]())
+        assert     Sequence_Check(cppjit.gbl.std.vector[ns.MyClass]())
+        assert not Sequence_Check(cppjit.gbl.std.list[ns.MyClass]())

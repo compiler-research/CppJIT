@@ -137,7 +137,7 @@ private:
     int m_int;
 
 public:
-    static void __cppyy_explicit_pythonize__(PyObject* klass, const std::string&);
+    static void __cppjit_explicit_pythonize__(PyObject* klass, const std::string&);
     static std::string klass_name;
 };
 
@@ -153,7 +153,7 @@ protected:
     int m_int;
 
 public:
-    static void __cppyy_pythonize__(PyObject* klass, const std::string&);
+    static void __cppjit_pythonize__(PyObject* klass, const std::string&);
     static std::string klass_name;
 };
 

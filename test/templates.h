@@ -1,5 +1,5 @@
-#ifndef CPPYY_TEST_TEMPLATES_H
-#define CPPYY_TEST_TEMPLATES_H
+#ifndef CPPJIT_TEST_TEMPLATES_H
+#define CPPJIT_TEST_TEMPLATES_H
 
 #include <stdexcept>
 #include <string>
@@ -544,4 +544,4 @@ extern template class B<int>;
 
 }
 
-#endif // !CPPYY_TEST_TEMPLATES_H
+#endif // !CPPJIT_TEST_TEMPLATES_H

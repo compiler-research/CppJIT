@@ -1,5 +1,5 @@
-#ifndef CPPYY_TEST_DATATYPES_H
-#define CPPYY_TEST_DATATYPES_H
+#ifndef CPPJIT_TEST_DATATYPES_H
+#define CPPJIT_TEST_DATATYPES_H
 
 #ifdef _WIN32
 typedef __int64          Long64_t;
@@ -21,7 +21,7 @@ const int N = 5;
 
 
 //===========================================================================
-struct CppyyTestPod {
+struct CppjitTestPod {
    int    m_int;
    double m_double;
 };
@@ -87,10 +87,10 @@ typedef _Complex double  ccomplex_t;    // C-style complex, maps to Py_complex
 typedef _C_double_complex ccomplex_t;   // id.
 #endif
 
-class CppyyTestData {
+class CppjitTestData {
 public:
-    CppyyTestData();
-    ~CppyyTestData();
+    CppjitTestData();
+    ~CppjitTestData();
 
 // special cases
     enum EWhat { kNothing=6, kSomething=111, kLots=42 };
@@ -163,12 +163,12 @@ public:
     ccomplex_t* get_ccomplex_array();
     ccomplex_t* get_ccomplex_array2();
 
-    CppyyTestPod get_pod_val();                 // for m_pod
-    CppyyTestPod* get_pod_val_ptr();
-    CppyyTestPod& get_pod_val_ref();
-    CppyyTestPod*& get_pod_ptrref();
+    CppjitTestPod get_pod_val();                 // for m_pod
+    CppjitTestPod* get_pod_val_ptr();
+    CppjitTestPod& get_pod_val_ref();
+    CppjitTestPod*& get_pod_ptrref();
 
-    CppyyTestPod* get_pod_ptr();                // for m_ppod
+    CppjitTestPod* get_pod_ptr();                // for m_ppod
 
 // getters const-ref
     const bool&               get_bool_cr();
@@ -258,16 +258,16 @@ public:
     void set_enum(EWhat);
     void set_voidp(void*);
 
-    void set_pod_val(CppyyTestPod);             // for m_pod
-    void set_pod_ptr_in(CppyyTestPod*);
-    void set_pod_ptr_out(CppyyTestPod*);
-    void set_pod_ref(const CppyyTestPod&);
-    void set_pod_ptrptr_in(CppyyTestPod**);
+    void set_pod_val(CppjitTestPod);             // for m_pod
+    void set_pod_ptr_in(CppjitTestPod*);
+    void set_pod_ptr_out(CppjitTestPod*);
+    void set_pod_ref(const CppjitTestPod&);
+    void set_pod_ptrptr_in(CppjitTestPod**);
     void set_pod_void_ptrptr_in(void**);
-    void set_pod_ptrptr_out(CppyyTestPod**);
+    void set_pod_ptrptr_out(CppjitTestPod**);
     void set_pod_void_ptrptr_out(void**);
 
-    void set_pod_ptr(CppyyTestPod*);            // for m_ppod
+    void set_pod_ptr(CppjitTestPod*);            // for m_ppod
 
 // setters const-ref
     void set_bool_cr(const bool&);
@@ -511,8 +511,8 @@ public:
     ccomplex_t* m_ccomplex_array2;
 
 // object types
-    CppyyTestPod m_pod;
-    CppyyTestPod* m_ppod;
+    CppjitTestPod m_pod;
+    CppjitTestPod* m_ppod;
 
 public:
     static bool                    s_bool;
@@ -552,9 +552,9 @@ private:
 
 
 //= global functions ========================================================
-intptr_t get_pod_address(CppyyTestData& c);
-intptr_t get_int_address(CppyyTestData& c);
-intptr_t get_double_address(CppyyTestData& c);
+intptr_t get_pod_address(CppjitTestData& c);
+intptr_t get_int_address(CppjitTestData& c);
+intptr_t get_double_address(CppjitTestData& c);
 
 
 //= global variables/pointers ===============================================
@@ -621,11 +621,11 @@ static const void*              g_c_voidp   = nullptr;
 void set_global_int(int i);
 int get_global_int();
 
-extern CppyyTestPod* g_pod;
-bool is_global_pod(CppyyTestPod* t);
-void set_global_pod(CppyyTestPod* t);
-CppyyTestPod* get_global_pod();
-CppyyTestPod* get_null_pod();
+extern CppjitTestPod* g_pod;
+bool is_global_pod(CppjitTestPod* t);
+void set_global_pod(CppjitTestPod* t);
+CppjitTestPod* get_global_pod();
+CppjitTestPod* get_null_pod();
 
 extern std::string g_some_global_string;
 std::string get_some_global_string();
@@ -829,4 +829,4 @@ namespace Int8_Uint8_Arrays {
     extern uint8_t utest[6];
 }
 
-#endif // !CPPYY_TEST_DATATYPES_H
+#endif // !CPPJIT_TEST_DATATYPES_H

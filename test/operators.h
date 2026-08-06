@@ -1,5 +1,5 @@
-#ifndef CPPYY_TEST_OPERATORS_H
-#define CPPYY_TEST_OPERATORS_H
+#ifndef CPPJIT_TEST_OPERATORS_H
+#define CPPJIT_TEST_OPERATORS_H
 
 class number  {
 public:
@@ -329,4 +329,4 @@ struct CommaOperator {
     int fInt;
 };
 
-#endif // !CPPYY_TEST_OPERATORS_H
+#endif // !CPPJIT_TEST_OPERATORS_H

@@ -12,18 +12,18 @@ def setup_module(mod):
 class TestDATATYPES:
     def setup_class(cls):
         cls.test_dct = test_dct
-        import cppyy
-        cls.datatypes = cppyy.load_reflection_info(cls.test_dct)
-        cls.N = 5 #cppyy.gbl.N
+        import cppjit
+        cls.datatypes = cppjit.load_reflection_info(cls.test_dct)
+        cls.N = 5 #cppjit.gbl.N
 
     def test01_instance_data_read_access(self):
         """Read access to instance public data and verify values"""
 
-        import cppyy
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         # reading boolean type
         assert c.m_bool == False
@@ -77,21 +77,21 @@ class TestDATATYPES:
         assert round(c.get_complex_cr().imag - 101., 11) == 0
         assert round(c.get_complex_r().real  -  99., 11) == 0
         assert round(c.get_complex_r().imag  - 101., 11) == 0
-        assert complex(cppyy.gbl.std.complex['double'](1, 2)) == complex(1, 2)
-        assert repr(cppyy.gbl.std.complex['double'](1, 2)) == '(1+2j)'
+        assert complex(cppjit.gbl.std.complex['double'](1, 2)) == complex(1, 2)
+        assert repr(cppjit.gbl.std.complex['double'](1, 2)) == '(1+2j)'
 
         # complex<int> retains C++ type in all cases (but includes pythonization to
         # resemble Python's complex more closely
-        assert type(c.get_icomplex()) == cppyy.gbl.std.complex[int]
+        assert type(c.get_icomplex()) == cppjit.gbl.std.complex[int]
         assert round(c.get_icomplex().real    - 121., 11) == 0
         assert round(c.get_icomplex().imag    - 141., 11) == 0
         assert repr(c.get_icomplex()) == '(121+141j)'
         assert round(c.get_icomplex_cr().real - 121., 11) == 0
         assert round(c.get_icomplex_cr().imag - 141., 11) == 0
-        assert type(c.get_icomplex_r()) == cppyy.gbl.std.complex[int]
+        assert type(c.get_icomplex_r()) == cppjit.gbl.std.complex[int]
         assert round(c.get_icomplex_r().real  - 121., 11) == 0
         assert round(c.get_icomplex_r().imag  - 141., 11) == 0
-        assert complex(cppyy.gbl.std.complex['int'](1, 2)) == complex(1, 2)
+        assert complex(cppjit.gbl.std.complex['int'](1, 2)) == complex(1, 2)
 
         # _Complex double type
         assert type(c.get_ccomplex()) == complex
@@ -104,7 +104,7 @@ class TestDATATYPES:
         assert round(c.get_ccomplex_r().imag  - 161., 11) == 0
 
         # complex overloads
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace ComplexOverload {
           template<typename T>
           struct CO {
@@ -116,9 +116,9 @@ class TestDATATYPES:
           };
         }""")
 
-        COd = cppyy.gbl.ComplexOverload.CO['double']
-        COf = cppyy.gbl.ComplexOverload.CO['float']
-        scf = cppyy.gbl.std.complex['float']
+        COd = cppjit.gbl.ComplexOverload.CO['double']
+        COf = cppjit.gbl.ComplexOverload.CO['float']
+        scf = cppjit.gbl.std.complex['float']
 
         assert COd(2).m_size     == 2
         assert COd(2).m_cplx     == 7.+42j
@@ -135,7 +135,7 @@ class TestDATATYPES:
         assert COf(9.+7j).m_cplx == scf(9., 7.)
 
         # reading of enum types
-        assert c.m_enum == CppyyTestData.kNothing
+        assert c.m_enum == CppjitTestData.kNothing
         assert c.m_enum == c.kNothing
 
         # reading of boolean array
@@ -180,22 +180,22 @@ class TestDATATYPES:
         raises(IndexError, c.m_double_array.__getitem__, self.N)
 
         # can not access an instance member on the class
-        raises(AttributeError, getattr, CppyyTestData, 'm_bool')
-        raises(AttributeError, getattr, CppyyTestData, 'm_int')
+        raises(AttributeError, getattr, CppjitTestData, 'm_bool')
+        raises(AttributeError, getattr, CppjitTestData, 'm_int')
 
-        assert not hasattr(CppyyTestData, 'm_bool')
-        assert not hasattr(CppyyTestData, 'm_int')
+        assert not hasattr(CppjitTestData, 'm_bool')
+        assert not hasattr(CppjitTestData, 'm_int')
 
         c.__destruct__()
 
     def test02_instance_data_write_access(self):
         """Test write access to instance public data and verify values"""
 
-        import cppyy
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         # boolean types through functions
         c.set_bool(True);  assert c.get_bool() == True
@@ -260,15 +260,15 @@ class TestDATATYPES:
             assert eval('c.m_%s' % names[i]) == 4*i
 
         for i in range(len(names)):
-            setattr(c, 'm_'+names[i], cppyy.default)
+            setattr(c, 'm_'+names[i], cppjit.default)
             assert eval('c.get_%s()' % names[i]) == 0
 
         for i in range(len(names)):
-            getattr(c, 'set_'+names[i])(cppyy.default)
+            getattr(c, 'set_'+names[i])(cppjit.default)
             assert eval('c.m_%s' % names[i]) == 0
 
         for i in range(len(names)):
-            getattr(c, 'set_'+names[i]+'_cr')(cppyy.default)
+            getattr(c, 'set_'+names[i]+'_cr')(cppjit.default)
             assert eval('c.m_%s' % names[i]) == 0
 
         # float types through functions
@@ -289,19 +289,19 @@ class TestDATATYPES:
 
         names = ['float', 'double', 'ldouble']
         for i in range(len(names)):
-            setattr(c, 'm_'+names[i], cppyy.default)
+            setattr(c, 'm_'+names[i], cppjit.default)
             assert eval('c.get_%s()' % names[i]) == 0.
 
         for i in range(len(names)):
-            getattr(c, 'set_'+names[i])(cppyy.default)
+            getattr(c, 'set_'+names[i])(cppjit.default)
             assert eval('c.m_%s' % names[i]) == 0.
 
         for i in range(len(names)):
-            getattr(c, 'set_'+names[i]+'_cr')(cppyy.default)
+            getattr(c, 'set_'+names[i]+'_cr')(cppjit.default)
             assert eval('c.m_%s' % names[i]) == 0.
 
         # (non-)writing of enum types
-        raises(TypeError, setattr, CppyyTestData, 'kNothing', 42)
+        raises(TypeError, setattr, CppjitTestData, 'kNothing', 42)
 
         # arrays; there will be pointer copies, so destroy the current ones
         c.destroy_arrays()
@@ -333,11 +333,11 @@ class TestDATATYPES:
     def test03_array_passing(self):
         """Test passing of array arguments"""
 
-        import cppyy, array, sys
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit, array, sys
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         a = range(self.N)
         # test arrays in mixed order, to give overload resolution a workout
@@ -364,69 +364,69 @@ class TestDATATYPES:
         assert not c.pass_array(0)
         raises(Exception, c.pass_array(0).__getitem__, 0)    # raises SegfaultException
         assert raises(TypeError, c.pass_array, None)
-        assert not c.pass_array(cppyy.nullptr)
-        raises(Exception, c.pass_array(cppyy.nullptr).__getitem__, 0) # id. id.
+        assert not c.pass_array(cppjit.nullptr)
+        raises(Exception, c.pass_array(cppjit.nullptr).__getitem__, 0) # id. id.
 
         c.__destruct__()
 
     def test04_class_read_access(self):
         """Test read access to class public data and verify values"""
 
-        import cppyy, sys
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit, sys
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         # char types
-        assert CppyyTestData.s_char     == 'c'
+        assert CppjitTestData.s_char     == 'c'
         assert c.s_char                 == 'c'
-        assert CppyyTestData.s_uchar    == 'u'
+        assert CppjitTestData.s_uchar    == 'u'
         assert c.s_uchar                == 'u'
-        assert CppyyTestData.s_wchar    == u'U'
+        assert CppjitTestData.s_wchar    == u'U'
         assert c.s_wchar                == u'U'
-        assert CppyyTestData.s_char16   == u'\u6c29'
+        assert CppjitTestData.s_char16   == u'\u6c29'
         assert c.s_char16               == u'\u6c29'
-        assert CppyyTestData.s_char32   == u'\U0001f34b'
+        assert CppjitTestData.s_char32   == u'\U0001f34b'
         assert c.s_char32               == u'\U0001f34b'
 
         assert type(c.s_wchar)              == pyunicode
-        assert type(CppyyTestData.s_wchar)  == pyunicode
+        assert type(CppjitTestData.s_wchar)  == pyunicode
         assert type(c.s_char16)             == pyunicode
-        assert type(CppyyTestData.s_char16) == pyunicode
+        assert type(CppjitTestData.s_char16) == pyunicode
         assert type(c.s_char32)             == pyunicode
-        assert type(CppyyTestData.s_char32) == pyunicode
+        assert type(CppjitTestData.s_char32) == pyunicode
 
         # integer types
-        assert CppyyTestData.s_byte == ord('b')
+        assert CppjitTestData.s_byte == ord('b')
         assert c.s_byte             == ord('b')
-        assert CppyyTestData.s_int8     == - 87
+        assert CppjitTestData.s_int8     == - 87
         assert c.s_int8                 == - 87
-        assert CppyyTestData.s_uint8    ==   87
+        assert CppjitTestData.s_uint8    ==   87
         assert c.s_uint8                ==   87
-        assert CppyyTestData.s_short    == -101
+        assert CppjitTestData.s_short    == -101
         assert c.s_short                == -101
         assert c.s_ushort               ==  255
-        assert CppyyTestData.s_ushort   ==  255
-        assert CppyyTestData.s_int      == -202
+        assert CppjitTestData.s_ushort   ==  255
+        assert CppjitTestData.s_int      == -202
         assert c.s_int                  == -202
         assert c.s_uint                 ==  202
-        assert CppyyTestData.s_uint     ==  202
-        assert CppyyTestData.s_long     == -pylong(303)
+        assert CppjitTestData.s_uint     ==  202
+        assert CppjitTestData.s_long     == -pylong(303)
         assert c.s_long                 == -pylong(303)
         assert c.s_ulong                ==  pylong(303)
-        assert CppyyTestData.s_ulong    ==  pylong(303)
-        assert CppyyTestData.s_llong    == -pylong(404)
+        assert CppjitTestData.s_ulong    ==  pylong(303)
+        assert CppjitTestData.s_llong    == -pylong(404)
         assert c.s_llong                == -pylong(404)
         assert c.s_ullong               ==  pylong(404)
-        assert CppyyTestData.s_ullong   ==  pylong(404)
+        assert CppjitTestData.s_ullong   ==  pylong(404)
 
         # floating point types
-        assert round(CppyyTestData.s_float   + 606., 5) == 0
+        assert round(CppjitTestData.s_float   + 606., 5) == 0
         assert round(c.s_float               + 606., 5) == 0
-        assert round(CppyyTestData.s_double  + 707., 8) == 0
+        assert round(CppjitTestData.s_double  + 707., 8) == 0
         assert round(c.s_double              + 707., 8) == 0
-        assert round(CppyyTestData.s_ldouble + 808., 8) == 0
+        assert round(CppjitTestData.s_ldouble + 808., 8) == 0
         assert round(c.s_ldouble             + 808., 8) == 0
 
         c.__destruct__()
@@ -434,83 +434,83 @@ class TestDATATYPES:
     def test05_class_data_write_access(self):
         """Test write access to class public data and verify values"""
 
-        import cppyy, sys
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit, sys
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         # char types
-        CppyyTestData.s_char             = 'a'
+        CppjitTestData.s_char             = 'a'
         assert c.s_char                 == 'a'
         c.s_char                         = 'b'
-        assert CppyyTestData.s_char     == 'b'
-        CppyyTestData.s_uchar            = 'c'
+        assert CppjitTestData.s_char     == 'b'
+        CppjitTestData.s_uchar            = 'c'
         assert c.s_uchar                == 'c'
         c.s_uchar                        = 'd'
-        assert CppyyTestData.s_uchar    == 'd'
-        raises(ValueError, setattr, CppyyTestData, 's_uchar', -1)
+        assert CppjitTestData.s_uchar    == 'd'
+        raises(ValueError, setattr, CppjitTestData, 's_uchar', -1)
         raises(ValueError, setattr, c,             's_uchar', -1)
-        CppyyTestData.s_wchar            = u'K'
+        CppjitTestData.s_wchar            = u'K'
         assert c.s_wchar                == u'K'
         c.s_wchar                        = u'L'
-        assert CppyyTestData.s_wchar    == u'L'
-        CppyyTestData.s_char16           = u'\u00df'
+        assert CppjitTestData.s_wchar    == u'L'
+        CppjitTestData.s_char16           = u'\u00df'
         assert c.s_char16               == u'\u00df'
         c.s_char16                       = u'\u00ef'
-        assert CppyyTestData.s_char16   == u'\u00ef'
-        CppyyTestData.s_char32           = u'\u00df'
+        assert CppjitTestData.s_char16   == u'\u00ef'
+        CppjitTestData.s_char32           = u'\u00df'
         assert c.s_char32               == u'\u00df'
         c.s_char32                       = u'\u00ef'
-        assert CppyyTestData.s_char32   == u'\u00ef'
+        assert CppjitTestData.s_char32   == u'\u00ef'
 
         # integer types
         c.s_byte                     =   66
-        assert CppyyTestData.s_byte ==   66
-        CppyyTestData.s_byte         =   66
+        assert CppjitTestData.s_byte ==   66
+        CppjitTestData.s_byte         =   66
         assert c.s_byte             ==   66
         c.s_short                        = -102
-        assert CppyyTestData.s_short    == -102
-        CppyyTestData.s_short            = -203
+        assert CppjitTestData.s_short    == -102
+        CppjitTestData.s_short            = -203
         assert c.s_short                == -203
         c.s_ushort                       =  127
-        assert CppyyTestData.s_ushort   ==  127
-        CppyyTestData.s_ushort           =  227
+        assert CppjitTestData.s_ushort   ==  127
+        CppjitTestData.s_ushort           =  227
         assert c.s_ushort               ==  227
-        CppyyTestData.s_int              = -234
+        CppjitTestData.s_int              = -234
         assert c.s_int                  == -234
         c.s_int                          = -321
-        assert CppyyTestData.s_int      == -321
-        CppyyTestData.s_uint             = 1234
+        assert CppjitTestData.s_int      == -321
+        CppjitTestData.s_uint             = 1234
         assert c.s_uint                 == 1234
         c.s_uint                         = 4321
-        assert CppyyTestData.s_uint     == 4321
+        assert CppjitTestData.s_uint     == 4321
         raises(ValueError, setattr, c,             's_uint', -1)
-        raises(ValueError, setattr, CppyyTestData, 's_uint', -1)
-        CppyyTestData.s_long             = -pylong(87)
+        raises(ValueError, setattr, CppjitTestData, 's_uint', -1)
+        CppjitTestData.s_long             = -pylong(87)
         assert c.s_long                 == -pylong(87)
         c.s_long                         = pylong(876)
-        assert CppyyTestData.s_long     == pylong(876)
-        CppyyTestData.s_ulong            = pylong(876)
+        assert CppjitTestData.s_long     == pylong(876)
+        CppjitTestData.s_ulong            = pylong(876)
         assert c.s_ulong                == pylong(876)
         c.s_ulong                        = pylong(678)
-        assert CppyyTestData.s_ulong    == pylong(678)
-        raises(ValueError, setattr, CppyyTestData, 's_ulong', -1)
+        assert CppjitTestData.s_ulong    == pylong(678)
+        raises(ValueError, setattr, CppjitTestData, 's_ulong', -1)
         raises(ValueError, setattr, c,             's_ulong', -1)
 
         # floating point types
-        CppyyTestData.s_float                      = -3.1415
+        CppjitTestData.s_float                      = -3.1415
         assert round(c.s_float, 5)                == -3.1415
         c.s_float                                  =  3.1415
-        assert round(CppyyTestData.s_float, 5)    ==  3.1415
+        assert round(CppjitTestData.s_float, 5)    ==  3.1415
         import math
         c.s_double                                 = -math.pi
-        assert CppyyTestData.s_double             == -math.pi
-        CppyyTestData.s_double                     =  math.pi
+        assert CppjitTestData.s_double             == -math.pi
+        CppjitTestData.s_double                     =  math.pi
         assert c.s_double                         ==  math.pi
         c.s_ldouble                                = -math.pi
-        assert CppyyTestData.s_ldouble            == -math.pi
-        CppyyTestData.s_ldouble                    =  math.pi
+        assert CppjitTestData.s_ldouble            == -math.pi
+        CppjitTestData.s_ldouble                    =  math.pi
         assert c.s_ldouble                        ==  math.pi
 
         c.__destruct__()
@@ -518,11 +518,11 @@ class TestDATATYPES:
     def test06_range_access(self):
         """Test the ranges of integer types"""
 
-        import cppyy, sys
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit, sys
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         # TODO: should these be TypeErrors, or should char/bool raise
         #       ValueErrors? In any case, consistency is needed ...
@@ -534,11 +534,11 @@ class TestDATATYPES:
     def test07_type_conversions(self):
         """Test conversions between builtin types"""
 
-        import cppyy, sys
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit, sys
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         c.m_double = -1
         assert round(c.m_double + 1.0, 8) == 0
@@ -569,8 +569,8 @@ class TestDATATYPES:
     def test08_global_builtin_type(self):
         """Test access to a global builtin type"""
 
-        import cppyy
-        gbl = cppyy.gbl
+        import cppjit
+        gbl = cppjit.gbl
 
         assert gbl.g_int == gbl.get_global_int()
 
@@ -611,21 +611,21 @@ class TestDATATYPES:
     def test08a_global_object(self):
         """Test access to global objects by value"""
 
-        import cppyy
-        gbl = cppyy.gbl
+        import cppjit
+        gbl = cppjit.gbl
 
         assert gbl.gData.fData == 5.
 
     def test09_global_ptr(self):
         """Test access of global objects through a pointer"""
 
-        import cppyy
-        gbl = cppyy.gbl
+        import cppjit
+        gbl = cppjit.gbl
 
         with raises(ReferenceError):
             gbl.g_pod.m_int
 
-        c = gbl.CppyyTestPod()
+        c = gbl.CppjitTestPod()
         c.m_int = 42
         c.m_double = 3.14
 
@@ -639,7 +639,7 @@ class TestDATATYPES:
         assert c is d
         assert id(c) == id(d)
 
-        e = gbl.CppyyTestPod()
+        e = gbl.CppjitTestPod()
         e.m_int = 43
         e.m_double = 2.14
 
@@ -651,44 +651,44 @@ class TestDATATYPES:
     def test10_enum(self):
         """Test access to enums"""
 
-        import cppyy
-        gbl = cppyy.gbl
+        import cppjit
+        gbl = cppjit.gbl
 
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         # test that the enum is accessible as a type
-        assert CppyyTestData.EWhat
+        assert CppjitTestData.EWhat
 
-        assert CppyyTestData.kNothing   ==   6
-        assert CppyyTestData.kSomething == 111
-        assert CppyyTestData.kLots      ==  42
+        assert CppjitTestData.kNothing   ==   6
+        assert CppjitTestData.kSomething == 111
+        assert CppjitTestData.kLots      ==  42
 
-        assert CppyyTestData.EWhat(CppyyTestData.kNothing) == CppyyTestData.kNothing
-        assert CppyyTestData.EWhat(6) == CppyyTestData.kNothing
+        assert CppjitTestData.EWhat(CppjitTestData.kNothing) == CppjitTestData.kNothing
+        assert CppjitTestData.EWhat(6) == CppjitTestData.kNothing
         # TODO: only allow instantiations with correct values (C++11)
 
-        assert c.get_enum() == CppyyTestData.kNothing
-        assert c.m_enum == CppyyTestData.kNothing
+        assert c.get_enum() == CppjitTestData.kNothing
+        assert c.m_enum == CppjitTestData.kNothing
 
-        c.m_enum = CppyyTestData.kSomething
-        assert c.get_enum() == CppyyTestData.kSomething
-        assert c.m_enum == CppyyTestData.kSomething
+        c.m_enum = CppjitTestData.kSomething
+        assert c.get_enum() == CppjitTestData.kSomething
+        assert c.m_enum == CppjitTestData.kSomething
 
-        c.set_enum(CppyyTestData.kLots)
-        assert c.get_enum() == CppyyTestData.kLots
-        assert c.m_enum == CppyyTestData.kLots
+        c.set_enum(CppjitTestData.kLots)
+        assert c.get_enum() == CppjitTestData.kLots
+        assert c.m_enum == CppjitTestData.kLots
 
-        assert c.s_enum == CppyyTestData.s_enum
-        assert c.s_enum == CppyyTestData.kNothing
-        assert CppyyTestData.s_enum == CppyyTestData.kNothing
+        assert c.s_enum == CppjitTestData.s_enum
+        assert c.s_enum == CppjitTestData.kNothing
+        assert CppjitTestData.s_enum == CppjitTestData.kNothing
 
-        c.s_enum = CppyyTestData.kSomething
-        assert c.s_enum == CppyyTestData.s_enum
-        assert c.s_enum == CppyyTestData.kSomething
-        assert CppyyTestData.s_enum == CppyyTestData.kSomething
+        c.s_enum = CppjitTestData.kSomething
+        assert c.s_enum == CppjitTestData.s_enum
+        assert c.s_enum == CppjitTestData.kSomething
+        assert CppjitTestData.s_enum == CppjitTestData.kSomething
 
         # global enums
         assert gbl.EFruit          # test type accessible
@@ -728,9 +728,9 @@ class TestDATATYPES:
     def test11_typed_enums(self):
         """Determine correct types of enums"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace TrueEnumTypes {
         class Test {
             enum nums { ZERO = 0, ONE = 1 };
@@ -739,7 +739,7 @@ class TestDATATYPES:
             enum vraioufaux : bool { faux = false, vrai = true };
         }; }""")
 
-        sc = cppyy.gbl.TrueEnumTypes.Test
+        sc = cppjit.gbl.TrueEnumTypes.Test
 
         assert sc.nums.ZERO == 0
         assert sc.nums.ONE  == 1
@@ -771,9 +771,9 @@ class TestDATATYPES:
     def test12_enum_scopes(self):
         """Enum accessibility and scopes"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         enum              { g_one   = 1, g_two  = 2 };
         enum       GEnum1 { g_three = 3, g_four = 4 };
         enum class GEnum2 { g_five  = 5, g_six  = 6 };
@@ -791,7 +791,7 @@ class TestDATATYPES:
             enum class CEnum2 { c_five  = 5, c_six  = 6 };
         }; """)
 
-        gn = cppyy.gbl
+        gn = cppjit.gbl
         assert not hasattr(gn, 'n_one')
         assert not hasattr(gn, 'c_one')
         assert gn.g_two  == 2
@@ -802,7 +802,7 @@ class TestDATATYPES:
         assert not hasattr(gn, 'g_five')
         assert gn.GEnum2.g_six == 6
 
-        ns = cppyy.gbl.EnumScopes
+        ns = cppjit.gbl.EnumScopes
         assert not hasattr(ns, 'g_one')
         assert not hasattr(ns, 'c_one')
         assert ns.n_two  == 2
@@ -813,7 +813,7 @@ class TestDATATYPES:
         assert not hasattr(ns, 'n_five')
         assert ns.NEnum2.n_six == 6
 
-        cl = cppyy.gbl.EnumClass
+        cl = cppjit.gbl.EnumClass
         assert not hasattr(cl, 'g_one')
         assert not hasattr(cl, 'n_one')
         assert cl.c_two  == 2
@@ -827,10 +827,10 @@ class TestDATATYPES:
     def test13_string_passing(self):
         """Test passing/returning of a const char*"""
 
-        import cppyy
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
+        c = CppjitTestData()
         assert c.get_valid_string('aap') == 'aap'
         assert c.get_invalid_string() == ''
 
@@ -846,8 +846,8 @@ class TestDATATYPES:
     def test14_copy_constructor(self):
         """Test copy constructor"""
 
-        import cppyy
-        FourVector = cppyy.gbl.FourVector
+        import cppjit
+        FourVector = cppjit.gbl.FourVector
 
         t1 = FourVector(1., 2., 3., -4.)
         t2 = FourVector(0., 0., 0.,  0.)
@@ -862,9 +862,9 @@ class TestDATATYPES:
     def test15_object_returns(self):
         """Test access to and return of PODs"""
 
-        import cppyy
+        import cppjit
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
 
         assert c.m_pod.m_int == 888
         assert c.m_pod.m_double == 3.14
@@ -889,13 +889,13 @@ class TestDATATYPES:
     def test16_object_arguments(self):
         """Test setting and returning of a POD through arguments"""
 
-        import cppyy
+        import cppjit
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         assert c.m_pod.m_int == 888
         assert c.m_pod.m_double == 3.14
 
-        p = cppyy.gbl.CppyyTestPod()
+        p = cppjit.gbl.CppjitTestPod()
         p.m_int = 123
         assert p.m_int == 123
         p.m_double = 321.
@@ -905,12 +905,12 @@ class TestDATATYPES:
         assert c.m_pod.m_int == 123
         assert c.m_pod.m_double == 321.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_ptr_in(p)
         assert c.m_pod.m_int == 123
         assert c.m_pod.m_double == 321.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_ptr_out(p)
         assert p.m_int == 888
         assert p.m_double == 3.14
@@ -918,26 +918,26 @@ class TestDATATYPES:
         p.m_int = 555
         p.m_double = 666.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_ref(p)
         assert c.m_pod.m_int == 555
         assert c.m_pod.m_double == 666.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_ptrptr_in(p)
         assert c.m_pod.m_int == 555
         assert c.m_pod.m_double == 666.
         assert p.m_int == 555
         assert p.m_double == 666.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_void_ptrptr_in(p)
         assert c.m_pod.m_int == 555
         assert c.m_pod.m_double == 666.
         assert p.m_int == 555
         assert p.m_double == 666.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_ptrptr_out(p)
         assert c.m_pod.m_int == 888
         assert c.m_pod.m_double == 3.14
@@ -947,7 +947,7 @@ class TestDATATYPES:
         p.m_int = 777
         p.m_double = 888.
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
         c.set_pod_void_ptrptr_out(p)
         assert c.m_pod.m_int == 888
         assert c.m_pod.m_double == 3.14
@@ -957,10 +957,10 @@ class TestDATATYPES:
     def test17_nullptr_passing(self):
         """Integer 0 ('NULL') and nullptr allowed to pass through instance*"""
 
-        import cppyy
+        import cppjit
 
-        for o in (0, cppyy.nullptr):
-            c = cppyy.gbl.CppyyTestData()
+        for o in (0, cppjit.nullptr):
+            c = cppjit.gbl.CppjitTestData()
             assert c.m_pod.m_int == 888
             assert c.m_pod.m_double == 3.14
             assert not not c.m_ppod
@@ -972,11 +972,11 @@ class TestDATATYPES:
     def test18_respect_privacy(self):
         """Test that privacy settings are respected"""
 
-        import cppyy
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
-        assert isinstance(c, CppyyTestData)
+        c = CppjitTestData()
+        assert isinstance(c, CppjitTestData)
 
         raises(AttributeError, getattr, c, 'm_owns_arrays')
 
@@ -985,24 +985,24 @@ class TestDATATYPES:
     def test19_object_and_pointer_comparisons(self):
         """Verify object and pointer comparisons"""
 
-        import cppyy
-        gbl = cppyy.gbl
+        import cppjit
+        gbl = cppjit.gbl
 
-        c1 = cppyy.bind_object(0, gbl.CppyyTestData)
+        c1 = cppjit.bind_object(0, gbl.CppjitTestData)
         assert not c1
 
-        c2 = cppyy.bind_object(0, gbl.CppyyTestData)
+        c2 = cppjit.bind_object(0, gbl.CppjitTestData)
         assert c1 == c2
         assert c2 == c1
 
         # FourVector overrides operator==
-        l1 = cppyy.bind_object(0, gbl.FourVector)
+        l1 = cppjit.bind_object(0, gbl.FourVector)
         assert not l1
 
         assert c1 != l1
         assert l1 != c1
 
-        l2 = cppyy.bind_object(0, gbl.FourVector)
+        l2 = cppjit.bind_object(0, gbl.FourVector)
         assert l1 == l2
         assert l2 == l1
 
@@ -1019,9 +1019,9 @@ class TestDATATYPES:
     def test20_object_comparisons_with_cpp__eq__(self):
         """Comparisons with C++ providing __eq__/__ne__"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace MoreComparisons {
         struct Comparable1 {
             Comparable1(int i) : fInt(i) {}
@@ -1045,7 +1045,7 @@ class TestDATATYPES:
             }
         }; }""")
 
-        ns = cppyy.gbl.MoreComparisons
+        ns = cppjit.gbl.MoreComparisons
 
         c1_1 = ns.Comparable1(42)
         c1_2 = ns.Comparable1(42)
@@ -1082,9 +1082,9 @@ class TestDATATYPES:
     def test21_object_validity(self):
         """Test object validity checking"""
 
-        from cppyy import gbl
+        from cppjit import gbl
 
-        d = gbl.CppyyTestPod()
+        d = gbl.CppjitTestPod()
 
         assert d
         assert not not d
@@ -1096,9 +1096,9 @@ class TestDATATYPES:
     def test22_buffer_shapes(self):
         """Correctness of declared buffer shapes"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ShapeTester {
         enum Enum{One, Two, Three};
 
@@ -1109,7 +1109,7 @@ class TestDATATYPES:
           T aaa[5][4][3];
         }; }""")
 
-        ns = cppyy.gbl.ShapeTester
+        ns = cppjit.gbl.ShapeTester
 
         for dtype in ["int", "double", "long", "bool", "char", "void*", "ShapeTester::Enum"]:
             foo = ns.Foo[dtype]()
@@ -1125,10 +1125,10 @@ class TestDATATYPES:
     def test23_buffer_reshaping(self):
         """Test usage of buffer sizing"""
 
-        import cppyy
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
+        c = CppjitTestData()
         for func in ['get_bool_array',   'get_bool_array2',
                      'get_uchar_array',  'get_uchar_array2',
                      'get_ushort_array', 'get_ushort_array2',
@@ -1154,34 +1154,34 @@ class TestDATATYPES:
     def test24_voidp(self):
         """Test usage of void* data"""
 
-        import cppyy
-        CppyyTestData = cppyy.gbl.CppyyTestData
+        import cppjit
+        CppjitTestData = cppjit.gbl.CppjitTestData
 
-        c = CppyyTestData()
+        c = CppjitTestData()
 
-        assert not cppyy.nullptr
+        assert not cppjit.nullptr
 
-        assert c.s_voidp                is cppyy.nullptr
-        assert CppyyTestData.s_voidp    is cppyy.nullptr
+        assert c.s_voidp                is cppjit.nullptr
+        assert CppjitTestData.s_voidp    is cppjit.nullptr
 
-        assert c.m_voidp                is cppyy.nullptr
-        assert c.get_voidp()            is cppyy.nullptr
+        assert c.m_voidp                is cppjit.nullptr
+        assert c.get_voidp()            is cppjit.nullptr
 
-        c2 = CppyyTestData()
-        assert c2.m_voidp               is cppyy.nullptr
+        c2 = CppjitTestData()
+        assert c2.m_voidp               is cppjit.nullptr
         c.set_voidp(c2.m_voidp)
-        assert c.m_voidp                is cppyy.nullptr
+        assert c.m_voidp                is cppjit.nullptr
         c.set_voidp(c2.get_voidp())
-        assert c.m_voidp                is cppyy.nullptr
-        c.set_voidp(cppyy.nullptr)
-        assert c.m_voidp                is cppyy.nullptr
+        assert c.m_voidp                is cppjit.nullptr
+        c.set_voidp(cppjit.nullptr)
+        assert c.m_voidp                is cppjit.nullptr
 
         c.set_voidp(c2)
         def address_equality_test(a, b):
-            assert cppyy.addressof(a) == cppyy.addressof(b)
-            b2 = cppyy.bind_object(a, CppyyTestData)
+            assert cppjit.addressof(a) == cppjit.addressof(b)
+            b2 = cppjit.bind_object(a, CppjitTestData)
             assert b is b2    # memory regulator recycles
-            b3 = cppyy.bind_object(cppyy.addressof(a), CppyyTestData)
+            b3 = cppjit.bind_object(cppjit.addressof(a), CppjitTestData)
             assert b is b3    # likewise
 
         address_equality_test(c.m_voidp, c2)
@@ -1189,8 +1189,8 @@ class TestDATATYPES:
 
         def null_test(null):
             c.m_voidp = null
-            assert c.m_voidp is cppyy.nullptr
-        map(null_test, [0, cppyy.nullptr])
+            assert c.m_voidp is cppjit.nullptr
+        map(null_test, [0, cppjit.nullptr])
 
         c.m_voidp = c2
         address_equality_test(c.m_voidp,     c2)
@@ -1199,7 +1199,7 @@ class TestDATATYPES:
         c.s_voidp = c2
         address_equality_test(c.s_voidp, c2)
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace VoidP {
         void* vvv[3][5][7];
         struct Init {
@@ -1213,7 +1213,7 @@ class TestDATATYPES:
           }
         } _init; }""")
 
-        ns = cppyy.gbl.VoidP
+        ns = cppjit.gbl.VoidP
         for i in range(3):
             for j in range(5):
                 for k in range(7):
@@ -1222,7 +1222,7 @@ class TestDATATYPES:
     def test25_byte_arrays(self):
         """Usage of unsigned char* as byte array and std::byte*"""
 
-        import array, cppyy, ctypes
+        import array, cppjit, ctypes
 
         buf = b'123456789'
         total = 0
@@ -1249,19 +1249,19 @@ class TestDATATYPES:
             pbuf = ctypes.cast(buf, ctypes.POINTER(ctypes.c_ubyte * len(buf)))[0]
             assert f(pbuf, len(buf)) == total
 
-        run(self, cppyy.gbl.sum_uc_data, buf, total)
-        run(self, cppyy.gbl.sum_byte_data, buf, total)
+        run(self, cppjit.gbl.sum_uc_data, buf, total)
+        run(self, cppjit.gbl.sum_byte_data, buf, total)
 
     @mark.xfail(run=False, condition=IS_MAC, reason="Crashes on OSX")
     def test26_function_pointers(self):
         """Function pointer passing"""
 
-        import cppyy
+        import cppjit
 
-        fi1 = cppyy.gbl.sum_of_int1
-        fi2 = cppyy.gbl.sum_of_int2
-        fd  = cppyy.gbl.sum_of_double
-        fdd = cppyy.gbl.call_double_double
+        fi1 = cppjit.gbl.sum_of_int1
+        fi2 = cppjit.gbl.sum_of_int2
+        fd  = cppjit.gbl.sum_of_double
+        fdd = cppjit.gbl.call_double_double
 
         assert 5 == fi1(2, 3)
         assert 5. == fd(5., 0.)
@@ -1269,64 +1269,64 @@ class TestDATATYPES:
         raises(TypeError, fdd, fi1, 2, 3)
 
         assert  5. == fdd(fd, 5., 0.)
-        assert -1. == fdd(cppyy.nullptr, 5., 0.)
+        assert -1. == fdd(cppjit.nullptr, 5., 0.)
 
-        fip = cppyy.gbl.sum_of_int_ptr
+        fip = cppjit.gbl.sum_of_int_ptr
         assert 5 == fip(2, 3)
 
-        cppyy.gbl.sum_of_int_ptr = cppyy.gbl.sum_of_int2
-        assert 7 == cppyy.gbl.sum_of_int_ptr(2, 3)
+        cppjit.gbl.sum_of_int_ptr = cppjit.gbl.sum_of_int2
+        assert 7 == cppjit.gbl.sum_of_int_ptr(2, 3)
 
-        cppyy.gbl.sum_of_int_ptr = cppyy.nullptr
-        assert not cppyy.gbl.sum_of_int_ptr
-        with raises(cppyy.gbl.std.bad_function_call):
-            cppyy.gbl.sum_of_int_ptr(2, 3)
+        cppjit.gbl.sum_of_int_ptr = cppjit.nullptr
+        assert not cppjit.gbl.sum_of_int_ptr
+        with raises(cppjit.gbl.std.bad_function_call):
+            cppjit.gbl.sum_of_int_ptr(2, 3)
         with raises(AttributeError):
-            cppyy.gbl.sim_of_int_ptr   # incorrect spelling
+            cppjit.gbl.sim_of_int_ptr   # incorrect spelling
 
-        cppyy.gbl.sum_of_int_ptr = cppyy.gbl.sum_of_int1
-        assert fip is cppyy.gbl.sum_of_int_ptr   # b/c cached
+        cppjit.gbl.sum_of_int_ptr = cppjit.gbl.sum_of_int1
+        assert fip is cppjit.gbl.sum_of_int_ptr   # b/c cached
 
-        o = cppyy.gbl.sum_of_int_struct()
-        o.sum_of_int_ptr = cppyy.gbl.sum_of_int1
+        o = cppjit.gbl.sum_of_int_struct()
+        o.sum_of_int_ptr = cppjit.gbl.sum_of_int1
         assert 5 == o.sum_of_int_ptr(2, 3)
 
-        o.sum_of_int_ptr = cppyy.gbl.sum_of_int2
+        o.sum_of_int_ptr = cppjit.gbl.sum_of_int2
         assert 7 == o.sum_of_int_ptr(2, 3)
 
         def sum_in_python(i1, i2):
             return i1-i2
-        cppyy.gbl.sum_of_int_ptr = sum_in_python
-        assert 1 == cppyy.gbl.call_sum_of_int(3, 2)
+        cppjit.gbl.sum_of_int_ptr = sum_in_python
+        assert 1 == cppjit.gbl.call_sum_of_int(3, 2)
 
         def sum_in_python(i1, i2, i3):
             return i1+i2+i3
-        cppyy.gbl.sum_of_int_ptr = sum_in_python
+        cppjit.gbl.sum_of_int_ptr = sum_in_python
         with raises(TypeError):
-            cppyy.gbl.call_sum_of_int(3, 2)
+            cppjit.gbl.call_sum_of_int(3, 2)
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace FuncPtrReturn {
             typedef std::string (*func_t)(void);
             std::string hello() { return "Hello, World!"; }
             func_t foo() { return hello; }
         }""")
 
-        ns = cppyy.gbl.FuncPtrReturn
+        ns = cppjit.gbl.FuncPtrReturn
         assert ns.foo()() == "Hello, World!"
 
     @mark.xfail(run=False, condition=IS_MAC, reason="Crashes")
     def test27_callable_passing(self):
         """Passing callables through function pointers"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        fdd = cppyy.gbl.call_double_double
-        fii = cppyy.gbl.call_int_int
-        fv  = cppyy.gbl.call_void
-        fri = cppyy.gbl.call_refi
-        frl = cppyy.gbl.call_refl
-        frd = cppyy.gbl.call_refd
+        fdd = cppjit.gbl.call_double_double
+        fii = cppjit.gbl.call_int_int
+        fv  = cppjit.gbl.call_void
+        fri = cppjit.gbl.call_refi
+        frl = cppjit.gbl.call_refl
+        frd = cppjit.gbl.call_refd
 
         assert 'call_double_double' in str(fdd)
         assert 'call_refd' in str(frd)
@@ -1378,7 +1378,7 @@ class TestDATATYPES:
 
         def pyd(arg0, arg1):
             return arg0*arg1
-        c = cppyy.gbl.StoreCallable(pyd)
+        c = cppjit.gbl.StoreCallable(pyd)
         assert c(3, 3) == 9.
 
         c.set_callable(lambda x, y: x*y)
@@ -1392,14 +1392,14 @@ class TestDATATYPES:
     def test28_callable_through_function_passing(self):
         """Passing callables through std::function"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        fdd = cppyy.gbl.call_double_double_sf
-        fii = cppyy.gbl.call_int_int_sf
-        fv  = cppyy.gbl.call_void_sf
-        fri = cppyy.gbl.call_refi_sf
-        frl = cppyy.gbl.call_refl_sf
-        frd = cppyy.gbl.call_refd_sf
+        fdd = cppjit.gbl.call_double_double_sf
+        fii = cppjit.gbl.call_int_int_sf
+        fv  = cppjit.gbl.call_void_sf
+        fri = cppjit.gbl.call_refi_sf
+        frl = cppjit.gbl.call_refl_sf
+        frd = cppjit.gbl.call_refd_sf
 
         assert 'call_double_double_sf' in str(fdd)
         assert 'call_refd_sf' in str(frd)
@@ -1451,7 +1451,7 @@ class TestDATATYPES:
 
         def pyd(arg0, arg1):
             return arg0*arg1
-        c = cppyy.gbl.StoreCallable(pyd)
+        c = cppjit.gbl.StoreCallable(pyd)
         assert c(3, 3) == 9.
 
         c.set_callable(lambda x, y: x*y)
@@ -1465,9 +1465,9 @@ class TestDATATYPES:
     def test29_std_function_life_lines(self):
         """Life lines to std::function data members"""
 
-        import cppyy, gc
+        import cppjit, gc
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace BoundMethod2StdFunction {
         class Base {
         public:
@@ -1479,7 +1479,7 @@ class TestDATATYPES:
             }
         }; } """)
 
-        ns = cppyy.gbl.BoundMethod2StdFunction
+        ns = cppjit.gbl.BoundMethod2StdFunction
 
         class Derived(ns.Base):
             def __init__(self):
@@ -1502,9 +1502,9 @@ class TestDATATYPES:
     def test30_multi_dim_arrays_of_builtins(test):
         """Multi-dim arrays of builtins"""
 
-        import cppyy, ctypes
+        import cppjit, ctypes
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         template<class T, int nlayers>
         struct MultiDimTest {
             T* layers[nlayers];
@@ -1520,7 +1520,7 @@ class TestDATATYPES:
         };
         """)
 
-        from cppyy.gbl import MultiDimTest
+        from cppjit.gbl import MultiDimTest
 
         nlayers = 3; width = 8; height = 4
         for (cpptype, ctype) in (('unsigned char', ctypes.c_ubyte),
@@ -1536,9 +1536,9 @@ class TestDATATYPES:
     def test31_anonymous_union(self):
         """Anonymous unions place there fields in the parent scope"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AnonUnion {
         struct Event1 {
             Event1() : num(1) { shrd.a = 5.; }
@@ -1591,37 +1591,37 @@ class TestDATATYPES:
         }; }""")
 
         # named union
-        e = cppyy.gbl.AnonUnion.Event1()
+        e = cppjit.gbl.AnonUnion.Event1()
         assert e.num == 1
         raises(AttributeError, getattr, e, 'a')
         raises(AttributeError, getattr, e, 'b')
         assert e.shrd.a == 5.
 
         # anonymous union, with field name
-        e = cppyy.gbl.AnonUnion.Event2()
+        e = cppjit.gbl.AnonUnion.Event2()
         assert e.num == 1
         raises(AttributeError, getattr, e, 'a')
         raises(AttributeError, getattr, e, 'b')
         assert e.shrd.a == 5.
 
         # anonymous union, no field name
-        e = cppyy.gbl.AnonUnion.Event3(42)
+        e = cppjit.gbl.AnonUnion.Event3(42)
         assert e.b == 42
 
-        e = cppyy.gbl.AnonUnion.Event3(5.)
+        e = cppjit.gbl.AnonUnion.Event3(5.)
         assert e.a == 5.
 
         # anonymous union, no field name, with offset
-        e = cppyy.gbl.AnonUnion.Event4(42)
+        e = cppjit.gbl.AnonUnion.Event4(42)
         assert e.num == 1
         assert e.b == 42
 
-        e = cppyy.gbl.AnonUnion.Event4(5.)
+        e = cppjit.gbl.AnonUnion.Event4(5.)
         assert e.num == 2
         assert e.a == 5.
 
         # anonumous struct in anonymous union
-        p = cppyy.gbl.AnonUnion.PointXYZI()
+        p = cppjit.gbl.AnonUnion.PointXYZI()
         assert type(p.x) == float
         assert type(p.data_c[0]) == float
         assert p.intensity == 5.
@@ -1629,9 +1629,9 @@ class TestDATATYPES:
     def test32_anonymous_struct(self):
         """Anonymous struct creates an unnamed type"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AnonStruct {
         class Foo1 {
         public:
@@ -1662,7 +1662,7 @@ class TestDATATYPES:
 
         } """)
 
-        ns = cppyy.gbl.AnonStruct
+        ns = cppjit.gbl.AnonStruct
 
         foo = ns.Foo1()
         assert foo.bar.x == 5
@@ -1677,9 +1677,9 @@ class TestDATATYPES:
     def test33_pointer_to_array(self):
         """Usability of pointer to array"""
 
-        import cppyy
+        import cppjit
 
-        AoS = cppyy.gbl.ArrayOfStruct
+        AoS = cppjit.gbl.ArrayOfStruct
 
         bar = AoS.Bar1()
         assert bar.fArr[0].fVal == 42
@@ -1689,7 +1689,7 @@ class TestDATATYPES:
         for i in range(4):
             assert bar.fArr[i].fVal == 2*i
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         namespace ArrayOfStruct {
         union Bar3 {         // not supported in dictionary
             Foo fArr[];      // clang only
@@ -1698,7 +1698,7 @@ class TestDATATYPES:
         }""")
 
         bar = AoS.Bar3()
-        assert cppyy.sizeof(AoS.Bar3) >= cppyy.sizeof(AoS.Foo)
+        assert cppjit.sizeof(AoS.Bar3) >= cppjit.sizeof(AoS.Foo)
         arr = bar.fArr
         arr.size = 1
         for f in arr:
@@ -1709,25 +1709,25 @@ class TestDATATYPES:
     def test34_object_pointers(self):
         """Read/write access to objects through pointers"""
 
-        import cppyy
+        import cppjit
 
-        c = cppyy.gbl.CppyyTestData()
+        c = cppjit.gbl.CppjitTestData()
 
-        assert cppyy.gbl.CppyyTestData.s_strv == "Hello"
+        assert cppjit.gbl.CppjitTestData.s_strv == "Hello"
         assert c.s_strv                       == "Hello"
-        assert not cppyy.gbl.CppyyTestData.s_strp
+        assert not cppjit.gbl.CppjitTestData.s_strp
         assert not c.s_strp
 
         c.s_strv                               = "World"
-        assert cppyy.gbl.CppyyTestData.s_strv == "World"
+        assert cppjit.gbl.CppjitTestData.s_strv == "World"
 
       # assign on nullptr is a pointer copy
-        sn = cppyy.gbl.std.string("aap")
-        cppyy.gbl.CppyyTestData.s_strp = sn
+        sn = cppjit.gbl.std.string("aap")
+        cppjit.gbl.CppjitTestData.s_strp = sn
         assert c.s_strp               == "aap"
 
       # assign onto the existing object
-        cppyy.gbl.CppyyTestData.s_strp.__assign__(cppyy.gbl.std.string("noot"))
+        cppjit.gbl.CppjitTestData.s_strp.__assign__(cppjit.gbl.std.string("noot"))
         assert c.s_strp               == "noot"
         assert sn                     == "noot"  # set through pointer
 
@@ -1735,18 +1735,18 @@ class TestDATATYPES:
     def test35_restrict(self):
         """Strip __restrict keyword from use"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("std::string restrict_call(const char*__restrict s) { return s; }")
+        cppjit.cppdef("std::string restrict_call(const char*__restrict s) { return s; }")
 
-        assert cppyy.gbl.restrict_call("aap") == "aap"
+        assert cppjit.gbl.restrict_call("aap") == "aap"
 
     def test36_legacy_matrix(self):
         """Handling of legacy matrix"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace Pointer2D {
         int** g_matrix;
 
@@ -1776,7 +1776,7 @@ class TestDATATYPES:
             return true;
         } }""")
 
-        ns = cppyy.gbl.Pointer2D;
+        ns = cppjit.gbl.Pointer2D;
 
         N, M = 2, 3
         m = ns.create_matrix(N, M)
@@ -1795,9 +1795,9 @@ class TestDATATYPES:
     def test37_legacy_matrix_of_structs(self):
         """Handling of legacy matrix of structs"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace StructPointer2D {
         typedef struct {
             int x,y,z;  // 'z' so that sizeof(xy) != sizeof(void*)
@@ -1834,7 +1834,7 @@ class TestDATATYPES:
             return true;
         } }""")
 
-        ns = cppyy.gbl.StructPointer2D;
+        ns = cppjit.gbl.StructPointer2D;
 
         N, M = 2, 3
         m = ns.create_matrix(N, M)
@@ -1858,9 +1858,9 @@ class TestDATATYPES:
     def test38_plain_old_data(self):
         """Initializer construction of PODs"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         struct SomePOD_A { };
         struct SomePOD_B { int fInt; };
         struct SomePOD_C { int fInt; double fDouble; };
@@ -1877,7 +1877,7 @@ class TestDATATYPES:
           struct SomePOD_F { std::array<double, 3>* fPtrArr; };
         }""")
 
-        for ns in [cppyy.gbl, cppyy.gbl.LotsOfPODS]:
+        for ns in [cppjit.gbl, cppjit.gbl.LotsOfPODS]:
           # no data member POD
             assert ns.SomePOD_A()
 
@@ -1935,7 +1935,7 @@ class TestDATATYPES:
           # ptr to object type data member pOD
             f0 = ns.SomePOD_F()
             assert f0.__python_owns__
-            arr = cppyy.gbl.std.array['double', 3]((1., 2., 3.))
+            arr = cppjit.gbl.std.array['double', 3]((1., 2., 3.))
             f1 = ns.SomePOD_F(arr)
             assert f1.__python_owns__
             assert len(f1.fPtrArr) == 3
@@ -1944,9 +1944,9 @@ class TestDATATYPES:
     def test39_aggregates(self):
         """Initializer construction of aggregates"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AggregateTest {
         class Atom {
         public:
@@ -1959,7 +1959,7 @@ class TestDATATYPES:
             std::array<double, 3> coords;
         }; }""")
 
-        ns = cppyy.gbl.AggregateTest
+        ns = cppjit.gbl.AggregateTest
 
         Z = ns.Atom.AtomicNumber(5)
         assert Z.a_n == 5
@@ -1974,7 +1974,7 @@ class TestDATATYPES:
         a = ns.Aggregate2(fInt=13)
         assert a.fInt == 13
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AggregateTest {
 
         typedef enum _TYPE { DATA=0, SHAPE } TYPE;
@@ -1985,7 +1985,7 @@ class TestDATATYPES:
           TYPE buf_type;
         } Buf; }""")
 
-        ns = cppyy.gbl.AggregateTest
+        ns = cppjit.gbl.AggregateTest
 
         b = ns.Buf(val=10, name="aap", buf_type=ns.SHAPE)
 
@@ -1996,9 +1996,9 @@ class TestDATATYPES:
     def test40_more_aggregates(self):
         """More aggregate testings (used to fail/report errors)"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AggregateTest {
         enum E { A=1 };
 
@@ -2011,12 +2011,12 @@ class TestDATATYPES:
             int x;
         }; }""")
 
-        ns = cppyy.gbl.AggregateTest
+        ns = cppjit.gbl.AggregateTest
 
         r1 = ns.make_R1()
         assert r1.e == ns.E.A
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace AggregateTest {
         struct R2 {
             std::optional<S> s = {};
@@ -2032,14 +2032,14 @@ class TestDATATYPES:
     def test41_complex_numpy_arrays(self):
         """Usage of complex numpy arrays"""
 
-        import cppyy
+        import cppjit
 
         try:
             import numpy as np
         except ImportError:
             skip('numpy is not installed')
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ComplexArrays {
         typedef std::complex<float> fcomp;
         fcomp fcompdot(const fcomp* arr1, const fcomp* arr2, const int N) {
@@ -2063,7 +2063,7 @@ class TestDATATYPES:
                 c += a[i]*b[i]
             return c
 
-        ns = cppyy.gbl.ComplexArrays
+        ns = cppjit.gbl.ComplexArrays
 
         for ctype, func in [(np.complex64,  ns.fcompdot),
                             (np.complex128, ns.dcompdot)]:
@@ -2079,9 +2079,9 @@ class TestDATATYPES:
     def test42_mixed_complex_arithmetic(self):
         """Mixin of Python and C++ std::complex in arithmetic"""
 
-        import cppyy
+        import cppjit
 
-        c = cppyy.gbl.std.complex['double'](1, 2)
+        c = cppjit.gbl.std.complex['double'](1, 2)
         p = 1+2j
 
         assert c*c     == p*p
@@ -2090,18 +2090,18 @@ class TestDATATYPES:
         assert (c*c)*c == (p*p)*p
 
     def test43_ccharp_memory_handling(self):
-        """cppyy side handled memory of C strings"""
+        """cppjit side handled memory of C strings"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace StructWithCChar {
         typedef struct {
             const char* name;
             int val;
         } BufInfo; }""")
 
-        ns = cppyy.gbl.StructWithCChar
+        ns = cppjit.gbl.StructWithCChar
 
         a_str, b_str = 'abc', 'def'
         a = ns.BufInfo(a_str, 4)
@@ -2139,15 +2139,15 @@ class TestDATATYPES:
         assert b.val  == 5
 
     def test44_buffer_memory_handling(self):
-        """cppyy side handled memory of LL buffers"""
+        """cppjit side handled memory of LL buffers"""
 
-        import cppyy, gc
+        import cppjit, gc
         try:
             import numpy as np
         except ImportError:
             skip('numpy is not installed')
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace StructWithBuf {
         typedef struct {
             double* data1;
@@ -2155,7 +2155,7 @@ class TestDATATYPES:
             int size;
         } BufInfo; }""")
 
-        ns = cppyy.gbl.StructWithBuf
+        ns = cppjit.gbl.StructWithBuf
 
         N = 10
         buf1 = ns.BufInfo(
@@ -2184,9 +2184,9 @@ class TestDATATYPES:
     def test45_const_ref_data(self):
         """Proper indirection for addressing const-ref data"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""\
+        cppjit.cppdef("""\
         namespace ConstRefData {
         struct A {
             std::string name;
@@ -2200,7 +2200,7 @@ class TestDATATYPES:
             const A& body2;
         }; }""")
 
-        ns = cppyy.gbl.ConstRefData
+        ns = cppjit.gbl.ConstRefData
 
         b = ns.B()
         assert b.body1.name == b.body2.name
@@ -2208,9 +2208,9 @@ class TestDATATYPES:
     def test46_small_int_enums(self):
         """Proper typing of small int enums"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace SmallEnums {
             enum class Enum { E0 = 0, E1 = 1, EN1 = -1, EN2 = -2 };
 
@@ -2225,7 +2225,7 @@ class TestDATATYPES:
             enum class UCharEnum : unsigned char { E0 = '0', E1 = '1' };
         }""")
 
-        ns = cppyy.gbl.SmallEnums
+        ns = cppjit.gbl.SmallEnums
 
         for eclsname in ('Enum', 'Int8Enum', 'Int16Enum'):
             ecls = getattr(ns, eclsname)
@@ -2250,7 +2250,7 @@ class TestDATATYPES:
         assert ns.UCharEnum.E0 == ord('0')
         assert ns.UCharEnum.E1 == ord('1')
 
-        cppyy.cppdef(r"""\
+        cppjit.cppdef(r"""\
         namespace SmallEnums {
             Int8Enum  func_int8()  { return Int8Enum::EN1; }
             UInt8Enum func_uint8() { return UInt8Enum::EMAX; }
@@ -2262,8 +2262,8 @@ class TestDATATYPES:
     def test47_hidden_name_enum(self):
         """Usage of hidden name enum"""
 
-        import cppyy
-        cppyy.cppdef(r"""
+        import cppjit
+        cppjit.cppdef(r"""
         namespace EnumFunctionSameName {
             enum foo { FOO = 42 };
             void foo() {}
@@ -2271,14 +2271,14 @@ class TestDATATYPES:
             struct Bar { Bar(enum foo f) : fFoo(f) {} enum foo fFoo; };
         }""")
 
-        ns = cppyy.gbl.EnumFunctionSameName
+        ns = cppjit.gbl.EnumFunctionSameName
 
         assert ns.bar(ns.FOO) == 42
         assert ns.Bar(ns.FOO)
         assert ns.Bar(ns.FOO).fFoo == 42
 
         # TODO:
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace EnumFunctionSameName {
             template<enum foo>
             struct BarT {};
@@ -2286,7 +2286,7 @@ class TestDATATYPES:
         #ns.BarT[ns.FOO]()
 
         # TODO:
-        cppyy.cppdef(r"""
+        cppjit.cppdef(r"""
         namespace EnumFunctionSameName {
             enum class Foo : int8_t { FOO };
             void Foo() {}
@@ -2297,15 +2297,15 @@ class TestDATATYPES:
     def test48_bool_typemap(self):
         """Test mapping of bool type typedefs"""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         struct BoolTypeMapTest {
             typedef bool BoolType;
         };
         """)
 
-        bt = cppyy.gbl.BoolTypeMapTest.BoolType
+        bt = cppjit.gbl.BoolTypeMapTest.BoolType
 
         assert bt.__name__ == 'BoolType'
         assert bt.__cpp_name__ == 'BoolTypeMapTest::BoolType'
@@ -2325,38 +2325,38 @@ class TestDATATYPES:
     def test49_addressof_method(self):
         """Use of addressof for (const) methods"""
 
-        import cppyy
+        import cppjit
 
-        assert cppyy.addressof(cppyy.gbl.std.vector[int].at.__overload__(':any:', False))
-        assert cppyy.addressof(cppyy.gbl.std.vector[int].at.__overload__(':any:', True))
+        assert cppjit.addressof(cppjit.gbl.std.vector[int].at.__overload__(':any:', False))
+        assert cppjit.addressof(cppjit.gbl.std.vector[int].at.__overload__(':any:', True))
 
     def test50_int8_uint8_global_arrays(self):
         """Access to int8_t/uint8_t arrays that are global variables"""
 
-        import cppyy
+        import cppjit
 
-        ns = cppyy.gbl.Int8_Uint8_Arrays
+        ns = cppjit.gbl.Int8_Uint8_Arrays
 
         assert [ns.test[i]  for i in range(6)] == [-0x12, -0x34, -0x56, -0x78, 0x0, 0x0]
         assert [ns.utest[i] for i in range(6)] == [ 0x12,  0x34,  0x56,  0x78, 0x0, 0x0]
 
     def test51_enum_integrity(self):
-        import cppyy
+        import cppjit
         import enum
 
-        cppyy.cppdef("enum class Eint : int { ON = 1, OFF = 0 };")
-        Eint = cppyy.gbl.Eint
+        cppjit.cppdef("enum class Eint : int { ON = 1, OFF = 0 };")
+        Eint = cppjit.gbl.Eint
         cls_Eint0 = enum.Enum("Eint0", [(n, v) for n, v in Eint.__dict__.items() if isinstance(v, Eint)])
         assert len(cls_Eint0.__dict__["_member_names_"]) == 2
 
-        cppyy.cppdef("enum class Ebool : bool { ON = true, OFF = false };")
-        Ebool = cppyy.gbl.Ebool
+        cppjit.cppdef("enum class Ebool : bool { ON = true, OFF = false };")
+        Ebool = cppjit.gbl.Ebool
         cls_Ebool0 = enum.Enum("Ebool0", [(n, v) for n, v in Ebool.__dict__.items() if isinstance(v, Ebool)])
         assert len(cls_Ebool0.__dict__["_member_names_"]) == 2
 
     def test52_8bit_goodness(self):
-        import cppyy
-        cppyy.cppdef("""
+        import cppjit
+        cppjit.cppdef("""
         namespace ns52 {
           int8_t ti8;
           uint8_t tui8;
@@ -2368,7 +2368,7 @@ class TestDATATYPES:
           auto teui8p1 = Teui8::P1;
         }""")
 
-        from cppyy.gbl import ns52
+        from cppjit.gbl import ns52
 
         assert ns52.ti8 == 0
         ns52.ti8 = 123
@@ -2388,14 +2388,14 @@ class TestDATATYPES:
         assert pteui8p2 == ns52.Teui8.P2
 
     def test53_basic_nanoseconds_goodness(self):
-        import cppyy
-        cppyy.cppdef("""
+        import cppjit
+        cppjit.cppdef("""
         namespace ns53 {
             auto f0(int64_t x) { return std::chrono::nanoseconds{x}.count(); }
             auto f1(std::chrono::nanoseconds x) { return x.count(); }
         }
         """)
-        from cppyy.gbl import std, ns53
+        from cppjit.gbl import std, ns53
         assert ns53.f0(1000) == 1000
         assert ns53.f1(std.chrono.nanoseconds(1000)) == 1000
 
@@ -2405,8 +2405,8 @@ class TestDATATYPES:
 
     @mark.xfail(condition= IS_MAC, reason="std::optional<std::string>::value_or rvalue conversion fails on OS X clang-repl (InstanceMoveConverter)")
     def test54_optional_use(self):
-        import cppyy
-        cppyy.cppdef("""
+        import cppjit
+        cppjit.cppdef("""
         #include <string>
         namespace ns54 {
             std::optional<int> toi;
@@ -2425,7 +2425,7 @@ class TestDATATYPES:
             std::optional<Teu8> teu8;
         }
         """)
-        from cppyy.gbl import ns54
+        from cppjit.gbl import ns54
 
         ns54.toi = 5
         assert ns54.toi == 5
@@ -2451,13 +2451,13 @@ class TestDATATYPES:
         assert ns54.teu8 == ns54.Teu8.TWO
 
     def test55_qt_cache_alias_collision(self):
-        """`unsigned char` and `uint8_t` share a canonical type but cppyy
+        """`unsigned char` and `uint8_t` share a canonical type but cppjit
         wires them to different converters (str vs int). Locks in the
         QT-keyed cache's alias-collision skip in Converters.cxx."""
 
-        import cppyy
+        import cppjit
 
-        cppyy.cppdef("""
+        cppjit.cppdef("""
         #include <cstdint>
         namespace ns55 {
             void take_uchar(unsigned char) {}
@@ -2466,7 +2466,7 @@ class TestDATATYPES:
             void take_int8(int8_t)         {}
         }
         """)
-        ns = cppyy.gbl.ns55
+        ns = cppjit.gbl.ns55
 
         # `unsigned char`: UCharConverter -- accepts 1-char str.
         ns.take_uchar('e')

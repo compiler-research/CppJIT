@@ -27,7 +27,8 @@ jobs:
       matrix:
         # Superset of the PR matrix + breadth (py 3.12/3.13, C++17, LLVM 20, arm)
         # and one cling cell. valgrind only where a supp is vendored: the LLVM 21
-        # cells (clang21) and the arm LLVM 22 cell (clang22), both under etc/.
+        # cells (clang21) and the arm LLVM 22 cell (clang22), both under
+        # .github/valgrind/.
         include:
           - { os: ubuntu-24.04,     llvm: '20', flavor: system, py: '3.12', cxx: '17' }
           - { os: ubuntu-24.04,     llvm: '21', flavor: system, py: '3.13', cxx: '20', vg: true }

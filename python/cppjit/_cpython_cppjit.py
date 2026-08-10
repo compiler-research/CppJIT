@@ -5,7 +5,6 @@ import ctypes
 import sys
 
 from . import _stdcpp_fix
-from cppjit_backend import loader
 
 __all__ = [
     'gbl',
@@ -19,11 +18,10 @@ __all__ = [
     '_end_capture_stderr'
     ]
 
-# first load the dependency libraries of the backend, then pull in the
-# libcppjit extension module
-# c = loader.load_cpp_backend()
+# the merged libcppjit extension is the backend: importing it loads the
+# C++ runtime (no separate loader.load_cpp_backend() step, which would
+# initialize the interpreter twice)
 import libcppjit as _backend
-# _backend._cpp_backend = c
 
 # explicitly expose APIs from libcppjit
 _w = ctypes.CDLL(_backend.__file__, ctypes.RTLD_GLOBAL)

@@ -1,6 +1,6 @@
 import py, os, sys
 from pytest import raises, mark
-from .support import setup_make
+from support import setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("example01Dict"))

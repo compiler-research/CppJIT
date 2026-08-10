@@ -52,18 +52,6 @@ __all__ = [
 
 import ctypes, os, sys, sysconfig, warnings
 
-if not 'CLING_STANDARD_PCH' in os.environ:
-    def _set_pch():
-        try:
-            import cppjit_backend as cpb
-            local_pch = os.path.join(os.path.dirname(__file__), 'allDict.cxx.pch.'+str(cpb.__version__))
-            if os.path.exists(local_pch):
-                os.putenv('CLING_STANDARD_PCH', local_pch)
-                os.environ['CLING_STANDARD_PCH'] = local_pch
-        except (ImportError, AttributeError):
-            pass
-    _set_pch(); del _set_pch
-
 try:
     import __pypy__
     del __pypy__
@@ -77,9 +65,8 @@ from ._version import __version__
 # import separately instead of in the above try/except block for easier to
 # understand tracebacks
 if ispypy:
-    from ._pypy_cppjit import *
-else:
-    from ._cpython_cppjit import *
+    raise ImportError("cppjit requires CPython; PyPy is not supported")
+from ._cpython_cppjit import *
 
 
 #- allow importing from gbl --------------------------------------------------

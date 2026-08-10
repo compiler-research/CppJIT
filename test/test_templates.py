@@ -839,20 +839,13 @@ class TestTEMPLATES:
             return ns.EventId(node.fData)
         adapt.__cpp_name__ = "FPTA::EventId (*)(FPTA::Node&)"
 
-        if sys.hexversion < 0x3050000:
-            def ann_adapt(node):
-                return ns.EventId(node.fData)
-            ann_adapt.__annotations__ = {'node': 'FPTA::Node&', 'return': ns.EventId}
-            def ann_ref_mod(node):
-                ev_id = ns.EventId(node.fData)
-                node.fData = 81
-                return ev_id
-            ann_adapt.__annotations__ = {'node': 'FPTA::Node&', 'return': ns.EventId}
-        else:
-            oldp = sys.path[:]
-            sys.path.append('.')
-            from templ_args_funcs import ann_adapt, ann_ref_mod
-            sys.path = oldp
+        def ann_adapt(node: 'FPTA::Node&') -> ns.EventId:
+            return ns.EventId(node.fData)
+
+        def ann_ref_mod(node: 'FPTA::Node&') -> ns.EventId:
+            ev_id = ns.EventId(node.fData)
+            node.fData = 81
+            return ev_id
 
         s = ns.Simulator()
 

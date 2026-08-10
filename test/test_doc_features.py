@@ -1202,18 +1202,11 @@ class TestTALKEXAMPLES:
             return f(args...);
         }}""")
 
-        if sys.hexversion < 0x3050000:
-            def ann_f1(arg):
-                return 3.1415*arg
-            ann_f1.__annotations__ = {'arg': 'int', 'return': 'double'}
-            def ann_f2(arg1, arg2):
-                return 3*arg1*arg2
-            ann_f2.__annotations__ = {'arg1': 'int', 'arg2' : 'int', 'return': 'int'}
-        else:
-            oldp = sys.path[:]
-            sys.path.append('.')
-            from doc_args_funcs import ann_f1, ann_f2
-            sys.path = oldp
+        def ann_f1(arg: 'int') -> 'double':
+            return 3.1415*arg
+
+        def ann_f2(arg1: 'int', arg2: 'int') -> 'int':
+            return 3*arg1*arg2
 
         assert round(CC.callT(ann_f1, 2)-2*3.1415, 5) == 0.
 

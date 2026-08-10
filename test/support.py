@@ -8,12 +8,8 @@ def setup_make(targetname):
     if os.getenv("CPPJIT_TEST_SKIP_MAKE", False):
         return
 
-    if sys.platform == 'win32':
-        popen = subprocess.Popen([sys.executable, "make_dict_win32.py", targetname], cwd=str(currpath),
-                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    else:
-        popen = subprocess.Popen(["make", targetname+"Dict.so"], cwd=str(currpath),
-                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    popen = subprocess.Popen(["make", targetname+"Dict.so"], cwd=str(currpath),
+                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, _ = popen.communicate()
     if popen.returncode:
         raise OSError("'make' failed:\n%s" % (stdout,))

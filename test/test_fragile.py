@@ -4,7 +4,7 @@ from support import setup_make, ispypy, IS_LINUX, IS_WINDOWS, IS_MAC_ARM, IS_CLA
 
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("fragileDict"))
+test_dct = str(currpath.join("cpp/fragileDict"))
 
 def setup_module(mod):
     setup_make("fragile")

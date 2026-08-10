@@ -4,7 +4,7 @@ from pytest import raises, skip, mark
 from support import setup_make, pylong, pyunicode, maxvalue, ispypy, IS_CLANG_REPL, IS_CLING, IS_CLANG_DEBUG, IS_MAC_X86, IS_MAC_ARM, IS_MAC, IS_VALGRIND, IS_LINUX_ARM
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("stltypesDict"))
+test_dct = str(currpath.join("cpp/stltypesDict"))
 
 def setup_module(mod):
     setup_make("stltypes")

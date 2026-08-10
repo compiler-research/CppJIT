@@ -3,7 +3,7 @@ from pytest import raises, skip, mark
 from support import setup_make, pylong, IS_WINDOWS, IS_MAC, IS_LINUX, ispypy, IS_CLANG_REPL, IS_MAC_ARM, IS_MAC_X86, IS_VALGRIND, IS_CLING
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("advancedcppDict"))
+test_dct = str(currpath.join("cpp/advancedcppDict"))
 
 def setup_module(mod):
     setup_make("advancedcpp")
@@ -160,7 +160,7 @@ class TestADVANCEDCPP:
         import cppjit
         gbl = cppjit.gbl
 
-        lib2 = cppjit.load_reflection_info("advancedcpp2Dict")
+        lib2 = cppjit.load_reflection_info(str(currpath.join("cpp/advancedcpp2Dict")))
 
         assert gbl.a_ns      is gbl.a_ns
         assert gbl.a_ns.d_ns is gbl.a_ns.d_ns

@@ -1,18 +1,23 @@
-dicts = advancedcppDict.so \
-        advancedcpp2Dict.so \
-        conversionsDict.so \
-        cpp11featuresDict.so \
-        crossinheritanceDict.so \
-        datatypesDict.so \
-        doc_helperDict.so \
-        example01Dict.so \
-        fragileDict.so \
-        operatorsDict.so \
-        overloadsDict.so \
-        pythonizablesDict.so \
-        std_streamsDict.so \
-        stltypesDict.so \
-        templatesDict.so
+# the C++ sides of the tests live under cpp/ and build into shared
+# libraries next to their sources (load_reflection_info resolves the
+# header as a sibling of the loaded Dict.so)
+dictnames = advancedcpp \
+            advancedcpp2 \
+            conversions \
+            cpp11features \
+            crossinheritance \
+            datatypes \
+            doc_helper \
+            example01 \
+            fragile \
+            operators \
+            overloads \
+            pythonizables \
+            std_streams \
+            stltypes \
+            templates
+
+dicts = $(addprefix cpp/,$(addsuffix Dict.so,$(dictnames)))
 
 all : $(dicts)
 
@@ -24,8 +29,11 @@ ifeq ($(PLATFORM),Darwin)
   cppflags+=-dynamiclib -single_module -undefined dynamic_lookup -Wno-delete-non-virtual-dtor
 endif
 
-%Dict.so: %.cxx
+cpp/%Dict.so: cpp/%.cxx
 	$(CXX) $(cppflags) -shared -o $@ $^
+
+# convenience: `make datatypesDict.so` builds cpp/datatypesDict.so
+%Dict.so: cpp/%Dict.so ;
 
 .PHONY: test clean
 

@@ -3,7 +3,7 @@ from pytest import raises, mark
 from support import setup_make, IS_MAC, IS_CLANG_REPL
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("std_streamsDict"))
+test_dct = str(currpath.join("cpp/std_streamsDict"))
 
 def setup_module(mod):
     setup_make("std_streams")

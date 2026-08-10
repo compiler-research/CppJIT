@@ -6,7 +6,7 @@ from support import setup_make, IS_MAC
 
 # reuse the example01
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("example01Dict"))
+test_dct = str(currpath.join("cpp/example01Dict"))
 
 def setup_module(mod):
     setup_make("example01")

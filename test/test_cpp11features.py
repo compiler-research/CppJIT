@@ -4,7 +4,7 @@ from support import setup_make, ispypy, IS_CLANG_REPL, IS_CLING, IS_LINUX_ARM, I
 
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("cpp11featuresDict"))
+test_dct = str(currpath.join("cpp/cpp11featuresDict"))
 
 def setup_module(mod):
     setup_make("cpp11features")

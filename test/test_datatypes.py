@@ -3,7 +3,7 @@ from pytest import raises, skip, xfail, mark
 from support import setup_make, pylong, pyunicode, IS_CLING, IS_CLANG_REPL, IS_MAC
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("datatypesDict"))
+test_dct = str(currpath.join("cpp/datatypesDict"))
 
 def setup_module(mod):
     setup_make("datatypes")

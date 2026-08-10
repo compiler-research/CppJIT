@@ -3,7 +3,7 @@ from pytest import raises, skip, mark
 from support import setup_make, ispypy, IS_WINDOWS, IS_CLANG_REPL, IS_CLING, IS_CLANG_DEBUG, IS_MAC, IS_MAC_X86, IS_MAC_ARM, IS_LINUX_ARM, IS_VALGRIND
 
 currpath = py.path.local(__file__).dirpath()
-test_dct = str(currpath.join("doc_helperDict"))
+test_dct = str(currpath.join("cpp/doc_helperDict"))
 
 def setup_module(mod):
     setup_make("doc_helper")

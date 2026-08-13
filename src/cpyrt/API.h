@@ -7,9 +7,9 @@
 
 // Python
 #ifdef _WIN32
-#pragma warning (disable : 4275)
-#pragma warning (disable : 4251)
-#pragma warning (disable : 4800)
+#pragma warning(disable : 4275)
+#pragma warning(disable : 4251)
+#pragma warning(disable : 4800)
 #endif
 #if defined(linux)
 #include <stdio.h>
@@ -35,7 +35,7 @@ struct DeclRef;
 struct TypeRef;
 struct FuncRef;
 struct ObjectRef;
-}  // namespace Cpp
+} // namespace Cpp
 
 namespace cppjit::interop {
 typedef Cpp::DeclRef TCppScope_t;
@@ -54,7 +54,6 @@ typedef void* TCppFuncAddr_t;
 #include <string>
 #include <vector>
 
-
 namespace cppjit::cpyrt {
 
 //- type conversion ---------------------------------------------------------
@@ -63,28 +62,28 @@ namespace cppjit::cpyrt {
 #define CPYRT_PARAMETER
 // generic function argument type
 struct Parameter {
-    union Value {
-        bool                 fBool;
-        int8_t               fInt8;
-        uint8_t              fUInt8;
-        short                fShort;
-        unsigned short       fUShort;
-        int                  fInt;
-        unsigned int         fUInt;
-        long                 fLong;
-        intptr_t             fIntPtr;
-        unsigned long        fULong;
-        long long            fLLong;
-        unsigned long long   fULLong;
-        int64_t              fInt64;
-        uint64_t             fUInt64;
-        float                fFloat;
-        double               fDouble;
-        long double          fLDouble;
-        void*                fVoidp;
-    } fValue;
-    void* fRef;
-    char  fTypeCode;
+  union Value {
+    bool fBool;
+    int8_t fInt8;
+    uint8_t fUInt8;
+    short fShort;
+    unsigned short fUShort;
+    int fInt;
+    unsigned int fUInt;
+    long fLong;
+    intptr_t fIntPtr;
+    unsigned long fULong;
+    long long fLLong;
+    unsigned long long fULLong;
+    int64_t fInt64;
+    uint64_t fUInt64;
+    float fFloat;
+    double fDouble;
+    long double fLDouble;
+    void* fVoidp;
+  } fValue;
+  void* fRef;
+  char fTypeCode;
 };
 #endif // CPYRT_PARAMETER
 
@@ -96,15 +95,15 @@ struct CallContext;
 #define CPYRT_DIMENSIONS_H
 typedef Py_ssize_t dim_t;
 
-class Dimensions {      // Windows note: NOT exported/imported
-    dim_t* fDims;
+class Dimensions { // Windows note: NOT exported/imported
+  dim_t* fDims;
 
 public:
-    Dimensions(dim_t /*ndim*/ = 0, dim_t* /*dims*/ = nullptr) : fDims(nullptr) {}
-    ~Dimensions() { delete [] fDims; }
+  Dimensions(dim_t /*ndim*/ = 0, dim_t* /*dims*/ = nullptr) : fDims(nullptr) {}
+  ~Dimensions() { delete[] fDims; }
 
 public:
-    operator bool() const { return (bool)fDims; }
+  operator bool() const { return (bool)fDims; }
 };
 
 typedef Dimensions dims_t;
@@ -114,55 +113,59 @@ typedef const dims_t& cdims_t;
 // type converter base class
 class CPYRT_CLASS_EXTERN Converter {
 public:
-    virtual ~Converter();
+  virtual ~Converter();
 
-// convert the python object and add store it on the parameter
-    virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) = 0;
+  // convert the python object and add store it on the parameter
+  virtual bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) = 0;
 
-// convert a C++ object from memory to a Python object
-    virtual PyObject* FromMemory(void* address);
+  // convert a C++ object from memory to a Python object
+  virtual PyObject* FromMemory(void* address);
 
-// convert a Python object to a C++ object and store it on address
-    virtual bool ToMemory(PyObject* value, void* address, PyObject* ctxt = nullptr);
+  // convert a Python object to a C++ object and store it on address
+  virtual bool ToMemory(PyObject* value, void* address,
+                        PyObject* ctxt = nullptr);
 
-// if a converter has state, it will be unique per function, shared otherwise
-    virtual bool HasState() { return false; }
+  // if a converter has state, it will be unique per function, shared otherwise
+  virtual bool HasState() { return false; }
 };
 
 // create a converter based on its full type name and dimensions
 CPYRT_EXTERN Converter* CreateConverter(const std::string& name, cdims_t = 0);
-CPYRT_EXTERN Converter* CreateConverter(cppjit::interop::TCppType_t type, cdims_t = 0);
+CPYRT_EXTERN Converter* CreateConverter(cppjit::interop::TCppType_t type,
+                                        cdims_t = 0);
 
 // delete a previously created converter
 CPYRT_EXTERN void DestroyConverter(Converter* p);
 
 // register a custom converter
 typedef Converter* (*ConverterFactory_t)(cdims_t);
-CPYRT_EXTERN bool RegisterConverter(const std::string& name, ConverterFactory_t);
+CPYRT_EXTERN bool RegisterConverter(const std::string& name,
+                                    ConverterFactory_t);
 
 // register a custom converter that is a reference to an existing converter
-CPYRT_EXTERN bool RegisterConverterAlias(const std::string& name, const std::string& target);
+CPYRT_EXTERN bool RegisterConverterAlias(const std::string& name,
+                                         const std::string& target);
 
 // remove a custom converter
 CPYRT_EXTERN bool UnregisterConverter(const std::string& name);
 
-
 // function executor base class
 class CPYRT_CLASS_EXTERN Executor {
 public:
-    virtual ~Executor();
+  virtual ~Executor();
 
-// callback when executing a function from Python
-    virtual PyObject* Execute(
-        cppjit::interop::TCppMethod_t, cppjit::interop::TCppObject_t, CallContext*) = 0;
+  // callback when executing a function from Python
+  virtual PyObject* Execute(cppjit::interop::TCppMethod_t,
+                            cppjit::interop::TCppObject_t, CallContext*) = 0;
 
-// if an executor has state, it will be unique per function, shared otherwise
-    virtual bool HasState() { return false; }
+  // if an executor has state, it will be unique per function, shared otherwise
+  virtual bool HasState() { return false; }
 };
 
 // create an executor based on its full type name
 CPYRT_EXTERN Executor* CreateExecutor(const std::string& name, cdims_t = 0);
-CPYRT_EXTERN Executor* CreateExecutor(cppjit::interop::TCppType_t type, cdims_t = 0);
+CPYRT_EXTERN Executor* CreateExecutor(cppjit::interop::TCppType_t type,
+                                      cdims_t = 0);
 
 // delete a previously created executor
 CPYRT_EXTERN void DestroyConverter(Converter* p);
@@ -172,29 +175,34 @@ typedef Executor* (*ExecutorFactory_t)(cdims_t);
 CPYRT_EXTERN bool RegisterExecutor(const std::string& name, ExecutorFactory_t);
 
 // register a custom executor that is a reference to an existing converter
-CPYRT_EXTERN bool RegisterExecutorAlias(const std::string& name, const std::string& target);
+CPYRT_EXTERN bool RegisterExecutorAlias(const std::string& name,
+                                        const std::string& target);
 
 // remove a custom executor
 CPYRT_EXTERN bool UnregisterExecutor(const std::string& name);
 
 // helper for calling into C++ from a custom executor
-CPYRT_EXTERN void* CallVoidP(cppjit::interop::TCppMethod_t, cppjit::interop::TCppObject_t, CallContext*);
-
+CPYRT_EXTERN void* CallVoidP(cppjit::interop::TCppMethod_t,
+                             cppjit::interop::TCppObject_t, CallContext*);
 
 //- C++ access to cppjit objects ---------------------------------------------
 
 // Get C++ Instance (python object proxy) name.
-// Sets a TypeError and returns an empty string if the pyobject is not a CPPInstance.
+// Sets a TypeError and returns an empty string if the pyobject is not a
+// CPPInstance.
 CPYRT_EXTERN std::string Instance_GetScopedFinalName(PyObject* pyobject);
 
 // C++ Instance (python object proxy) to void* conversion
 CPYRT_EXTERN void* Instance_AsVoidPtr(PyObject* pyobject);
 
-// void* to C++ Instance (python object proxy) conversion, returns a new reference
-CPYRT_EXTERN PyObject* Instance_FromVoidPtr(
-    void* addr, const std::string& classname, bool python_owns = false);
-CPYRT_EXTERN PyObject* Instance_FromVoidPtr(
-    void* addr, cppjit::interop::TCppScope_t klass_scope, bool python_owns = false);
+// void* to C++ Instance (python object proxy) conversion, returns a new
+// reference
+CPYRT_EXTERN PyObject* Instance_FromVoidPtr(void* addr,
+                                            const std::string& classname,
+                                            bool python_owns = false);
+CPYRT_EXTERN PyObject*
+Instance_FromVoidPtr(void* addr, cppjit::interop::TCppScope_t klass_scope,
+                     bool python_owns = false);
 // type verifiers for C++ Scope
 CPYRT_EXTERN bool Scope_Check(PyObject* pyobject);
 CPYRT_EXTERN bool Scope_CheckExact(PyObject* pyobject);
@@ -222,7 +230,6 @@ CPYRT_EXTERN bool Overload_CheckExact(PyObject* pyobject);
 // support IO of arbitrary C++ objects, like ROOT.
 CPYRT_EXTERN void Instance_SetReduceMethod(PyCFunction reduceMethod);
 
-
 //- access to the python interpreter ----------------------------------------
 
 // import a python module, making its classes available to Cling
@@ -232,7 +239,8 @@ CPYRT_EXTERN bool Import(const std::string& name);
 CPYRT_EXTERN bool Exec(const std::string& cmd);
 
 // execute a python stand-alone script, with argv CLI arguments
-CPYRT_EXTERN void ExecScript(const std::string& name, const std::vector<std::string>& args);
+CPYRT_EXTERN void ExecScript(const std::string& name,
+                             const std::vector<std::string>& args);
 
 // enter an interactive python session (exit with ^D)
 CPYRT_EXTERN void Prompt();

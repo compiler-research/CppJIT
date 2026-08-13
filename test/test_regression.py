@@ -1,29 +1,42 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import setup_make, IS_WINDOWS, ispypy, IS_CLANG_REPL, IS_CLING, IS_CLANG_DEBUG, IS_MAC_X86, IS_MAC_ARM, IS_MAC
+import os
+import sys
+
+from pytest import mark, raises, skip
+from support import (
+    IS_CLANG_REPL,
+    IS_CLING,
+    IS_MAC,
+    IS_MAC_ARM,
+    IS_WINDOWS,
+    ispypy,
+)
 
 
 class TestREGRESSION:
     helpout = []
 
     def setup_class(cls):
-        import cppjit
 
-        if sys.hexversion < 0x30d0000:
+        if sys.hexversion < 0x30D0000:
+
             def stringpager(text, cls=cls):
                 cls.helpout.append(text)
         else:
-            def stringpager(text, title='', cls=cls):
+
+            def stringpager(text, title="", cls=cls):
                 cls.helpout.append(text)
 
         import pydoc
+
         pydoc.pager = stringpager
 
     @mark.xfail
     def test01_kdcraw(self):
         """Doc strings for KDcrawIface (used to crash)."""
 
-        import cppjit, pydoc
+        import pydoc
+
+        import cppjit
 
         # TODO: run a find for these paths
         qtpath = "/usr/include/qt5"
@@ -45,17 +58,19 @@ class TestREGRESSION:
 
         self.__class__.helpout = []
         pydoc.doc(KDcrawIface.KDcraw)
-        helptext  = ''.join(self.__class__.helpout)
-        assert 'KDcraw' in helptext
-        assert 'CPPInstance' in helptext
+        helptext = "".join(self.__class__.helpout)
+        assert "KDcraw" in helptext
+        assert "CPPInstance" in helptext
 
     def test02_dir(self):
         """For the same reasons as test01_kdcraw, this used to crash."""
 
         if ispypy:
-            skip('hangs (??) in pypy')
+            skip("hangs (??) in pypy")
 
-        import cppjit, pydoc
+        import pydoc
+
+        import cppjit
 
         cppjit.cppdef("""
             namespace docs {
@@ -66,45 +81,48 @@ class TestREGRESSION:
             }
         """)
 
-        assert not '__abstractmethods__' in dir(cppjit.gbl.docs.ptrDocs)
-        assert '__class__' in dir(cppjit.gbl.docs.ptrDocs)
+        assert "__abstractmethods__" not in dir(cppjit.gbl.docs.ptrDocs)
+        assert "__class__" in dir(cppjit.gbl.docs.ptrDocs)
 
         self.__class__.helpout = []
         pydoc.doc(cppjit.gbl.docs.ptrDocs)
-        helptext = ''.join(self.__class__.helpout)
-        assert 'MyDocs' in helptext
-        assert 'CPPInstance' in helptext
-        assert 'fn' in helptext
+        helptext = "".join(self.__class__.helpout)
+        assert "MyDocs" in helptext
+        assert "CPPInstance" in helptext
+        assert "fn" in helptext
 
         cppjit.cppdef("namespace cppjit_regression_test { void iii() {}; }")
 
-        assert not 'iii' in cppjit.gbl.cppjit_regression_test.__dict__
-        assert not '__abstractmethods__' in dir(cppjit.gbl.cppjit_regression_test)
-        assert '__class__' in dir(cppjit.gbl.cppjit_regression_test)
-        assert 'iii' in dir(cppjit.gbl.cppjit_regression_test)
+        assert "iii" not in cppjit.gbl.cppjit_regression_test.__dict__
+        assert "__abstractmethods__" not in dir(cppjit.gbl.cppjit_regression_test)
+        assert "__class__" in dir(cppjit.gbl.cppjit_regression_test)
+        assert "iii" in dir(cppjit.gbl.cppjit_regression_test)
 
-        assert not 'iii' in cppjit.gbl.cppjit_regression_test.__dict__
+        assert "iii" not in cppjit.gbl.cppjit_regression_test.__dict__
         assert cppjit.gbl.cppjit_regression_test.iii
-        assert 'iii' in cppjit.gbl.cppjit_regression_test.__dict__
+        assert "iii" in cppjit.gbl.cppjit_regression_test.__dict__
 
         self.__class__.helpout = []
         pydoc.doc(cppjit.gbl.cppjit_regression_test)
-        helptext = ''.join(self.__class__.helpout)
+        helptext = "".join(self.__class__.helpout)
         # TODO: it's deeply silly that namespaces inherit from CPPInstance (in cpyrt)
-        assert ('CPPInstance' in helptext or 'CPPNamespace' in helptext)
+        assert "CPPInstance" in helptext or "CPPNamespace" in helptext
 
     def test03_pyfunc_doc(self):
         """Help on a generated pyfunc used to crash."""
 
-        import cppjit, pydoc, sys
+        import pydoc
+        import sys
         import sysconfig as sc
+
+        import cppjit
 
         cppjit.add_include_path(sc.get_config_var("INCLUDEPY"))
         if sys.hexversion < 0x3000000:
             cppjit.cppdef("#undef _POSIX_C_SOURCE")
             cppjit.cppdef("#undef _XOPEN_SOURCE")
         else:
-            cppjit.cppdef("#undef slots")     # potentially pulled in by Qt/xapian.h
+            cppjit.cppdef("#undef slots")  # potentially pulled in by Qt/xapian.h
 
         cppjit.cppdef("""#include "Python.h"
            long py2long(PyObject* obj) { return PyLong_AsLong(obj); }""")
@@ -116,26 +134,28 @@ class TestREGRESSION:
     def test04_avx(self):
         """Test usability of AVX by default."""
 
-        import cppjit, subprocess
+        import subprocess
+
+        import cppjit
 
         has_avx = False
         try:
-            f = open('/proc/cpuinfo', 'r')
+            f = open("/proc/cpuinfo", "r")
             for line in f.readlines():
-                if 'avx' in line:
+                if "avx" in line:
                     has_avx = True
                     break
             f.close()
         except Exception:
             try:
-                cli_arg = subprocess.check_output(['sysctl', 'machdep.cpu.features'])
-                has_avx = 'avx' in cli_arg.decode("utf-8").strip().lower()
+                cli_arg = subprocess.check_output(["sysctl", "machdep.cpu.features"])
+                has_avx = "avx" in cli_arg.decode("utf-8").strip().lower()
             except Exception:
                 pass
 
         if has_avx:
-            assert cppjit.cppdef('int check_avx() { return (int) __AVX__; }')
-            assert cppjit.gbl.check_avx()   # attribute error if compilation failed
+            assert cppjit.cppdef("int check_avx() { return (int) __AVX__; }")
+            assert cppjit.gbl.check_avx()  # attribute error if compilation failed
 
     def test05_default_template_arguments(self):
         """Calling a templated method on a templated class with all defaults used to crash."""
@@ -155,7 +175,7 @@ class TestREGRESSION:
         };""")
 
         a = cppjit.gbl.AllDefault[int](24)
-        a.m_t = 21;
+        a.m_t = 21
         assert a.do_stuff() == 24
 
     def test06_default_float_or_unsigned_argument(self):
@@ -173,22 +193,25 @@ class TestREGRESSION:
 
         ns = cppjit.gbl.Defaulters
 
-      # the following default argument used to fail to parse
-        assert ns.take_float()     == 10.
-        assert ns.take_float(b=2)  == 10.
-        assert ns.take_double()    == 10.
-        assert ns.take_double(b=2) == 10.
-        assert ns.take_long()      == 10
-        assert ns.take_long(b=2)   == 10
-        assert ns.take_ulong()     == 10
-        assert ns.take_ulong(b=2)  == 10
+        # the following default argument used to fail to parse
+        assert ns.take_float() == 10.0
+        assert ns.take_float(b=2) == 10.0
+        assert ns.take_double() == 10.0
+        assert ns.take_double(b=2) == 10.0
+        assert ns.take_long() == 10
+        assert ns.take_long(b=2) == 10
+        assert ns.take_ulong() == 10
+        assert ns.take_ulong(b=2) == 10
 
     def test07_class_refcounting(self):
         """The memory regulator would leave an additional refcount on classes"""
 
-        import cppjit, gc, sys
+        import gc
+        import sys
 
-        x = cppjit.gbl.std.vector['float']
+        import cppjit
+
+        x = cppjit.gbl.std.vector["float"]
         old_refcnt = sys.getrefcount(x)
 
         y = x()
@@ -213,9 +236,9 @@ class TestREGRESSION:
         from cppjit.gbl import PyABC
 
         assert PyABC.S2.S1_coll
-        assert 'S1_coll' in dir(PyABC.S2)
-        assert not 'vector<const PyABC::S1*>' in dir(PyABC.S2)
-        assert PyABC.S2.S1_coll is cppjit.gbl.std.vector('const PyABC::S1*')
+        assert "S1_coll" in dir(PyABC.S2)
+        assert "vector<const PyABC::S1*>" not in dir(PyABC.S2)
+        assert PyABC.S2.S1_coll is cppjit.gbl.std.vector("const PyABC::S1*")
 
     def test09_gil_not_released(self):
         """GIL was released by accident for by-value returns"""
@@ -239,20 +262,20 @@ class TestREGRESSION:
         cppjit.cppdef(code)
         cppjit.gbl.some_foo_calling_python()
 
-    @mark.xfail(run = False, condition = IS_CLING, reason="Crashes on Cling")
+    @mark.xfail(run=False, condition=IS_CLING, reason="Crashes on Cling")
     def test10_enum_in_global_space(self):
         """Enum declared in search.h did not appear in global space"""
 
         if IS_WINDOWS:
-            return           # no such enum in MSVC's search.h
+            return  # no such enum in MSVC's search.h
 
         import cppjit
 
-        cppjit.include('search.h')
+        cppjit.include("search.h")
 
         assert cppjit.gbl.ACTION
-        assert hasattr(cppjit.gbl, 'ENTER')
-        assert hasattr(cppjit.gbl, 'FIND')
+        assert hasattr(cppjit.gbl, "ENTER")
+        assert hasattr(cppjit.gbl, "FIND")
 
     def test11_cobject_addressing(self):
         """AsCObject (now as_cobject) had a deref too many"""
@@ -260,13 +283,13 @@ class TestREGRESSION:
         import cppjit
         import cppjit.ll
 
-        cppjit.cppdef('struct CObjA { CObjA() : m_int(42) {} int m_int; };')
+        cppjit.cppdef("struct CObjA { CObjA() : m_int(42) {} int m_int; };")
         a = cppjit.gbl.CObjA()
         co = cppjit.ll.as_cobject(a)
 
-        assert a is cppjit.bind_object(co, 'CObjA')
+        assert a is cppjit.bind_object(co, "CObjA")
         assert a.m_int == 42
-        assert cppjit.bind_object(co, 'CObjA').m_int == 42
+        assert cppjit.bind_object(co, "CObjA").m_int == 42
 
     def test12_exception_while_exception(self):
         """Exception from SetDetailedException during exception handling used to crash"""
@@ -287,10 +310,10 @@ class TestREGRESSION:
     def test13_char_star_over_char(self):
         """Map str to const char* over char"""
 
-      # This is debatable, but although a single character string passes through char,
-      # it is more consistent to prefer const char* or std::string in all cases. The
-      # original bug report is here:
-      #    https://bitbucket.org/wlav/cppyy/issues/127/string-argument-resolves-incorrectly
+        # This is debatable, but although a single character string passes through char,
+        # it is more consistent to prefer const char* or std::string in all cases. The
+        # original bug report is here:
+        #    https://bitbucket.org/wlav/cppyy/issues/127/string-argument-resolves-incorrectly
 
         import cppjit
 
@@ -310,14 +333,14 @@ class TestREGRESSION:
         }
         """)
 
-        assert cppjit.gbl.csoc1.call('0') == 'char'
-        raises(ValueError, cppjit.gbl.csoc1.call, '00')
+        assert cppjit.gbl.csoc1.call("0") == "char"
+        raises(ValueError, cppjit.gbl.csoc1.call, "00")
 
-        assert cppjit.gbl.csoc2.call('0')  == 'const char*'
-        assert cppjit.gbl.csoc2.call('00') == 'const char*'
+        assert cppjit.gbl.csoc2.call("0") == "const char*"
+        assert cppjit.gbl.csoc2.call("00") == "const char*"
 
-        assert cppjit.gbl.csoc3.call('0')  == 'string'
-        assert cppjit.gbl.csoc3.call('00') == 'string'
+        assert cppjit.gbl.csoc3.call("0") == "string"
+        assert cppjit.gbl.csoc3.call("00") == "string"
 
     def test14_struct_direct_definition(self):
         """Struct defined directly in a scope miseed scope in renormalized name"""
@@ -353,9 +376,9 @@ class TestREGRESSION:
 
         assert len(b.baz) == 2
         assert len(b.baz[0].data) == 1
-        assert b.baz[0].data[0]   == 3.14
+        assert b.baz[0].data[0] == 3.14
         assert len(b.baz[1].data) == 1
-        assert b.baz[1].data[0]   == 2.73
+        assert b.baz[1].data[0] == 2.73
 
         f = sds.Foo()
         assert f.bar.x == 5
@@ -383,19 +406,19 @@ class TestREGRESSION:
         }""")
 
         nameit1 = cppjit.gbl.vec_vs_init.nameit1
-        assert 'vector' in nameit1(list(range(10)))
-        assert 'vector' in nameit1(cppjit.gbl.std.vector[int]())
+        assert "vector" in nameit1(list(range(10)))
+        assert "vector" in nameit1(cppjit.gbl.std.vector[int]())
 
         nameit2 = cppjit.gbl.vec_vs_init.nameit2
-        assert 'vector' in nameit2(list(range(10)))
-        assert 'vector' in nameit2(cppjit.gbl.std.vector[int]())
+        assert "vector" in nameit2(list(range(10)))
+        assert "vector" in nameit2(cppjit.gbl.std.vector[int]())
 
         sizeit = cppjit.gbl.vec_vs_init.sizeit
         assert sizeit(list(range(10))) == 10
 
     def test16_iterable_enum(self):
         """Use template to iterate over an enum"""
-      # from: https://stackoverflow.com/questions/52459530/pybind11-emulate-python-enum-behaviour
+        # from: https://stackoverflow.com/questions/52459530/pybind11-emulate-python-enum-behaviour
 
         import cppjit
 
@@ -440,7 +463,7 @@ class TestREGRESSION:
             Unknown
         };""")
 
-        Color = cppjit.gbl.my_iter_enum['MyColorEnum']
+        Color = cppjit.gbl.my_iter_enum["MyColorEnum"]
         assert Color.iterator
 
         c_iterable = Color()
@@ -478,12 +501,12 @@ class TestREGRESSION:
         a = soe.Derived1()
         b = soe.Derived1()
 
-        assert a == b             # derived class' C++ operator== called
+        assert a == b  # derived class' C++ operator== called
 
         a = soe.Derived2()
         b = soe.Derived2()
 
-        assert a != b             # derived class' C++ operator!= called
+        assert a != b  # derived class' C++ operator!= called
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test18_operator_plus_overloads(self):
@@ -494,11 +517,11 @@ class TestREGRESSION:
         a = cppjit.gbl.std.string("a")
         b = cppjit.gbl.std.string("b")
 
-        assert a == 'a'
-        assert b == 'b'
+        assert a == "a"
+        assert b == "b"
 
-        assert type(a+b) == cppjit.gbl.std.string
-        assert a+b == 'ab'
+        assert type(a + b) == cppjit.gbl.std.string
+        assert a + b == "ab"
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test19_std_string_hash(self):
@@ -506,15 +529,13 @@ class TestREGRESSION:
 
         import cppjit
 
-        import cppjit
-
         s = cppjit.gbl.std.string("text")
         d = {}
 
-      # hashes of std::string larger than 2**31 would fail; run a couple of
-      # strings to check although it may still succeed by accident (and never
-      # was an issue on p3 anyway)
-        for s in ['abc', 'text', '321', 'stuff', 'very long string']:
+        # hashes of std::string larger than 2**31 would fail; run a couple of
+        # strings to check although it may still succeed by accident (and never
+        # was an issue on p3 anyway)
+        for s in ["abc", "text", "321", "stuff", "very long string"]:
             d[s] = 1
 
     def test20_signed_char_ref(self):
@@ -531,9 +552,9 @@ class TestREGRESSION:
         };""")
 
         obj = cppjit.gbl.SignedCharRefGetter()
-        obj.setter('c')
+        obj.setter("c")
 
-        assert obj.getter() == 'c'
+        assert obj.getter() == "c"
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test21_temporaries_and_vector(self):
@@ -546,7 +567,7 @@ class TestREGRESSION:
         """)
 
         l = [e for e in cppjit.gbl.get_some_temporary_vector()]
-        assert l == ['x', 'y', 'z']
+        assert l == ["x", "y", "z"]
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test22_initializer_list_and_temporary(self):
@@ -591,16 +612,18 @@ class TestREGRESSION:
         assert len(r21.what_called) == 0
 
         r21.Bar(1)
-        assert r21.what_called == 'Bar(int)'
+        assert r21.what_called == "Bar(int)"
 
-        r21.what_called = ''
-        r21.Bar([1,2])  # used to call Bar(Foo x) through implicit conversion
-        assert r21.what_called == 'Bar(il<size=2>)'
+        r21.what_called = ""
+        r21.Bar([1, 2])  # used to call Bar(Foo x) through implicit conversion
+        assert r21.what_called == "Bar(il<size=2>)"
 
     def test23_copy_constructor(self):
         """Copy construct an object into an empty (NULL) proxy"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         cppjit.cppdef("""\
         namespace regression_test22 {
@@ -689,7 +712,7 @@ class TestREGRESSION:
         CSE.my_enum = CSE.MyEnum.kTwo
         assert CSE.my_enum == CSE.MyEnum.kTwo
 
-      # the following would fail b/c the type was not properly resolved
+        # the following would fail b/c the type was not properly resolved
         assert CSE.your_enum == CSE.YourEnum.kThree
         CSE.your_enum = CSE.YourEnum.kFour
         assert CSE.your_enum == CSE.YourEnum.kFour
@@ -751,7 +774,9 @@ class TestREGRESSION:
     def test27_exception_by_value(self):
         """Proper memory management of exception return by value"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         cppjit.cppdef("""\
         namespace ExceptionByValue {
@@ -798,7 +823,11 @@ class TestREGRESSION:
         null = cppjit.gbl.exception_as_shared_ptr.get_shared_null()
         assert not null
 
-    @mark.xfail(run=False, condition=(IS_CLING and IS_MAC) or IS_MAC_ARM, reason="Dispatcher fix #53 introduces canonical types with std:: namespace that introduces OS X exceptions similar to test_stltypes")
+    @mark.xfail(
+        run=False,
+        condition=(IS_CLING and IS_MAC) or IS_MAC_ARM,
+        reason="Dispatcher fix #53 introduces canonical types with std:: namespace that introduces OS X exceptions similar to test_stltypes",
+    )
     def test29_callback_pointer_values(self):
         """Make sure pointer comparisons in callbacks work as expected"""
 
@@ -886,18 +915,18 @@ class TestREGRESSION:
 
         std = cppjit.gbl.std
         uint64_t = cppjit.gbl.uint64_t
-        umax64   = std.numeric_limits[uint64_t].max()
-        int64_t  = cppjit.gbl.int64_t
-        max64    = std.numeric_limits[int64_t].max()
-        min64    = std.numeric_limits[int64_t].min()
+        umax64 = std.numeric_limits[uint64_t].max()
+        int64_t = cppjit.gbl.int64_t
+        max64 = std.numeric_limits[int64_t].max()
+        min64 = std.numeric_limits[int64_t].min()
 
         assert max64 < umax64
         assert min64 < max64
         assert umax64 == ns.Test(umax64)
 
         assert ns.TTest(umax64).fT == umax64
-        assert ns.TTest(max64).fT  ==  max64
-        assert ns.TTest(min64).fT  ==  min64
+        assert ns.TTest(max64).fT == max64
+        assert ns.TTest(min64).fT == min64
         assert ns.TTest(1.01).fT == 1.01
         assert ns.TTest(True).fT == True
         assert type(ns.TTest(True).fT) == bool
@@ -921,7 +950,7 @@ class TestREGRESSION:
 
         all_names = set(dir(cppjit.gbl.enum_in_dir))
 
-        required = {'prod', 'a', 'b', 'smth', 'my_enum'}
+        required = {"prod", "a", "b", "smth", "my_enum"}
         assert all_names.intersection(required) == required
 
     def test32_typedef_class_enum(self):
@@ -1004,30 +1033,37 @@ class TestREGRESSION:
         } } // namespace type, property_types
         """)
 
-        assert cppjit.gbl.property_types.type.canonical_mos['double']
-        assert cppjit.gbl.std.get[0](cppjit.gbl.libchemist.produce())     == 10.
-        assert cppjit.gbl.std.get[0](cppjit.gbl.property_types.produce()) ==  5.
+        assert cppjit.gbl.property_types.type.canonical_mos["double"]
+        assert cppjit.gbl.std.get[0](cppjit.gbl.libchemist.produce()) == 10.0
+        assert cppjit.gbl.std.get[0](cppjit.gbl.property_types.produce()) == 5.0
 
-        pt_type = cppjit.gbl.property_types.ReferenceWavefunction['double']
-        assert cppjit.gbl.std.get[0](cppjit.gbl.property_types.run_as[pt_type]()) ==  20.
+        pt_type = cppjit.gbl.property_types.ReferenceWavefunction["double"]
+        assert (
+            cppjit.gbl.std.get[0](cppjit.gbl.property_types.run_as[pt_type]()) == 20.0
+        )
 
-    @mark.xfail(run=False, reason="Crashes on ClangRepl with 'toString not implemented', and on Cling")
+    @mark.xfail(
+        run=False,
+        reason="Crashes on ClangRepl with 'toString not implemented', and on Cling",
+    )
     def test34_print_empty_collection(self):
         """Print empty collection through Cling"""
 
         import cppjit
 
-      # printing an empty collection used to have a missing symbol on 64b Windows
+        # printing an empty collection used to have a missing symbol on 64b Windows
         v = cppjit.gbl.std.vector[int]()
         str(v)
 
-    @mark.xfail(run=IS_CLANG_REPL, condition=IS_MAC or IS_CLING, reason="Crashes on Cling")
+    @mark.xfail(
+        run=IS_CLANG_REPL, condition=IS_MAC or IS_CLING, reason="Crashes on Cling"
+    )
     def test35_filesytem(self):
         """Static path object used to crash on destruction"""
 
         if IS_WINDOWS:
             # TODO: this is b/c of the mangling: it's looking for '_std', but name is '__'
-            skip('fails due to missing _std_fs_convert_narrow_to_wide symbol')
+            skip("fails due to missing _std_fs_convert_narrow_to_wide symbol")
 
         import cppjit
 
@@ -1045,7 +1081,9 @@ class TestREGRESSION:
     def test36_ctypes_sizeof(self):
         """cppjit.sizeof forwards to ctypes.sizeof where necessary"""
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
 
         cppjit.cppdef("""\
         namespace test36_ctypes_sizeof {
@@ -1084,7 +1122,7 @@ class TestREGRESSION:
 
         N = 9
 
-        for t, b in (('int*', True), ('uint8_t*', False)):
+        for t, b in (("int*", True), ("uint8_t*", False)):
             arr = cppjit.ll.array_new[t](N, managed=True)
             assert arr.shape[0] == N
             assert len(arr) == N
@@ -1093,13 +1131,16 @@ class TestREGRESSION:
 
             assert cppjit.addressof(res) == cppjit.addressof(arr)
 
-    @mark.xfail(run = False, condition = (IS_MAC and IS_CLING), reason = "Crashes on OS X Cling")
+    @mark.xfail(
+        run=False, condition=(IS_MAC and IS_CLING), reason="Crashes on OS X Cling"
+    )
     def test38_char16_arrays(self):
         """Access to fixed-size char16 arrays as data members"""
 
+        import warnings
+
         import cppjit
         import cppjit.ll
-        import warnings
 
         cppjit.cppdef(r"""\
         namespace Char16Fixed {
@@ -1118,39 +1159,39 @@ class TestREGRESSION:
         ns = cppjit.gbl.Char16Fixed
 
         ai = ns.AxisInformation()
-        for s in [u'hello', u'hellow']:
+        for s in ["hello", "hellow"]:
             ai.name = s
             len(ai.name) == 6
-            assert ai.name[:len(s)] == s
+            assert ai.name[: len(s)] == s
 
-      # isolate the warning configuration
+        # isolate the warning configuration
         with warnings.catch_warnings():
             warnings.simplefilter("error")  # turn warnings into errors
 
             with raises(RuntimeWarning) as exc:
-                ai.name = u'hellowd'
-            assert 'too long' in str(exc.value)
+                ai.name = "hellowd"
+            assert "too long" in str(exc.value)
 
         # vector of objects
         va = cppjit.gbl.std.vector[ns.AxisInformation](N)
         ns.fillem(va.data(), N)
         for ai in va:
             assert len(ai.name) == 6
-            assert ai.name[:5] == u'hello'
+            assert ai.name[:5] == "hello"
 
         # array of objects
         aa = cppjit.gbl.std.array[ns.AxisInformation, N]()
         ns.fillem(aa.data(), N)
         for ai in aa:
             assert len(ai.name) == 6
-            assert ai.name[:5] == u'hello'
+            assert ai.name[:5] == "hello"
 
         # low-level array of objects
         aa = cppjit.ll.array_new[ns.AxisInformation](N)
         ns.fillem(aa, N)
         for ai in aa:
             assert len(ai.name) == 6
-            assert ai.name[:5] == u'hello'
+            assert ai.name[:5] == "hello"
         cppjit.ll.array_delete(aa)
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
@@ -1170,7 +1211,7 @@ class TestREGRESSION:
         }; }""")
 
         cppjit.gbl.VectorOfPointers
-        from cppjit.gbl.VectorOfPointers import Base1, Derived1, Owner
+        from cppjit.gbl.VectorOfPointers import Base1, Derived1, Owner  # noqa: F401
 
         o = Owner()
 
@@ -1207,18 +1248,25 @@ class TestREGRESSION:
         std::vector<const Base3*> vec3 { &d3 };
         }""")
 
-        from cppjit.gbl import std
-        from cppjit.gbl.VectorOfPointers import Base2, Derived2, Base3, Derived3, vec2, vec3
+        from cppjit.gbl import std  # noqa: F401
+        from cppjit.gbl.VectorOfPointers import (
+            Base2,
+            Base3,  # noqa: F401
+            Derived2,
+            Derived3,
+            vec2,
+            vec3,
+        )
 
-        assert len(vec2)     == 1
+        assert len(vec2) == 1
         assert type(vec2[0]) == Base2
-        assert len(list(vec2))     == 1
+        assert len(list(vec2)) == 1
         assert type(list(vec2)[0]) == Base2
         assert len([d for d in vec2 if isinstance(d, Derived2)]) == 0
 
-        assert len(vec3)     == 1
+        assert len(vec3) == 1
         assert type(vec3[0]) == Derived3
-        assert len(list(vec3))     == 1
+        assert len(list(vec3)) == 1
         assert type(list(vec2)[0]) == Base2
         assert len([d for d in vec3 if isinstance(d, Derived3)]) == 1
 
@@ -1242,13 +1290,16 @@ class TestREGRESSION:
         ns = cppjit.gbl.ExplicitInitializer
 
         TestPair = cppjit.gbl.std.pair[ns.TestEnum, int]
-        arg = ns.TestDictClass([TestPair(ns.TestEnum.Bar, 4), TestPair(ns.TestEnum.Foo, 12)])
+        arg = ns.TestDictClass(
+            [TestPair(ns.TestEnum.Bar, 4), TestPair(ns.TestEnum.Foo, 12)]
+        )
         assert ns.TestClass(arg)
 
     def test41_typedefed_enums(self):
         """Typedef-ed enums do not have enum tag in declarations"""
 
         import cppjit
+
         cppjit.cppdef("""\
         namespace TypedefedEnum {
         typedef enum {
@@ -1293,16 +1344,16 @@ class TestREGRESSION:
         foo = ns.Foo()
         ns.set_pointers(foo)
 
-        howdy = 'howdy!'
-        hello = 'hello'
-        world = 'world!'
+        howdy = "howdy!"
+        hello = "hello"
+        world = "world!"
 
-        assert ''.join(foo.val)[:len(howdy)] == howdy
+        assert "".join(foo.val)[: len(howdy)] == howdy
         assert foo.ptr == howdy
         assert foo.values[0].as_string() == hello
         assert foo.values[1].as_string() == world
-        assert foo.pointers[0] == 'hello'
-        assert foo.pointers[1] == 'world!'
+        assert foo.pointers[0] == "hello"
+        assert foo.pointers[1] == "world!"
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test43_static_with_default(self):
@@ -1320,7 +1371,7 @@ class TestREGRESSION:
         obj = ns.MyClass()
 
         obj.smethod("one", "two")
-        obj.smethod("one")        # used to fail with vectorcall
+        obj.smethod("one")  # used to fail with vectorcall
 
     def test44_heuristic_mem_policy(self):
         """Ownership of arguments with heuristic memory policy"""
@@ -1339,7 +1390,9 @@ class TestREGRESSION:
         try:
             # The scope with the heuristic memory policy is in a try-except-finally block
             # to ensure the memory policy is always reset.
-            old_memory_policy = cppjit._backend.SetMemoryPolicy(cppjit._backend.kMemoryHeuristics)
+            old_memory_policy = cppjit._backend.SetMemoryPolicy(
+                cppjit._backend.kMemoryHeuristics
+            )
 
             # Validate the intended behavior for different argument types:
             #   const ref : caller keeps ownership
@@ -1364,7 +1417,7 @@ class TestREGRESSION:
             # Let's give back the ownership to Python here so there is no leak
             cppjit._backend.SetOwnership(args[3], True)
         except:
-            raise # rethrow the exception
+            raise  # rethrow the exception
         finally:
             cppjit._backend.SetMemoryPolicy(old_memory_policy)
 
@@ -1385,7 +1438,11 @@ class TestREGRESSION:
         assert cppjit.gbl.cppjit.interop.ResolveName("my_custom_type_t") == "const int"
         assert cppjit.gbl.cppjit.interop.ResolveName("cmy_custom_type_t") == "const int"
 
-    @mark.xfail(run=False, condition=IS_MAC_ARM, reason="Crashes with exception not being caught on Apple Silicon")
+    @mark.xfail(
+        run=False,
+        condition=IS_MAC_ARM,
+        reason="Crashes with exception not being caught on Apple Silicon",
+    )
     def test46_exception_narrowing(self):
         """Exception narrowing to C++ exception of all overloads"""
 
@@ -1404,7 +1461,7 @@ class TestREGRESSION:
         foo = ns.Foo()
         with raises(cppjit.gbl.std.logic_error):
             foo.bar()
-    
+
     def test47_initializer_list_fail(self, capfd):
         """Conversion to intializer_list requires default constructor"""
 
@@ -1574,7 +1631,7 @@ class TestREGRESSION:
         # crash and must yield the actual (derived) class...
         op = ns.get(0)
         assert op.code() == 0
-        assert 'Impl<float' in type(op).__cpp_name__
+        assert "Impl<float" in type(op).__cpp_name__
         assert ns.get(1).code() == 1
         assert ns.get(2).code() == 2
 

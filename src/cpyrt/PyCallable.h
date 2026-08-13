@@ -4,9 +4,8 @@
 #include <climits>
 
 // Bindings
-#include "cpyrt/Reflex.h"
 #include "CallContext.h"
-
+#include "cpyrt/Reflex.h"
 
 namespace cppjit::cpyrt {
 
@@ -14,39 +13,41 @@ class CPPInstance;
 
 class PyCallable {
 public:
-    virtual ~PyCallable() {}
+  virtual ~PyCallable() {}
 
 public:
-    virtual PyObject* GetSignature(bool show_formalargs = true) = 0;
-    virtual PyObject* GetSignatureNames() = 0;
-    virtual PyObject* GetSignatureTypes() = 0;
-    virtual PyObject* GetPrototype(bool show_formalargs = true) = 0;
-    virtual PyObject* GetTypeName() { return GetPrototype(false); }
-    virtual PyObject* GetDocString() { return GetPrototype(); }
-    virtual PyObject* Reflex(cppjit::interop::Reflex::RequestId_t request,
-                             cppjit::interop::Reflex::FormatId_t format = cppjit::interop::Reflex::OPTIMAL) {
-        PyErr_Format(PyExc_ValueError, "unsupported reflex request %d or format %d", request, format);
-        return nullptr;
-    };
+  virtual PyObject* GetSignature(bool show_formalargs = true) = 0;
+  virtual PyObject* GetSignatureNames() = 0;
+  virtual PyObject* GetSignatureTypes() = 0;
+  virtual PyObject* GetPrototype(bool show_formalargs = true) = 0;
+  virtual PyObject* GetTypeName() { return GetPrototype(false); }
+  virtual PyObject* GetDocString() { return GetPrototype(); }
+  virtual PyObject* Reflex(cppjit::interop::Reflex::RequestId_t request,
+                           cppjit::interop::Reflex::FormatId_t format =
+                               cppjit::interop::Reflex::OPTIMAL) {
+    PyErr_Format(PyExc_ValueError, "unsupported reflex request %d or format %d",
+                 request, format);
+    return nullptr;
+  };
 
-    virtual int GetPriority() = 0;
-    virtual bool IsGreedy() = 0;
+  virtual int GetPriority() = 0;
+  virtual bool IsGreedy() = 0;
 
-    virtual int GetMaxArgs() = 0;
-    virtual PyObject* GetCoVarNames() = 0;
-    virtual PyObject* GetArgDefault(int /* iarg */, bool silent=true) = 0;
-    virtual bool IsConst() { return false; }
+  virtual int GetMaxArgs() = 0;
+  virtual PyObject* GetCoVarNames() = 0;
+  virtual PyObject* GetArgDefault(int /* iarg */, bool silent = true) = 0;
+  virtual bool IsConst() { return false; }
 
-    virtual PyObject* GetScopeProxy() = 0;
-    virtual cppjit::interop::TCppFuncAddr_t GetFunctionAddress() = 0;
+  virtual PyObject* GetScopeProxy() = 0;
+  virtual cppjit::interop::TCppFuncAddr_t GetFunctionAddress() = 0;
 
-    virtual PyCallable* Clone() = 0;
+  virtual PyCallable* Clone() = 0;
 
-    virtual int GetArgMatchScore(PyObject* /* args_tuple */) { return INT_MAX; }
+  virtual int GetArgMatchScore(PyObject* /* args_tuple */) { return INT_MAX; }
 
 public:
-    virtual PyObject* Call(CPPInstance*& self,
-        cpyrt_PyArgs_t args, size_t nargsf, PyObject* kwds, CallContext* ctxt = nullptr) = 0;
+  virtual PyObject* Call(CPPInstance*& self, cpyrt_PyArgs_t args, size_t nargsf,
+                         PyObject* kwds, CallContext* ctxt = nullptr) = 0;
 };
 
 } // namespace cppjit::cpyrt

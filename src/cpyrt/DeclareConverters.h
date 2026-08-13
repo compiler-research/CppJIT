@@ -3,74 +3,78 @@
 
 // Bindings
 #include "Converters.h"
-#include "cppjit_interop.h"
 #include "Dimensions.h"
+#include "cppjit_interop.h"
 
 // Standard
 #include <complex>
 #include <string>
 
-
 namespace cppjit::cpyrt {
 
 namespace {
 
-#define CPPJIT_DECLARE_BASIC_CONVERTER(name)                                  \
-class name##Converter : public Converter {                                   \
-public:                                                                      \
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;      \
-    PyObject* FromMemory(void*) override;                                     \
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;            \
-    std::string GetFailureMsg() override { return "[" #name "Converter]"; }   \
-};                                                                           \
-                                                                             \
-class Const##name##RefConverter : public Converter {                         \
-public:                                                                      \
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;      \
-    PyObject* FromMemory(void*) override;                                     \
-    std::string GetFailureMsg() override { return "[Const" #name "RefConverter]"; }\
-}
+#define CPPJIT_DECLARE_BASIC_CONVERTER(name)                                   \
+  class name##Converter : public Converter {                                   \
+  public:                                                                      \
+    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;       \
+    PyObject* FromMemory(void*) override;                                      \
+    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;             \
+    std::string GetFailureMsg() override { return "[" #name "Converter]"; }    \
+  };                                                                           \
+                                                                               \
+  class Const##name##RefConverter : public Converter {                         \
+  public:                                                                      \
+    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;       \
+    PyObject* FromMemory(void*) override;                                      \
+    std::string GetFailureMsg() override {                                     \
+      return "[Const" #name "RefConverter]";                                   \
+    }                                                                          \
+  }
 
+#define CPPJIT_DECLARE_BASIC_CONVERTER2(name, base)                            \
+  class name##Converter : public base##Converter {                             \
+  public:                                                                      \
+    PyObject* FromMemory(void*) override;                                      \
+    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;             \
+    std::string GetFailureMsg() override { return "[" #name "Converter]"; }    \
+  };                                                                           \
+                                                                               \
+  class Const##name##RefConverter : public Converter {                         \
+  public:                                                                      \
+    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;       \
+    PyObject* FromMemory(void*) override;                                      \
+    std::string GetFailureMsg() override {                                     \
+      return "[Const" #name "RefConverter]";                                   \
+    }                                                                          \
+  }
 
-#define CPPJIT_DECLARE_BASIC_CONVERTER2(name, base)                           \
-class name##Converter : public base##Converter {                             \
-public:                                                                      \
-    PyObject* FromMemory(void*) override;                                     \
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;            \
-    std::string GetFailureMsg() override { return "[" #name "Converter]"; }   \
-};                                                                           \
-                                                                             \
-class Const##name##RefConverter : public Converter {                         \
-public:                                                                      \
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;      \
-    PyObject* FromMemory(void*) override;                                     \
-    std::string GetFailureMsg() override { return "[Const" #name "RefConverter]"; }\
-}
+#define CPPJIT_DECLARE_REFCONVERTER(name)                                      \
+  class name##RefConverter : public Converter {                                \
+  public:                                                                      \
+    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;       \
+    PyObject* FromMemory(void*) override;                                      \
+    std::string GetFailureMsg() override { return "[" #name "RefConverter]"; } \
+  };
 
-#define CPPJIT_DECLARE_REFCONVERTER(name)                                     \
-class name##RefConverter : public Converter {                                \
-public:                                                                      \
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;      \
-    PyObject* FromMemory(void*) override;                                     \
-    std::string GetFailureMsg() override { return "[" #name "RefConverter]"; }\
-};
-
-#define CPPJIT_DECLARE_ARRAY_CONVERTER(name)                                  \
-class name##ArrayConverter : public Converter {                              \
-public:                                                                      \
-    name##ArrayConverter(cdims_t dims);                                      \
-    name##ArrayConverter(const name##ArrayConverter&) = delete;              \
-    name##ArrayConverter& operator=(const name##ArrayConverter&) = delete;   \
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;      \
-    PyObject* FromMemory(void*) override;                                     \
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;            \
-    bool HasState() override { return true; }                                 \
-    std::string GetFailureMsg() override { return "[" #name "ArrayConverter]"; }\
-protected:                                                                   \
-    dims_t fShape;                                                           \
-    bool fIsFixed;                                                           \
-};
-
+#define CPPJIT_DECLARE_ARRAY_CONVERTER(name)                                   \
+  class name##ArrayConverter : public Converter {                              \
+  public:                                                                      \
+    name##ArrayConverter(cdims_t dims);                                        \
+    name##ArrayConverter(const name##ArrayConverter&) = delete;                \
+    name##ArrayConverter& operator=(const name##ArrayConverter&) = delete;     \
+    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;       \
+    PyObject* FromMemory(void*) override;                                      \
+    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;             \
+    bool HasState() override { return true; }                                  \
+    std::string GetFailureMsg() override {                                     \
+      return "[" #name "ArrayConverter]";                                      \
+    }                                                                          \
+                                                                               \
+  protected:                                                                   \
+    dims_t fShape;                                                             \
+    bool fIsFixed;                                                             \
+  };
 
 // converters for built-ins
 CPPJIT_DECLARE_BASIC_CONVERTER(Long);
@@ -78,14 +82,14 @@ CPPJIT_DECLARE_BASIC_CONVERTER(Bool);
 CPPJIT_DECLARE_BASIC_CONVERTER(Char);
 class SCharAsIntConverter : public CharConverter {
 public:
-    using CharConverter::CharConverter;
-    PyObject* FromMemory(void*) override;
+  using CharConverter::CharConverter;
+  PyObject* FromMemory(void*) override;
 };
 CPPJIT_DECLARE_BASIC_CONVERTER(UChar);
 class UCharAsIntConverter : public UCharConverter {
 public:
-    using UCharConverter::UCharConverter;
-    PyObject* FromMemory(void*) override;
+  using UCharConverter::UCharConverter;
+  PyObject* FromMemory(void*) override;
 };
 CPPJIT_DECLARE_BASIC_CONVERTER(WChar);
 CPPJIT_DECLARE_BASIC_CONVERTER(Char16);
@@ -126,93 +130,94 @@ CPPJIT_DECLARE_REFCONVERTER(LDouble);
 
 class VoidConverter : public Converter {
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
 };
 
 class CStringConverter : public Converter {
 public:
-    CStringConverter(std::string::size_type maxSize = std::string::npos) : fMaxSize(maxSize) {}
+  CStringConverter(std::string::size_type maxSize = std::string::npos)
+      : fMaxSize(maxSize) {}
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[CStringConverter]"; }
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[CStringConverter]"; }
 
 protected:
-    std::string fBuffer;
-    std::string::size_type fMaxSize;
+  std::string fBuffer;
+  std::string::size_type fMaxSize;
 };
 
 class NonConstCStringConverter : public CStringConverter {
 public:
-    using CStringConverter::CStringConverter;
+  using CStringConverter::CStringConverter;
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    std::string GetFailureMsg() override { return "[NonConstCStringConverter]"; }
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  std::string GetFailureMsg() override { return "[NonConstCStringConverter]"; }
 };
 
 class WCStringConverter : public Converter {
 public:
-    WCStringConverter(std::wstring::size_type maxSize = std::wstring::npos) :
-        fBuffer(nullptr), fMaxSize(maxSize) {}
-    WCStringConverter(const WCStringConverter&) = delete;
-    WCStringConverter& operator=(const WCStringConverter&) = delete;
-    virtual ~WCStringConverter() { free(fBuffer); }
+  WCStringConverter(std::wstring::size_type maxSize = std::wstring::npos)
+      : fBuffer(nullptr), fMaxSize(maxSize) {}
+  WCStringConverter(const WCStringConverter&) = delete;
+  WCStringConverter& operator=(const WCStringConverter&) = delete;
+  virtual ~WCStringConverter() { free(fBuffer); }
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[WCStringConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[WCStringConverter]"; };
 
 protected:
-    wchar_t* fBuffer;
-    std::wstring::size_type fMaxSize;
+  wchar_t* fBuffer;
+  std::wstring::size_type fMaxSize;
 };
 
 class CString16Converter : public Converter {
 public:
-    CString16Converter(std::wstring::size_type maxSize = std::wstring::npos) :
-        fBuffer(nullptr), fMaxSize(maxSize) {}
-    CString16Converter(const CString16Converter&) = delete;
-    CString16Converter& operator=(const CString16Converter&) = delete;
-    virtual ~CString16Converter() { free(fBuffer); }
+  CString16Converter(std::wstring::size_type maxSize = std::wstring::npos)
+      : fBuffer(nullptr), fMaxSize(maxSize) {}
+  CString16Converter(const CString16Converter&) = delete;
+  CString16Converter& operator=(const CString16Converter&) = delete;
+  virtual ~CString16Converter() { free(fBuffer); }
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[CString16Converter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[CString16Converter]"; };
 
 protected:
-    char16_t* fBuffer;
-    std::wstring::size_type fMaxSize;
+  char16_t* fBuffer;
+  std::wstring::size_type fMaxSize;
 };
 
 class CString32Converter : public Converter {
 public:
-    CString32Converter(std::wstring::size_type maxSize = std::wstring::npos) :
-        fBuffer(nullptr), fMaxSize(maxSize) {}
-    CString32Converter(const CString32Converter&) = delete;
-    CString32Converter& operator=(const CString32Converter&) = delete;
-    virtual ~CString32Converter() { free(fBuffer); }
+  CString32Converter(std::wstring::size_type maxSize = std::wstring::npos)
+      : fBuffer(nullptr), fMaxSize(maxSize) {}
+  CString32Converter(const CString32Converter&) = delete;
+  CString32Converter& operator=(const CString32Converter&) = delete;
+  virtual ~CString32Converter() { free(fBuffer); }
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[CString32Converter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[CString32Converter]"; };
 
 protected:
-    char32_t* fBuffer;
-    std::wstring::size_type fMaxSize;
+  char32_t* fBuffer;
+  std::wstring::size_type fMaxSize;
 };
 
 // pointer/array conversions
@@ -238,156 +243,160 @@ CPPJIT_DECLARE_ARRAY_CONVERTER(ComplexD);
 
 class CStringArrayConverter : public SCharArrayConverter {
 public:
-    CStringArrayConverter(cdims_t dims, bool fixed) : SCharArrayConverter(dims) {
-        fIsFixed = fixed;    // overrides SCharArrayConverter decision
-    }
-    using SCharArrayConverter::SCharArrayConverter;
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    std::string GetFailureMsg() override { return "[CStringArrayConverter]"; };
+  CStringArrayConverter(cdims_t dims, bool fixed) : SCharArrayConverter(dims) {
+    fIsFixed = fixed; // overrides SCharArrayConverter decision
+  }
+  using SCharArrayConverter::SCharArrayConverter;
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  std::string GetFailureMsg() override { return "[CStringArrayConverter]"; };
 
 private:
-    std::vector<const char*> fBuffer;
+  std::vector<const char*> fBuffer;
 };
 
 class NonConstCStringArrayConverter : public CStringArrayConverter {
 public:
-    using CStringArrayConverter::CStringArrayConverter;
-    PyObject* FromMemory(void* address) override;
-    std::string GetFailureMsg() override { return "[NonConstCStringArrayConverter]"; };
+  using CStringArrayConverter::CStringArrayConverter;
+  PyObject* FromMemory(void* address) override;
+  std::string GetFailureMsg() override {
+    return "[NonConstCStringArrayConverter]";
+  };
 };
 
 // converters for special cases
 class NullptrConverter : public Converter {
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
 };
 
 class InstanceConverter : public StrictInstancePtrConverter {
 public:
-    using StrictInstancePtrConverter::StrictInstancePtrConverter;
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void*) override;
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;
-    std::string GetFailureMsg() override { return "[InstanceConverter]"; };
+  using StrictInstancePtrConverter::StrictInstancePtrConverter;
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void*) override;
+  bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;
+  std::string GetFailureMsg() override { return "[InstanceConverter]"; };
 };
 
-class InstanceRefConverter : public Converter  {
+class InstanceRefConverter : public Converter {
 public:
-    InstanceRefConverter(cppjit::interop::TCppScope_t klass, bool isConst) :
-        fClass(klass), fIsConst(isConst) {}
+  InstanceRefConverter(cppjit::interop::TCppScope_t klass, bool isConst)
+      : fClass(klass), fIsConst(isConst) {}
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[InstanceRefConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[InstanceRefConverter]"; };
 
 protected:
-    cppjit::interop::TCppScope_t fClass;
-    bool fIsConst;
+  cppjit::interop::TCppScope_t fClass;
+  bool fIsConst;
 };
 
-class InstanceMoveConverter : public InstanceRefConverter  {
+class InstanceMoveConverter : public InstanceRefConverter {
 public:
-    InstanceMoveConverter(cppjit::interop::TCppScope_t klass) : InstanceRefConverter(klass, true) {}
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    std::string GetFailureMsg() override { return "[InstanceMoveConverter]"; };
+  InstanceMoveConverter(cppjit::interop::TCppScope_t klass)
+      : InstanceRefConverter(klass, true) {}
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  std::string GetFailureMsg() override { return "[InstanceMoveConverter]"; };
 };
 
 template <bool ISREFERENCE>
 class InstancePtrPtrConverter : public InstancePtrConverter<false> {
 public:
-    using InstancePtrConverter::InstancePtrConverter;
+  using InstancePtrConverter::InstancePtrConverter;
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    std::string GetFailureMsg() override { return "[InstancePtrPtrConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  std::string GetFailureMsg() override { return "[InstancePtrPtrConverter]"; };
 };
 
 class InstanceArrayConverter : public InstancePtrConverter<false> {
 public:
-    InstanceArrayConverter(cppjit::interop::TCppScope_t klass, cdims_t dims, bool keepControl = false) :
-            InstancePtrConverter<false>(klass, keepControl), fShape(dims) { }
-    InstanceArrayConverter(const InstanceArrayConverter&) = delete;
-    InstanceArrayConverter& operator=(const InstanceArrayConverter&) = delete;
+  InstanceArrayConverter(cppjit::interop::TCppScope_t klass, cdims_t dims,
+                         bool keepControl = false)
+      : InstancePtrConverter<false>(klass, keepControl), fShape(dims) {}
+  InstanceArrayConverter(const InstanceArrayConverter&) = delete;
+  InstanceArrayConverter& operator=(const InstanceArrayConverter&) = delete;
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    std::string GetFailureMsg() override { return "[InstanceArrayConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  std::string GetFailureMsg() override { return "[InstanceArrayConverter]"; };
 
 protected:
-    dims_t fShape;
+  dims_t fShape;
 };
 
-
-class ComplexDConverter: public InstanceConverter {
+class ComplexDConverter : public InstanceConverter {
 public:
-    ComplexDConverter(bool keepControl = false);
+  ComplexDConverter(bool keepControl = false);
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[ComplexDConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[ComplexDConverter]"; };
 
 private:
-    std::complex<double> fBuffer;
+  std::complex<double> fBuffer;
 };
 
-
-// Cling WORKAROUND -- classes for STL iterators are completely undefined in that
-// they come in a bazillion different guises, so just do whatever
+// Cling WORKAROUND -- classes for STL iterators are completely undefined in
+// that they come in a bazillion different guises, so just do whatever
 class STLIteratorConverter : public Converter {
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    std::string GetFailureMsg() override { return "[STLIteratorConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  std::string GetFailureMsg() override { return "[STLIteratorConverter]"; };
 };
 // -- END Cling WORKAROUND
 
-
 class VoidPtrRefConverter : public Converter {
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    std::string GetFailureMsg() override { return "[VoidPtrRefConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  std::string GetFailureMsg() override { return "[VoidPtrRefConverter]"; };
 };
 
 class VoidPtrPtrConverter : public Converter {
 public:
-    VoidPtrPtrConverter(cdims_t dims, const std::string &failureMsg = std::string());
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[VoidPtrPtrConverter] " + fFailureMsg; }
+  VoidPtrPtrConverter(cdims_t dims,
+                      const std::string& failureMsg = std::string());
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override {
+    return "[VoidPtrPtrConverter] " + fFailureMsg;
+  }
 
 protected:
-    dims_t fShape;
-    bool fIsFixed;
-    const std::string fFailureMsg;
+  dims_t fShape;
+  bool fIsFixed;
+  const std::string fFailureMsg;
 };
 
 CPPJIT_DECLARE_BASIC_CONVERTER(PyObject);
 
-
-#define CPPJIT_DECLARE_STRING_CONVERTER(name, strtype)                        \
-class name##Converter : public InstanceConverter {                           \
-public:                                                                      \
-    name##Converter(bool keepControl = true);                                \
-                                                                             \
-public:                                                                      \
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;      \
-    PyObject* FromMemory(void* address) override;                             \
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;            \
-    bool HasState() override { return true; }                                 \
-    std::string GetFailureMsg() override { return "[" #name "Converter]"; };  \
-protected:                                                                   \
-    strtype fBuffer;                                                         \
-}
+#define CPPJIT_DECLARE_STRING_CONVERTER(name, strtype)                         \
+  class name##Converter : public InstanceConverter {                           \
+  public:                                                                      \
+    name##Converter(bool keepControl = true);                                  \
+                                                                               \
+  public:                                                                      \
+    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;       \
+    PyObject* FromMemory(void* address) override;                              \
+    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;             \
+    bool HasState() override { return true; }                                  \
+    std::string GetFailureMsg() override { return "[" #name "Converter]"; };   \
+                                                                               \
+  protected:                                                                   \
+    strtype fBuffer;                                                           \
+  }
 
 CPPJIT_DECLARE_STRING_CONVERTER(STLString, std::string);
 CPPJIT_DECLARE_STRING_CONVERTER(STLWString, std::wstring);
@@ -395,104 +404,102 @@ CPPJIT_DECLARE_STRING_CONVERTER(STLStringView, std::string_view);
 
 class STLStringMoveConverter : public STLStringConverter {
 public:
-    using STLStringConverter::STLStringConverter;
+  using STLStringConverter::STLStringConverter;
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    std::string GetFailureMsg() override { return "[STLStringMoveConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  std::string GetFailureMsg() override { return "[STLStringMoveConverter]"; };
 };
-
 
 // function pointers
 class FunctionPointerConverter : public Converter {
 public:
-    FunctionPointerConverter(const std::string& ret, const std::string& sig) :
-        fRetType(ret), fSignature(sig) {}
+  FunctionPointerConverter(const std::string& ret, const std::string& sig)
+      : fRetType(ret), fSignature(sig) {}
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[FunctionPointerConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[FunctionPointerConverter]"; };
 
 protected:
-    std::string fRetType;
-    std::string fSignature;
-    bool fAllowCppInstance = false;
+  std::string fRetType;
+  std::string fSignature;
+  bool fAllowCppInstance = false;
 };
 
 // std::function
 class StdFunctionConverter : public FunctionPointerConverter {
 public:
-    StdFunctionConverter(Converter* cnv, const std::string& ret, const std::string& sig) :
-        FunctionPointerConverter(ret, sig), fConverter(cnv) {
-        fAllowCppInstance = true;
-    }
-    StdFunctionConverter(const StdFunctionConverter&) = delete;
-    StdFunctionConverter& operator=(const StdFunctionConverter&) = delete;
-    virtual ~StdFunctionConverter() { delete fConverter; }
+  StdFunctionConverter(Converter* cnv, const std::string& ret,
+                       const std::string& sig)
+      : FunctionPointerConverter(ret, sig), fConverter(cnv) {
+    fAllowCppInstance = true;
+  }
+  StdFunctionConverter(const StdFunctionConverter&) = delete;
+  StdFunctionConverter& operator=(const StdFunctionConverter&) = delete;
+  virtual ~StdFunctionConverter() { delete fConverter; }
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
-    std::string GetFailureMsg() override { return "[StdFunctionConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject* value, void* address, PyObject* = nullptr) override;
+  std::string GetFailureMsg() override { return "[StdFunctionConverter]"; };
 
 protected:
-    Converter* fConverter;
+  Converter* fConverter;
 };
-
 
 // smart pointer converter
 class SmartPtrConverter : public Converter {
 public:
-    SmartPtrConverter(cppjit::interop::TCppScope_t smart,
-                      cppjit::interop::TCppScope_t underlying,
-                      bool keepControl = false,
-                      bool isRef = false)
-        : fSmartPtrType(smart), fUnderlyingType(underlying),
-          fKeepControl(keepControl), fIsRef(isRef) {}
+  SmartPtrConverter(cppjit::interop::TCppScope_t smart,
+                    cppjit::interop::TCppScope_t underlying,
+                    bool keepControl = false, bool isRef = false)
+      : fSmartPtrType(smart), fUnderlyingType(underlying),
+        fKeepControl(keepControl), fIsRef(isRef) {}
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    PyObject* FromMemory(void* address) override;
-    bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[SmartPtrConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  PyObject* FromMemory(void* address) override;
+  bool ToMemory(PyObject*, void*, PyObject* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[SmartPtrConverter]"; };
 
 protected:
-    virtual bool GetAddressSpecialCase(PyObject*, void*&) { return false; }
+  virtual bool GetAddressSpecialCase(PyObject*, void*&) { return false; }
 
-    cppjit::interop::TCppScope_t  fSmartPtrType;
-    cppjit::interop::TCppScope_t  fUnderlyingType;
-    bool                fKeepControl;
-    bool                fIsRef;
+  cppjit::interop::TCppScope_t fSmartPtrType;
+  cppjit::interop::TCppScope_t fUnderlyingType;
+  bool fKeepControl;
+  bool fIsRef;
 };
-
 
 // initializer lists
 class InitializerListConverter : public InstanceConverter {
 public:
-    InitializerListConverter(cppjit::interop::TCppScope_t klass, std::string const& value_type);
-    InitializerListConverter(const InitializerListConverter&) = delete;
-    InitializerListConverter& operator=(const InitializerListConverter&) = delete;
-    virtual ~InitializerListConverter();
+  InitializerListConverter(cppjit::interop::TCppScope_t klass,
+                           std::string const& value_type);
+  InitializerListConverter(const InitializerListConverter&) = delete;
+  InitializerListConverter& operator=(const InitializerListConverter&) = delete;
+  virtual ~InitializerListConverter();
 
 public:
-    bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
-    bool HasState() override { return true; }
-    std::string GetFailureMsg() override { return "[FunctionPointerConverter]"; };
+  bool SetArg(PyObject*, Parameter&, CallContext* = nullptr) override;
+  bool HasState() override { return true; }
+  std::string GetFailureMsg() override { return "[FunctionPointerConverter]"; };
 
 protected:
-    void Clear();
+  void Clear();
 
 protected:
-    void*             fBuffer = nullptr;
-    std::vector<Converter*> fConverters;
-    std::string       fValueTypeName;
-    cppjit::interop::TCppScope_t fValueType;
-    size_t            fValueSize;
+  void* fBuffer = nullptr;
+  std::vector<Converter*> fConverters;
+  std::string fValueTypeName;
+  cppjit::interop::TCppScope_t fValueType;
+  size_t fValueSize;
 };
 
 } // unnamed namespace

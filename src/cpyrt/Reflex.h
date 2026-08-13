@@ -11,17 +11,17 @@ namespace Reflex {
 
 typedef int RequestId_t;
 
-const RequestId_t IS_NAMESPACE    =  1;
-const RequestId_t IS_AGGREGATE    =  2;
+const RequestId_t IS_NAMESPACE = 1;
+const RequestId_t IS_AGGREGATE = 2;
 
-const RequestId_t OFFSET          = 16;
-const RequestId_t RETURN_TYPE     = 17;
-const RequestId_t TYPE            = 18;
+const RequestId_t OFFSET = 16;
+const RequestId_t RETURN_TYPE = 17;
+const RequestId_t TYPE = 18;
 
 typedef int FormatId_t;
-const FormatId_t OPTIMAL          =  1;
-const FormatId_t AS_TYPE          =  2;
-const FormatId_t AS_STRING        =  3;
+const FormatId_t OPTIMAL = 1;
+const FormatId_t AS_TYPE = 2;
+const FormatId_t AS_STRING = 3;
 
 } // namespace Reflex
 

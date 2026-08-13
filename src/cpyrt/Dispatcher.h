@@ -9,7 +9,8 @@ namespace cppjit::cpyrt {
 class CPPScope;
 
 // helper that inserts dispatchers for virtual methods
-bool InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct, std::ostringstream& err);
+bool InsertDispatcher(CPPScope* klass, PyObject* bases, PyObject* dct,
+                      std::ostringstream& err);
 
 } // namespace cppjit::cpyrt
 

@@ -1,10 +1,13 @@
-import py, os, sys
-import math, time
+import math
+import os
+import time
+
 from pytest import mark, raises
-from support import setup_make, IS_LINUX_ARM, IS_VALGRIND
+from support import IS_LINUX_ARM, IS_VALGRIND
 
 try:
     import numba
+
     has_numba = True
 except ImportError:
     has_numba = False
@@ -12,21 +15,21 @@ except ImportError:
 if IS_LINUX_ARM and IS_VALGRIND:
     has_numba = False
 
+
 class TestREFLEX:
     def setup_class(cls):
-        import cppjit
-        import cppjit.reflex
+        pass
 
     def test01_instance_box_unbox(self):
         """Access to box/unbox methods"""
 
         import cppjit
 
-        assert cppjit.addressof('Instance_AsVoidPtr')
-        assert cppjit.addressof('Instance_FromVoidPtr')
+        assert cppjit.addressof("Instance_AsVoidPtr")
+        assert cppjit.addressof("Instance_FromVoidPtr")
 
         with raises(TypeError):
-            cppjit.addressof('doesnotexist')
+            cppjit.addressof("doesnotexist")
 
     def test02_method_reflection(self):
         """Method reflection tooling"""
@@ -44,13 +47,22 @@ class TestREFLEX:
 
         ns = cppjit.gbl.ReflexTest
 
-        assert ns.free1.__cpp_reflex__(r.RETURN_TYPE) == 'int'
-        assert ns.free2.__cpp_reflex__(r.RETURN_TYPE) == 'double'
+        assert ns.free1.__cpp_reflex__(r.RETURN_TYPE) == "int"
+        assert ns.free2.__cpp_reflex__(r.RETURN_TYPE) == "double"
 
-        assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE)              == ns.MyData_m1
-        assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.OPTIMAL)   == ns.MyData_m1
-        assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.AS_TYPE)   == ns.MyData_m1
-        assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.AS_STRING) == 'ReflexTest::MyData_m1'
+        assert ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE) == ns.MyData_m1
+        assert (
+            ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.OPTIMAL)
+            == ns.MyData_m1
+        )
+        assert (
+            ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.AS_TYPE)
+            == ns.MyData_m1
+        )
+        assert (
+            ns.MyData_m1.__init__.__cpp_reflex__(r.RETURN_TYPE, r.AS_STRING)
+            == "ReflexTest::MyData_m1"
+        )
 
     def test03_datamember_reflection(self):
         """Data member reflection tooling"""
@@ -68,19 +80,22 @@ class TestREFLEX:
 
         ns = cppjit.gbl.ReflexTest
 
-        assert ns.MyData_d1.__dict__['m_int'].__cpp_reflex__(r.TYPE)    == 'int'
-        assert ns.MyData_d1.__dict__['m_double'].__cpp_reflex__(r.TYPE) == 'double'
+        assert ns.MyData_d1.__dict__["m_int"].__cpp_reflex__(r.TYPE) == "int"
+        assert ns.MyData_d1.__dict__["m_double"].__cpp_reflex__(r.TYPE) == "double"
 
-        d = ns.MyData_d1(); daddr = cppjit.addressof(d)
-        assert ns.MyData_d1.__dict__['m_int'].__cpp_reflex__(r.OFFSET)    == 0
-        assert ns.MyData_d1.__dict__['m_double'].__cpp_reflex__(r.OFFSET) == cppjit.addressof(d, 'm_double') - daddr
+        d = ns.MyData_d1()
+        daddr = cppjit.addressof(d)
+        assert ns.MyData_d1.__dict__["m_int"].__cpp_reflex__(r.OFFSET) == 0
+        assert (
+            ns.MyData_d1.__dict__["m_double"].__cpp_reflex__(r.OFFSET)
+            == cppjit.addressof(d, "m_double") - daddr
+        )
 
 
 @mark.skipif(has_numba == False, reason="numba not found")
 class TestNUMBA:
     def setup_class(cls):
-        import cppjit
-        import cppjit.numba_ext
+        pass
 
     def compare(self, go_slow, go_fast, N, *args):
         t0 = time.time()
@@ -132,7 +147,7 @@ class TestNUMBA:
         }""")
 
         def add42(t):
-            return type(t)(t+42)
+            return type(t)(t + 42)
 
         def go_slow(a):
             trace = 0.0
@@ -178,11 +193,11 @@ class TestNUMBA:
                 trace += d.fField1 + d.fField2
             return a + trace
 
-      # note: need a sizable array to outperform given the unboxing overhead
+        # note: need a sizable array to outperform given the unboxing overhead
         x = np.arange(10000, dtype=np.float64).reshape(100, 100)
         d = cppjit.gbl.MyNumbaData03(42, 27)
 
-        assert((go_fast(x, d) == go_slow(x, d)).all())
+        assert (go_fast(x, d) == go_slow(x, d)).all()
         assert self.compare(go_slow, go_fast, 10000, x, d)
 
     def test04_proxy_argument_for_method(self):
@@ -211,13 +226,13 @@ class TestNUMBA:
                 trace += d.get_field()
             return a + trace
 
-      # note: need a sizable array to outperform given the unboxing overhead
+        # note: need a sizable array to outperform given the unboxing overhead
         x = np.arange(10000, dtype=np.float64).reshape(100, 100)
         d = cppjit.gbl.MyNumbaData04(42)
 
-        assert((go_fast(x, d) == go_slow(x, d)).all())
+        assert (go_fast(x, d) == go_slow(x, d)).all()
         assert self.compare(go_slow, go_fast, 10000, x, d)
-    
+
     def test05_multiple_arguments_function(self):
         """Numba-JITing of functions with multiple arguments"""
 
@@ -230,6 +245,7 @@ class TestNUMBA:
                    return d;
                    }
                """)
+
         @numba.njit()
         def loop_add(x):
             sum = 0
@@ -249,6 +265,7 @@ class TestNUMBA:
 
         import cppjit
         import numpy as np
+
         cppjit.cppdef("""
                 namespace NumbaSupportExample {
                 template<typename T1>
@@ -289,18 +306,28 @@ class TestNUMBA:
 
         types = (
             # 'int8_t', 'uint8_t',     # TODO b/c check using return type fails
-            'short', 'unsigned short', 'int', 'unsigned int',
-            'int32_t', 'uint32_t', 'int64_t', 'uint64_t',
-            'long', 'unsigned long', 'long long', 'unsigned long long',
-            'float', 'double',
+            "short",
+            "unsigned short",
+            "int",
+            "unsigned int",
+            "int32_t",
+            "uint32_t",
+            "int64_t",
+            "uint64_t",
+            "long",
+            "unsigned long",
+            "long long",
+            "unsigned long long",
+            "float",
+            "double",
         )
 
         nl = cppjit.gbl.std.numeric_limits
         for i, ntype in enumerate(types):
             cppjit.cppdef(code % (i, i, ntype, ntype))
-            for m in ('min', 'max'):
+            for m in ("min", "max"):
                 val = getattr(nl[ntype], m)()
-                assert access_field(getattr(ns, 'M%d'%i)(val)) == val
+                assert access_field(getattr(ns, "M%d" % i)(val)) == val
 
     def test08_object_returns(self):
         """Numba-JITing of a function that returns an object"""
@@ -332,14 +359,15 @@ class TestNUMBA:
 
         x = np.arange(100, dtype=np.float64).reshape(10, 10)
 
-        assert((go_fast(x) == go_slow(x)).all())
+        assert (go_fast(x) == go_slow(x)).all()
         assert self.compare(go_slow, go_fast, 100000, x)
-    
+
     def test09_non_typed_templates(self):
         """Numba-JITing of a free template function that recieves multiple template args with non types"""
 
         import cppjit
         import numpy as np
+
         cppjit.cppdef("""
                 namespace NumbaSupportExample {
                 template<typename T1, typename T2>
@@ -362,8 +390,8 @@ class TestNUMBA:
 
     def test10_returning_a_reference(self):
         import cppjit
-        import numpy as np
         import numba
+        import numpy as np
 
         cppjit.cppdef("""
         int64_t& ref_add(int64_t x, int64_t y) {
@@ -382,7 +410,6 @@ class TestNUMBA:
                 i = i + 1
             return k
 
-
         @numba.njit()
         def fast_add(X):
             res = []
@@ -398,9 +425,10 @@ class TestNUMBA:
 
     def test11_ptr_ref_support(self):
         """Numba-JITing of a increment method belonging to a class, and also swaps the pointers and reflects the change on the python ctypes variables"""
-        import cppjit
         import ctypes
         import random
+
+        import cppjit
 
         cppjit.cppdef("""
            namespace RefTest {
@@ -429,8 +457,8 @@ class TestNUMBA:
            """)
 
         ns = cppjit.gbl.RefTest
-        assert ns.Box.__dict__['a'].__cpp_reflex__(cppjit.reflex.TYPE) == 'long'
-        assert ns.Box.__dict__['b'].__cpp_reflex__(cppjit.reflex.TYPE) == 'long *'
+        assert ns.Box.__dict__["a"].__cpp_reflex__(cppjit.reflex.TYPE) == "long"
+        assert ns.Box.__dict__["b"].__cpp_reflex__(cppjit.reflex.TYPE) == "long *"
 
         @numba.njit()
         def inc_b(d, k):
@@ -462,11 +490,13 @@ class TestNUMBA:
         assert b.value == z + k
         assert c.value == y + k
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crash in llvmlite on Linux ARM")
+    @mark.xfail(
+        run=False, condition=IS_LINUX_ARM, reason="Crash in llvmlite on Linux ARM"
+    )
     def test12_std_vector_pass_by_ref(self):
-        """Numba-JITing of a method that performs scalar addition to a std::vector initialised through pointers """
+        """Numba-JITing of a method that performs scalar addition to a std::vector initialised through pointers"""
+
         import cppjit
-        import ctypes
         import numba
         import numpy as np
 
@@ -505,6 +535,7 @@ class TestNUMBA:
                    }
            """)
         ns = cppjit.gbl.RefTest
+
         @numba.njit()
         def add_vec_fast(d):
             for i in range(10000):
@@ -527,7 +558,10 @@ class TestNUMBA:
                 x = np.square(x)
             return x
 
-        assert ns.BoxVector.__dict__['a'].__cpp_reflex__(cppjit.reflex.TYPE) == 'std::vector<long> *'
+        assert (
+            ns.BoxVector.__dict__["a"].__cpp_reflex__(cppjit.reflex.TYPE)
+            == "std::vector<long> *"
+        )
 
         add_vec_fast(ns.BoxVector())
         square_vec_fast(ns.BoxVector())
@@ -536,8 +570,8 @@ class TestNUMBA:
         a = np.random.randint(1, 100, size=10000, dtype=np.int64)
         b = np.random.randint(1, 4, size=10, dtype=np.int64)
 
-        x = cppjit.gbl.std.vector['long'](a.flatten())
-        y = cppjit.gbl.std.vector['long'](b.flatten())
+        x = cppjit.gbl.std.vector["long"](a.flatten())
+        y = cppjit.gbl.std.vector["long"](b.flatten())
 
         t0 = time.time()
         add_vec_fast(ns.BoxVector(x))
@@ -560,8 +594,8 @@ class TestNUMBA:
 
     def test13_std_vector_dot_product(self):
         """Numba-JITing of a dot_product method of a class that stores pointers to std::vectors on the python side"""
-        import cppjit, cppjit.ll
-        import ctypes
+        import cppjit
+        import cppjit.ll
         import cppjit.numba_ext
         import numba
         import numpy as np
@@ -606,6 +640,7 @@ class TestNUMBA:
             for i in range(10000):
                 res += d.self_dot_product()
             return res
+
         def np_dot_product(x, y):
             res = 0
             for i in range(10000):
@@ -623,8 +658,8 @@ class TestNUMBA:
         # for i in a:
         #     vec_list.append([vector['long'](i[0]), vector['long'](i[1])])
 
-        x = cppjit.gbl.std.vector['long'](a.flatten())
-        y = cppjit.gbl.std.vector['long'](b.flatten())
+        x = cppjit.gbl.std.vector["long"](a.flatten())
+        y = cppjit.gbl.std.vector["long"](b.flatten())
         d = ns.DotVector(x, y)
         dot_product_fast(d)
         res = 0
@@ -638,42 +673,44 @@ class TestNUMBA:
         res = np_dot_product(x, y)
         time_np = time.time() - t0
 
-        assert (njit_res == res)
+        assert njit_res == res
         # assert (time_njit < time_np)
 
     @mark.skip(reason="Fails at ImplCLassType Boxing call in lowering")
     def test14_eigen_numba(self):
         """Numba-JITing of a function that uses a cppjit declared Eigen Vector"""
 
-        import numpy as np
-        import time
-        import cppjit, numba, warnings
-        import cppjit.numba_ext
-        import os
+        import warnings
 
-        inc_paths = [os.path.join(os.path.sep, 'usr', 'include'),
-                     os.path.join(os.path.sep, 'usr', 'local', 'include')]
+        import cppjit
+        import cppjit.numba_ext
+        import numba
+
+        inc_paths = [
+            os.path.join(os.path.sep, "usr", "include"),
+            os.path.join(os.path.sep, "usr", "local", "include"),
+        ]
 
         eigen_path = None
         for p in inc_paths:
-            p = os.path.join(p, 'eigen3')
+            p = os.path.join(p, "eigen3")
             if os.path.exists(p):
                 eigen_path = p
 
         cppjit.add_include_path(eigen_path)
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            cppjit.include('Eigen/Dense')
+            warnings.simplefilter("ignore")
+            cppjit.include("Eigen/Dense")
 
         # Define the templated function that takes Eigen objects
-        cppjit.cppdef('''
+        cppjit.cppdef("""
         template<typename T>
         T multiply_scalar(T value, int64_t scalar) {
             return value * scalar;
         }
-        ''')
+        """)
 
-        cppjit.cppdef('''
+        cppjit.cppdef("""
         #include <iostream>
         #include <vector>
         namespace EigenFake {
@@ -700,7 +737,7 @@ class TestNUMBA:
             }
         };
         }
-        ''')
+        """)
 
         @numba.jit(nopython=True)
         def mul_njit(m, x):
@@ -716,14 +753,13 @@ class TestNUMBA:
         vector[2] = 3.0
         matrix2 = cppjit.gbl.multiply_scalar(vector, 5)
         result = mul_njit(vector, 5)
-        assert(result == matrix2)
+        assert result == matrix2
 
 
 @mark.skipif(has_numba == False, reason="numba not found")
 class TestNUMBA_DOC:
     def setup_class(cls):
-        import cppjit
-        import cppjit.numba_ext
+        pass
 
     def test01_templated_freefunction(self):
         """Numba support documentation example: free templated function"""
@@ -794,7 +830,7 @@ class TestNUMBA_DOC:
         def tsdm(a, d):
             total = type(a[0])(0)
             for i in range(len(a)):
-                total += a[i] +  d.get_field1() + d.get_field2()
+                total += a[i] + d.get_field1() + d.get_field2()
             return total
 
         assert tsdm(a, d) == 155

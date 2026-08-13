@@ -1,9 +1,15 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import setup_make, pylong, maxvalue, IS_WINDOWS, IS_MAC, IS_CLANG_REPL, IS_CLING
+import py
+from pytest import raises, skip
+from support import (
+    IS_WINDOWS,
+    maxvalue,
+    pylong,
+    setup_make,
+)
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/operatorsDict"))
+
 
 def setup_module(mod):
     setup_make("operators")
@@ -13,10 +19,12 @@ class TestOPERATORS:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.operators = cppjit.load_reflection_info(cls.test_dct)
 
     def teardown_method(self, meth):
         import gc
+
         gc.collect()
 
     def test01_math_operators(self):
@@ -27,19 +35,19 @@ class TestOPERATORS:
         number = cppjit.gbl.number
 
         assert (number(20) + number(10)) == number(30)
-        assert (number(20) + 10        ) == number(30)
+        assert (number(20) + 10) == number(30)
         assert (number(20) - number(10)) == number(10)
-        assert (number(20) - 10        ) == number(10)
+        assert (number(20) - 10) == number(10)
         assert (number(20) / number(10)) == number(2)
-        assert (number(20) / 10        ) == number(2)
+        assert (number(20) / 10) == number(2)
         assert (number(20) * number(10)) == number(200)
-        assert (number(20) * 10        ) == number(200)
-        assert (number(20) % 10        ) == number(0)
+        assert (number(20) * 10) == number(200)
+        assert (number(20) % 10) == number(0)
         assert (number(20) % number(10)) == number(0)
-        assert (number(5)  & number(14)) == number(4)
-        assert (number(5)  | number(14)) == number(15)
-        assert (number(5)  ^ number(14)) == number(11)
-        assert (number(5)  << 2) == number(20)
+        assert (number(5) & number(14)) == number(4)
+        assert (number(5) | number(14)) == number(15)
+        assert (number(5) ^ number(14)) == number(11)
+        assert (number(5) << 2) == number(20)
         assert (number(20) >> 2) == number(5)
 
     def test02_unary_math_operators(self):
@@ -49,14 +57,14 @@ class TestOPERATORS:
 
         number = cppjit.gbl.number
 
-        n  = number(20)
+        n = number(20)
         n += number(10)
         n -= number(10)
         n *= number(10)
         n /= number(2)
         assert n == number(100)
 
-        nn = -n;
+        nn = -n
         assert nn == number(-100)
 
     def test03_comparison_operators(self):
@@ -66,8 +74,8 @@ class TestOPERATORS:
 
         number = cppjit.gbl.number
 
-        assert (number(20) >  number(10)) == True
-        assert (number(20) <  number(10)) == False
+        assert (number(20) > number(10)) == True
+        assert (number(20) < number(10)) == False
         assert (number(20) >= number(20)) == True
         assert (number(20) <= number(10)) == False
         assert (number(20) != number(10)) == True
@@ -94,57 +102,63 @@ class TestOPERATORS:
         gbl = cppjit.gbl
 
         o = gbl.operator_char_star()
-        assert o.m_str == 'operator_char_star'
-        assert str(o)  == 'operator_char_star'
+        assert o.m_str == "operator_char_star"
+        assert str(o) == "operator_char_star"
 
         o = gbl.operator_const_char_star()
-        assert o.m_str == 'operator_const_char_star'
-        assert str(o)  == 'operator_const_char_star'
+        assert o.m_str == "operator_const_char_star"
+        assert str(o) == "operator_const_char_star"
 
-        o = gbl.operator_int(); o.m_int = -13
+        o = gbl.operator_int()
+        o.m_int = -13
         assert o.m_int == -13
-        assert int(o)  == -13
+        assert int(o) == -13
 
-        o = gbl.operator_long(); o.m_long = 42
-        assert o.m_long  == 42
+        o = gbl.operator_long()
+        o.m_long = 42
+        assert o.m_long == 42
         assert pylong(o) == 42
 
-        o = gbl.operator_double(); o.m_double = 3.1415
+        o = gbl.operator_double()
+        o.m_double = 3.1415
         assert o.m_double == 3.1415
-        assert float(o)   == 3.1415
+        assert float(o) == 3.1415
 
     def test06_approximate_types(self):
         """Test converter operators of approximate types"""
 
-        import cppjit, sys
+        import cppjit
 
         gbl = cppjit.gbl
 
-        o = gbl.operator_short(); o.m_short = 256
+        o = gbl.operator_short()
+        o.m_short = 256
         assert o.m_short == 256
-        assert int(o)    == 256
+        assert int(o) == 256
 
-        o = gbl.operator_unsigned_int(); o.m_uint = 2147483647 + 32
-        assert o.m_uint  == 2147483647 + 32
+        o = gbl.operator_unsigned_int()
+        o.m_uint = 2147483647 + 32
+        assert o.m_uint == 2147483647 + 32
         assert pylong(o) == 2147483647 + 32
 
-        o = gbl.operator_unsigned_long();
+        o = gbl.operator_unsigned_long()
         o.m_ulong = maxvalue + 128
         assert o.m_ulong == maxvalue + 128
         assert pylong(o) == maxvalue + 128
 
-        o = gbl.operator_float(); o.m_float = 3.14
-        assert round(o.m_float - 3.14, 5) == 0.
-        assert round(float(o) - 3.14, 5)  == 0.
+        o = gbl.operator_float()
+        o.m_float = 3.14
+        assert round(o.m_float - 3.14, 5) == 0.0
+        assert round(float(o) - 3.14, 5) == 0.0
 
     def test07_virtual_operator_eq(self):
         """Test use of virtual bool operator=="""
 
         import cppjit
 
-        b1  = cppjit.gbl.v_opeq_base(1)
+        b1 = cppjit.gbl.v_opeq_base(1)
         b1a = cppjit.gbl.v_opeq_base(1)
-        b2  = cppjit.gbl.v_opeq_base(2)
+        b2 = cppjit.gbl.v_opeq_base(2)
         b2a = cppjit.gbl.v_opeq_base(2)
 
         assert b1 == b1
@@ -154,9 +168,9 @@ class TestOPERATORS:
         assert b2 == b2
         assert b2 == b2a
 
-        d1  = cppjit.gbl.v_opeq_derived(1)
+        d1 = cppjit.gbl.v_opeq_derived(1)
         d1a = cppjit.gbl.v_opeq_derived(1)
-        d2  = cppjit.gbl.v_opeq_derived(2)
+        d2 = cppjit.gbl.v_opeq_derived(2)
         d2a = cppjit.gbl.v_opeq_derived(2)
 
         # derived operator== returns opposite
@@ -183,53 +197,57 @@ class TestOPERATORS:
 
         m = cppjit.gbl.YAMatrix1()
         assert m.m_val == 42
-        assert m[1,2]  == 42
-        assert m(1,2)  == 42
-        m[1,2] = 27
+        assert m[1, 2] == 42
+        assert m(1, 2) == 42
+        m[1, 2] = 27
         assert m.m_val == 27
-        assert m[1,2]  == 27
-        assert m(1,2)  == 27
+        assert m[1, 2] == 27
+        assert m(1, 2) == 27
 
         m = cppjit.gbl.YAMatrix2()
         assert m.m_val == 42
-        assert m[1]    == 42
+        assert m[1] == 42
         m[1] = 27
         assert m.m_val == 27
-        assert m[1]    == 27
+        assert m[1] == 27
 
-        for cls in [cppjit.gbl.YAMatrix3, cppjit.gbl.YAMatrix4,
-                    cppjit.gbl.YAMatrix5, cppjit.gbl.YAMatrix6,
-                    cppjit.gbl.YAMatrix7]:
+        for cls in [
+            cppjit.gbl.YAMatrix3,
+            cppjit.gbl.YAMatrix4,
+            cppjit.gbl.YAMatrix5,
+            cppjit.gbl.YAMatrix6,
+            cppjit.gbl.YAMatrix7,
+        ]:
             m = cls()
             assert m.m_val == 42
-            assert m[1,2]  == 42
-            assert m[1]    == 42
-            assert m(1,2)  == 42
+            assert m[1, 2] == 42
+            assert m[1] == 42
+            assert m(1, 2) == 42
 
-            m[1,2]  = 27
+            m[1, 2] = 27
             assert m.m_val == 27
-            assert m[1,2]  == 27
-            assert m[1]    == 27
-            assert m(1,2)  == 27
+            assert m[1, 2] == 27
+            assert m[1] == 27
+            assert m(1, 2) == 27
 
-            m[1]    = 83
+            m[1] = 83
             assert m.m_val == 83
-            assert m[1,2]  == 83
-            assert m[1]    == 83
-            assert m(1,2)  == 83
+            assert m[1, 2] == 83
+            assert m[1] == 83
+            assert m(1, 2) == 83
 
             m.m_val = 74
             assert m.m_val == 74
-            assert m[1,2]  == 74
-            assert m[1]    == 74
-            assert m(1,2)  == 74
+            assert m[1, 2] == 74
+            assert m[1] == 74
+            assert m(1, 2) == 74
 
     def test09_templated_operator(self):
         """Templated operator<()"""
 
         from cppjit.gbl import TOIClass
 
-        assert (TOIClass() < 1)
+        assert TOIClass() < 1
 
     def test10_r_non_associative(self):
         """Use of radd/rmul with non-associative types"""
@@ -238,29 +256,29 @@ class TestOPERATORS:
 
         # Note: calls are repeated to test caching, if any
 
-        a = cppjit.gbl.AssocADD(5.)
-        assert 5+a == 10.
-        assert a+5 == 10.
-        assert 5+a == 10.
-        assert a+5 == 10.
+        a = cppjit.gbl.AssocADD(5.0)
+        assert 5 + a == 10.0
+        assert a + 5 == 10.0
+        assert 5 + a == 10.0
+        assert a + 5 == 10.0
 
-        a = cppjit.gbl.NonAssocRADD(5.)
-        assert 5+a == 10.
-        assert 5+a == 10.
+        a = cppjit.gbl.NonAssocRADD(5.0)
+        assert 5 + a == 10.0
+        assert 5 + a == 10.0
         with raises(NotImplementedError):
-            v = a+5
+            v = a + 5
 
-        a = cppjit.gbl.AssocMUL(5.)
-        assert 2*a == 10.
-        assert a*2 == 10.
-        assert 2*a == 10.
-        assert a*2 == 10.
+        a = cppjit.gbl.AssocMUL(5.0)
+        assert 2 * a == 10.0
+        assert a * 2 == 10.0
+        assert 2 * a == 10.0
+        assert a * 2 == 10.0
 
-        m = cppjit.gbl.NonAssocRMUL(5.)
-        assert 2*m == 10.
-        assert 2*m == 10.
+        m = cppjit.gbl.NonAssocRMUL(5.0)
+        assert 2 * m == 10.0
+        assert 2 * m == 10.0
         with raises(NotImplementedError):
-            v = m*2
+            v = m * 2
 
     def test11_overloaded_operators(self):
         """Overloaded operator*/+-"""
@@ -270,29 +288,29 @@ class TestOPERATORS:
         v = cppjit.gbl.MultiLookup.Vector2(1, 2)
         w = cppjit.gbl.MultiLookup.Vector2(3, 4)
 
-        u = v*2
-        assert u.x == 2.
-        assert u.y == 4.
+        u = v * 2
+        assert u.x == 2.0
+        assert u.y == 4.0
 
-        assert v*w == 1*3 + 2*4
+        assert v * w == 1 * 3 + 2 * 4
 
-        u = v/2
+        u = v / 2
         assert u.x == 0.5
         assert u.y == 1.0
 
-        assert round(v/w - (1./3. + 2./4.), 8) == 0.
+        assert round(v / w - (1.0 / 3.0 + 2.0 / 4.0), 8) == 0.0
 
-        u = v+2
-        assert u.x == 3.
-        assert u.y == 4.
+        u = v + 2
+        assert u.x == 3.0
+        assert u.y == 4.0
 
-        assert v+w == 1+3 + 2+4
+        assert v + w == 1 + 3 + 2 + 4
 
-        u = v-2
-        assert u.x == -1.
-        assert u.y ==  0.
+        u = v - 2
+        assert u.x == -1.0
+        assert u.y == 0.0
 
-        assert v-w == 1-3 + 2-4
+        assert v - w == 1 - 3 + 2 - 4
 
     def test12_unary_operators(self):
         """Unary operator-+~"""
@@ -303,8 +321,8 @@ class TestOPERATORS:
             n = cls(42)
 
             assert (-n).i == -42
-            assert (+n).i ==  42
-            #assert (~n).i == ~42
+            assert (+n).i == 42
+            # assert (~n).i == ~42
 
     def test13_comma_operator(self):
         """Comma operator"""
@@ -344,9 +362,9 @@ class TestOPERATORS:
 
         from cppjit.gbl import std
 
-        x = std.vector[int]([1,2,3])
+        x = std.vector[int]([1, 2, 3])
         assert (x.end() - 1).__deref__() == 3
-        assert std.max_element(x.begin(), x.end())-x.begin() == 2
+        assert std.max_element(x.begin(), x.end()) - x.begin() == 2
         assert (x.end() - 3).__deref__() == 1
 
     def test16_global_ordered_operators(self):
@@ -373,16 +391,16 @@ class TestOPERATORS:
 
         ns = cppjit.gbl.FriendOperator
 
-        assert     ns.ALt(4) <  ns.ALt(5)
-        assert not ns.ALt(5) <  ns.ALt(4)
+        assert ns.ALt(4) < ns.ALt(5)
+        assert not ns.ALt(5) < ns.ALt(4)
 
-        assert     ns.ALe(4) <= ns.ALe(5)
+        assert ns.ALe(4) <= ns.ALe(5)
         assert not ns.ALe(5) <= ns.ALe(4)
 
-        assert     ns.AGt(5) >  ns.AGt(4)
-        assert not ns.AGt(4) >  ns.AGt(5)
+        assert ns.AGt(5) > ns.AGt(4)
+        assert not ns.AGt(4) > ns.AGt(5)
 
-        assert     ns.AGe(5) >= ns.AGe(4)
+        assert ns.AGe(5) >= ns.AGe(4)
         assert not ns.AGe(4) >= ns.AGe(5)
 
     def test17_arrow_operator_recursion(self):

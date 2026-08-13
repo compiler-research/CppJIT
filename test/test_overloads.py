@@ -1,9 +1,10 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import setup_make, ispypy, IS_WINDOWS, IS_MAC, IS_MAC_ARM
+import py
+from pytest import mark, raises, skip
+from support import IS_MAC, IS_MAC_ARM, IS_WINDOWS, ispypy, setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/overloadsDict"))
+
 
 def setup_module(mod):
     setup_make("overloads")
@@ -13,12 +14,14 @@ class TestOVERLOADS:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.overloads = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_class_based_overloads(self):
         """Test functions overloaded on different C++ clases"""
 
         import cppjit
+
         a_overload = cppjit.gbl.a_overload
         b_overload = cppjit.gbl.b_overload
         c_overload = cppjit.gbl.c_overload
@@ -32,16 +35,17 @@ class TestOVERLOADS:
         assert d_overload().get_int(a_overload()) == 42
         assert d_overload().get_int(b_overload()) == 13
 
-        assert c_overload().get_int(ns_a_overload.a_overload()) ==  88
+        assert c_overload().get_int(ns_a_overload.a_overload()) == 88
         assert c_overload().get_int(ns_b_overload.a_overload()) == -33
 
-        assert d_overload().get_int(ns_a_overload.a_overload()) ==  88
+        assert d_overload().get_int(ns_a_overload.a_overload()) == 88
         assert d_overload().get_int(ns_b_overload.a_overload()) == -33
 
     def test02_class_based_overloads_explicit_resolution(self):
         """Test explicitly resolved function overloads"""
 
         import cppjit
+
         a_overload = cppjit.gbl.a_overload
         b_overload = cppjit.gbl.b_overload
         c_overload = cppjit.gbl.c_overload
@@ -50,21 +54,21 @@ class TestOVERLOADS:
         ns_a_overload = cppjit.gbl.ns_a_overload
 
         c = c_overload()
-        raises(TypeError, c.__dispatch__, 'get_int', 12)
-        raises(LookupError, c.__dispatch__, 'get_int', 'does_not_exist')
-        assert c.__dispatch__('get_int', 'a_overload*')(a_overload())             == 42
-        assert c_overload.get_int.__overload__('a_overload*')(c, a_overload())    == 42
-        assert c.__dispatch__('get_int', 'b_overload*')(b_overload())             == 13
-        assert c_overload.get_int.__overload__('b_overload*')(c, b_overload())    == 13
+        raises(TypeError, c.__dispatch__, "get_int", 12)
+        raises(LookupError, c.__dispatch__, "get_int", "does_not_exist")
+        assert c.__dispatch__("get_int", "a_overload*")(a_overload()) == 42
+        assert c_overload.get_int.__overload__("a_overload*")(c, a_overload()) == 42
+        assert c.__dispatch__("get_int", "b_overload*")(b_overload()) == 13
+        assert c_overload.get_int.__overload__("b_overload*")(c, b_overload()) == 13
 
-        assert c_overload().__dispatch__('get_int', 'a_overload*')(a_overload())  == 42
+        assert c_overload().__dispatch__("get_int", "a_overload*")(a_overload()) == 42
         # TODO: #assert c_overload.__dispatch__('get_int', 'b_overload*')(c, b_overload()) == 13
 
         d = d_overload()
-        assert d.__dispatch__('get_int', 'a_overload*')(a_overload())             == 42
-        assert d_overload.get_int.__overload__('a_overload*')(d, a_overload())    == 42
-        assert d.__dispatch__('get_int', 'b_overload*')(b_overload())             == 13
-        assert d_overload.get_int.__overload__('b_overload*')(d, b_overload())    == 13
+        assert d.__dispatch__("get_int", "a_overload*")(a_overload()) == 42
+        assert d_overload.get_int.__overload__("a_overload*")(d, a_overload()) == 42
+        assert d.__dispatch__("get_int", "b_overload*")(b_overload()) == 13
+        assert d_overload.get_int.__overload__("b_overload*")(d, b_overload()) == 13
 
         nb = ns_a_overload.b_overload()
         raises(TypeError, nb.f, c_overload())
@@ -74,6 +78,7 @@ class TestOVERLOADS:
         """Test functions overloaded on void* and non-existing classes"""
 
         import cppjit
+
         more_overloads = cppjit.gbl.more_overloads
         aa_ol = cppjit.gbl.aa_ol
         bb_ol = cppjit.gbl.bb_ol
@@ -82,23 +87,24 @@ class TestOVERLOADS:
 
         assert more_overloads().call(aa_ol()) == "aa_ol"
         bb = cppjit.gbl.get_bb_ol()
-        assert more_overloads().call(bb     ) == "bb_ol"
+        assert more_overloads().call(bb) == "bb_ol"
         assert more_overloads().call(cc_ol()) == "cc_ol"
         dd = cppjit.bind_object(cppjit.nullptr, dd_ol)
         with raises(TypeError):
             more_overloads().call(dd)
         dd = cppjit.gbl.get_dd_ol()
-        assert more_overloads().call(dd     ) == "dd_ol"
+        assert more_overloads().call(dd) == "dd_ol"
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test04_fully_fragile_overloads(self):
         """Test that unknown* is preferred over unknown&"""
 
         import cppjit
+
         more_overloads2 = cppjit.gbl.more_overloads2
 
         bb = cppjit.bind_object(cppjit.nullptr, cppjit.gbl.bb_ol)
-        assert more_overloads2().call(bb)    == "bb_olptr"
+        assert more_overloads2().call(bb) == "bb_olptr"
 
         dd = cppjit.bind_object(cppjit.nullptr, cppjit.gbl.dd_ol)
         assert more_overloads2().call(dd, 1) == "dd_olptr"
@@ -107,16 +113,17 @@ class TestOVERLOADS:
         """Test functions overloaded on different arrays"""
 
         import cppjit
+
         c_overload = cppjit.gbl.c_overload
         d_overload = cppjit.gbl.d_overload
 
         from array import array
 
-        ai = array('i', [525252])
+        ai = array("i", [525252])
         assert c_overload().get_int(ai) == 525252
         assert d_overload().get_int(ai) == 525252
 
-        ah = array('h', [25])
+        ah = array("h", [25])
         assert c_overload().get_int(ah) == 25
         assert d_overload().get_int(ah) == 25
 
@@ -125,23 +132,27 @@ class TestOVERLOADS:
         """Test overloads on int/doubles"""
 
         import cppjit
+
         more_overloads = cppjit.gbl.more_overloads
 
-        assert more_overloads().call(1)   == "int"
-        assert more_overloads().call(1.)  == "double"
-        assert more_overloads().call1(1)  == "int"
-        assert more_overloads().call1(1.) == "double"
+        assert more_overloads().call(1) == "int"
+        assert more_overloads().call(1.0) == "double"
+        assert more_overloads().call1(1) == "int"
+        assert more_overloads().call1(1.0) == "double"
 
     def test07_mean_overloads(self):
         """Adapted test for array overloading"""
 
-        import cppjit, array
+        import array
+
+        import cppjit
+
         cmean = cppjit.gbl.calc_mean
 
         numbers = [8, 2, 4, 2, 4, 2, 4, 4, 1, 5, 6, 3, 7]
         mean, median = 4.0, 4.0
 
-        for l in ['f', 'd', 'i', 'h', 'l']:
+        for l in ["f", "d", "i", "h", "l"]:
             a = array.array(l, numbers)
             assert round(cmean(len(a), a) - mean, 8) == 0
 
@@ -153,18 +164,18 @@ class TestOVERLOADS:
 
         m = cppjit.gbl.more_overloads3()
 
-        assert m.slice.__overload__(':any:', True)(0)  == 'const'
-        assert m.slice.__overload__(':any:', False)(0) == 'non-const'
+        assert m.slice.__overload__(":any:", True)(0) == "const"
+        assert m.slice.__overload__(":any:", False)(0) == "non-const"
 
-        allmeths = cppjit.gbl.more_overloads3.slice.__overload__(':any:')
-        cppjit.gbl.more_overloads3.slice        = allmeths.__overload__(':any:', False)
-        cppjit.gbl.more_overloads3.slice_const =  allmeths.__overload__(':any:', True)
+        allmeths = cppjit.gbl.more_overloads3.slice.__overload__(":any:")
+        cppjit.gbl.more_overloads3.slice = allmeths.__overload__(":any:", False)
+        cppjit.gbl.more_overloads3.slice_const = allmeths.__overload__(":any:", True)
         del allmeths
 
-        assert m.slice(0)          == 'non-const'
-        assert m,slice(0, 0)       == 'non-const'
-        assert m.slice_const(0)    ==     'const'
-        assert m,slice_const(0, 0) ==     'const'
+        assert m.slice(0) == "non-const"
+        assert m, slice(0, 0) == "non-const"
+        assert m.slice_const(0) == "const"
+        assert m, slice_const(0, 0) == "const"  # noqa: F821
 
     def test09_bool_int_overloads(self):
         """Check bool/int overloaded calls"""
@@ -173,29 +184,28 @@ class TestOVERLOADS:
 
         cpp = cppjit.gbl
 
-        cppjit.cppdef("namespace BoolInt1 { int  fff(int i)  { return i; } }");
+        cppjit.cppdef("namespace BoolInt1 { int  fff(int i)  { return i; } }")
         cppjit.cppdef("namespace BoolInt1 { bool fff(bool i) { return i; } }")
 
         assert type(cpp.BoolInt1.fff(0)) == int
         assert type(cpp.BoolInt1.fff(1)) == int
         assert type(cpp.BoolInt1.fff(2)) == int
 
-        assert type(cpp.BoolInt1.fff(True))  == bool
+        assert type(cpp.BoolInt1.fff(True)) == bool
         assert type(cpp.BoolInt1.fff(False)) == bool
 
-        cppjit.cppdef("namespace BoolInt2 { int  fff(int i)  { return i; } }");
+        cppjit.cppdef("namespace BoolInt2 { int  fff(int i)  { return i; } }")
         cppjit.cppdef("namespace BoolInt2 { bool fff(bool i) { return i; } }")
 
-        assert type(cpp.BoolInt2.fff(True))  == bool
+        assert type(cpp.BoolInt2.fff(True)) == bool
         assert type(cpp.BoolInt2.fff(False)) == bool
 
         assert type(cpp.BoolInt2.fff(0)) == int
         assert type(cpp.BoolInt2.fff(1)) == int
         assert type(cpp.BoolInt2.fff(2)) == int
 
-        cppjit.cppdef("namespace BoolInt3 { int  fff(int i)  { return i; } }");
-
-        assert type(cpp.BoolInt3.fff(True))  == int
+        cppjit.cppdef("namespace BoolInt3 { int  fff(int i)  { return i; } }")
+        assert type(cpp.BoolInt3.fff(True)) == int
         assert type(cpp.BoolInt3.fff(False)) == int
 
         cppjit.cppdef("namespace BoolInt4 { bool fff(bool i) { return i; } }")
@@ -210,7 +220,7 @@ class TestOVERLOADS:
         """Prioritize reporting C++ exceptions from callee"""
 
         if ispypy or IS_WINDOWS:
-            skip('throwing exceptions from the JIT terminates the process')
+            skip("throwing exceptions from the JIT terminates the process")
 
         import cppjit
 
@@ -315,7 +325,7 @@ class TestOVERLOADS:
         result_instance = d.StaticMethod()
 
         assert result_instance == result_direct
-    
+
     def test13_disallow_functor_to_function_pointer(self):
         """Make sure we're no allowing to convert C++ functors to function
         pointers, extending the C++ language in an unnatural way that can lead
@@ -353,11 +363,13 @@ class TestOVERLOADS:
         """)
 
         functor = cppjit.gbl.Test14Functor()
-        assert cppjit.gbl.test14_foo(functor) == 1 # should resolve to foo(T fcn)
+        assert cppjit.gbl.test14_foo(functor) == 1  # should resolve to foo(T fcn)
         # not allowed, because there is only an overload taking a function pointer
         raises(TypeError, cppjit.gbl.test14_bar, functor)
         # The "baz" function has a std::function overload, which should be selected
-        assert cppjit.gbl.test14_baz(functor) == 2 # should resolve to baz(std::function)
+        assert (
+            cppjit.gbl.test14_baz(functor) == 2
+        )  # should resolve to baz(std::function)
 
     def test14_explicit_constructor_in_implicit_conversion(self):
         """Check that explicit constructors are not used in implicit conversion."""
@@ -384,8 +396,7 @@ class TestOVERLOADS:
         assert cppjit.gbl.test12_bar(1) == cppjit.gbl.call_test12_bar()
 
     def test15_disallow_mutable_pointer_references(self):
-        """Verify that mutable pointer references (T*&) are not allowed as arguments.
-        """
+        """Verify that mutable pointer references (T*&) are not allowed as arguments."""
 
         import cppjit
 

@@ -12,64 +12,55 @@ namespace cppjit::cpyrt {
 
 //- custom type representing typedef to pointer of class ---------------------
 struct typedefpointertoclassobject {
-    PyObject_HEAD
-    cppjit::interop::TCppScope_t fCppType;
+  PyObject_HEAD cppjit::interop::TCppScope_t fCppType;
 };
 
 extern PyTypeObject TypedefPointerToClass_Type;
 
-template<typename T>
-inline bool TypedefPointerToClass_Check(T* object)
-{
-    return object && PyObject_TypeCheck(object, &TypedefPointerToClass_Type);
+template <typename T> inline bool TypedefPointerToClass_Check(T* object) {
+  return object && PyObject_TypeCheck(object, &TypedefPointerToClass_Type);
 }
 
-template<typename T>
-inline bool TypedefPointerToClass_CheckExact(T* object)
-{
-    return object && Py_TYPE(object) == &TypedefPointerToClass_Type;
+template <typename T> inline bool TypedefPointerToClass_CheckExact(T* object) {
+  return object && Py_TYPE(object) == &TypedefPointerToClass_Type;
 }
 
 //- custom instance method object type and type verification -----------------
 extern PyTypeObject CustomInstanceMethod_Type;
 
-template<typename T>
-inline bool CustomInstanceMethod_Check(T* object)
-{
-    return object && PyObject_TypeCheck(object, &CustomInstanceMethod_Type);
+template <typename T> inline bool CustomInstanceMethod_Check(T* object) {
+  return object && PyObject_TypeCheck(object, &CustomInstanceMethod_Type);
 }
 
-template<typename T>
-inline bool CustomInstanceMethod_CheckExact(T* object)
-{
-    return object && Py_TYPE(object) == &CustomInstanceMethod_Type;
+template <typename T> inline bool CustomInstanceMethod_CheckExact(T* object) {
+  return object && Py_TYPE(object) == &CustomInstanceMethod_Type;
 }
 
-PyObject* CustomInstanceMethod_New(PyObject* func, PyObject* self, PyObject* pyclass);
+PyObject* CustomInstanceMethod_New(PyObject* func, PyObject* self,
+                                   PyObject* pyclass);
 
 //- custom iterator for high performance std::vector iteration ---------------
 struct indexiterobject {
-    PyObject_HEAD
-    PyObject*                ii_container;
-    Py_ssize_t               ii_pos;
-    Py_ssize_t               ii_len;
+  PyObject_HEAD PyObject* ii_container;
+  Py_ssize_t ii_pos;
+  Py_ssize_t ii_len;
 };
 
 extern PyTypeObject IndexIter_Type;
 
 class Converter;
 struct vectoriterobject : public indexiterobject {
-    void*                    vi_data;
-    Py_ssize_t               vi_stride;
-    cppjit::cpyrt::Converter*     vi_converter;
-    cppjit::interop::TCppScope_t        vi_klass;
-    int                      vi_flags;
+  void* vi_data;
+  Py_ssize_t vi_stride;
+  cppjit::cpyrt::Converter* vi_converter;
+  cppjit::interop::TCppScope_t vi_klass;
+  int vi_flags;
 
-    enum EFlags {
-        kDefault        = 0x0000,
-        kNeedLifeLine   = 0x0001,
-        kIsPolymorphic  = 0x0002,
-    };
+  enum EFlags {
+    kDefault = 0x0000,
+    kNeedLifeLine = 0x0001,
+    kIsPolymorphic = 0x0002,
+  };
 };
 
 extern PyTypeObject VectorIter_Type;

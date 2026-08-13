@@ -1,6 +1,8 @@
-import os, sys, subprocess
-from pytest import mark
+import os
+import subprocess
+import sys
 
+from pytest import mark
 
 # C++23 isn't the stack's default and the interpreter is a process-wide
 # singleton pinned at the first `import cppjit`. So TestCPP23Driver re-runs the
@@ -17,9 +19,10 @@ _CPP23_CHILD = "CPPJIT_TEST_CPP23_CHILD"
 _IN_CHILD = bool(os.environ.get(_CPP23_CHILD))
 
 
-@mark.skipif(not _IN_CHILD,
-             reason="C++23 tests run in the child interpreter launched by "
-                    "TestCPP23Driver")
+@mark.skipif(
+    not _IN_CHILD,
+    reason="C++23 tests run in the child interpreter launched by TestCPP23Driver",
+)
 class TestCPP23FEATURES:
     """C++23 features driven via cppjit.cppdef through the JIT (clang-repl/cling).
 
@@ -32,6 +35,7 @@ class TestCPP23FEATURES:
         # In the child process C++23 is already selected, so this one-time boot
         # is the C++23 interpreter every test shares.
         import cppjit
+
         cls.cppjit = cppjit
 
     def test01_deducing_this_basic(self):
@@ -148,7 +152,7 @@ class TestCPP23FEATURES:
         w = cppjit.gbl.Cpp23DeducingThis.BWidget()
         r = w.set(5).set(8)
         assert r.value == 8
-        assert w.value == 8           # same object returned by reference
+        assert w.value == 8  # same object returned by reference
 
     def test07_deducing_this_default_arg(self):
         """explicit object parameter with a defaulted regular argument"""
@@ -164,7 +168,7 @@ class TestCPP23FEATURES:
         """)
 
         w = cppjit.gbl.Cpp23DeducingThis.DWidget()
-        assert w.scale() == 12        # default factor=4
+        assert w.scale() == 12  # default factor=4
         assert w.scale(10) == 30
 
     def test08_deducing_this_call_operator(self):
@@ -198,8 +202,8 @@ class TestCPP23FEATURES:
         """)
 
         w = cppjit.gbl.Cpp23DeducingThis.MWidget()
-        assert w.get() == 50          # explicit-object overload
-        assert w.get(7) == 57         # normal overload
+        assert w.get() == 50  # explicit-object overload
+        assert w.get(7) == 57  # normal overload
 
     def test10_deducing_this_templated(self):
         """templated explicit object parameter (the CRTP-replacement idiom)"""
@@ -282,8 +286,8 @@ class TestCPP23FEATURES:
         """)
 
         w = cppjit.gbl.Cpp23DeducingThis.CopyWidget()
-        assert w.bump() == 101        # the copy is mutated
-        assert w.value == 1           # ... the original is untouched
+        assert w.bump() == 101  # the copy is mutated
+        assert w.value == 1  # ... the original is untouched
 
     def test15_deducing_this_inheritance(self):
         """base-class explicit object method invoked on a derived object"""
@@ -329,9 +333,9 @@ class TestCPP23FEATURES:
         """)
 
         o = cppjit.gbl.Cpp23DeducingThis.Optional()
-        assert o.read() == 5                 # forwarding read
-        o.value()[0] = 17                    # write through the forwarded reference
-        assert o.read() == 17                # ... mutation is visible on the object
+        assert o.read() == 5  # forwarding read
+        o.value()[0] = 17  # write through the forwarded reference
+        assert o.read() == 17  # ... mutation is visible on the object
 
     def test17_blog_crtp_postfix_increment(self):
         """Blog use-case 2: CRTP postfix increment without templating the base.
@@ -357,7 +361,7 @@ class TestCPP23FEATURES:
         }
         """)
 
-        assert cppjit.gbl.Cpp23DeducingThis.drive_postfix() == 1   # old.v=0, c.v=1
+        assert cppjit.gbl.Cpp23DeducingThis.drive_postfix() == 1  # old.v=0, c.v=1
 
     def test18_blog_recursive_lambda(self):
         """Blog use-case 4: recursive lambda via the explicit object parameter."""
@@ -447,13 +451,24 @@ class TestCPP23Driver:
     def test_run_under_cpp23(self):
         env = dict(os.environ)
         env[_CPP23_CHILD] = "1"
-        env["EXTRA_CLING_ARGS"] = "-std=c++23"                   # cling
+        env["EXTRA_CLING_ARGS"] = "-std=c++23"  # cling
         env["CPPINTEROP_EXTRA_INTERPRETER_ARGS"] = "-std=c++23"  # clang-repl
         proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-             os.path.basename(__file__)],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "-p",
+                "no:cacheprovider",
+                os.path.basename(__file__),
+            ],
             cwd=os.path.dirname(os.path.abspath(__file__)),
-            env=env, capture_output=True, text=True)
+            env=env,
+            capture_output=True,
+            text=True,
+        )
         assert proc.returncode == 0, (
             "C++23 child run failed (rc=%d)\n--- stdout ---\n%s\n--- stderr ---\n%s"
-            % (proc.returncode, proc.stdout, proc.stderr))
+            % (proc.returncode, proc.stdout, proc.stderr)
+        )

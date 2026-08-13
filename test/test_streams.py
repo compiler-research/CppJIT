@@ -1,9 +1,10 @@
-import py, os, sys
-from pytest import raises, mark
-from support import setup_make, IS_MAC, IS_CLANG_REPL
+import py
+from pytest import mark
+from support import IS_MAC, setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/std_streamsDict"))
+
 
 def setup_module(mod):
     setup_make("std_streams")
@@ -13,6 +14,7 @@ class TestSTDStreams:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.streams = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_std_ostream(self):
@@ -30,7 +32,7 @@ class TestSTDStreams:
 
         import cppjit
 
-        assert not (cppjit.gbl.std.cout is None)
+        assert cppjit.gbl.std.cout is not None
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test03_consistent_naming_if_char_traits(self):
@@ -44,8 +46,8 @@ class TestSTDStreams:
             o << "TEST STRING";
         } }""")
 
-        s = cppjit.gbl.std.ostringstream();
-      # base class used to fail to match
+        s = cppjit.gbl.std.ostringstream()
+        # base class used to fail to match
         cppjit.gbl.stringstream_base.pass_through_base(s)
         assert s.str() == "TEST STRING"
 
@@ -56,10 +58,11 @@ class TestSTDStreams:
 
         # Check if the object created is equal in all three cases
         cl0 = cppjit.gbl.std.ostringstream
-        cl1 = cppjit.gbl.std.basic_ostringstream['char']
-        cl2 = cppjit.gbl.std.basic_ostringstream['char', cppjit.gbl.std.char_traits['char'] , cppjit.gbl.std.allocator['char']]
+        cl1 = cppjit.gbl.std.basic_ostringstream["char"]
+        cl2 = cppjit.gbl.std.basic_ostringstream[
+            "char", cppjit.gbl.std.char_traits["char"], cppjit.gbl.std.allocator["char"]
+        ]
 
         assert cl0 == cl1
         assert cl1 == cl2
         assert cl2 == cl0
-

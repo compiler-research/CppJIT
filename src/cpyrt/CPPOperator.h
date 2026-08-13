@@ -7,20 +7,20 @@
 // Standard
 #include <string>
 
-
 namespace cppjit::cpyrt {
 
 class CPPOperator : public CPPMethod {
 public:
-    CPPOperator(cppjit::interop::TCppScope_t scope, cppjit::interop::TCppMethod_t method, const std::string& name);
+  CPPOperator(cppjit::interop::TCppScope_t scope,
+              cppjit::interop::TCppMethod_t method, const std::string& name);
 
 public:
-    PyCallable* Clone() override { return new CPPOperator(*this); }
-    PyObject* Call(CPPInstance*& self,
-        cpyrt_PyArgs_t args, size_t nargsf, PyObject* kwds, CallContext* ctxt = nullptr) override;
+  PyCallable* Clone() override { return new CPPOperator(*this); }
+  PyObject* Call(CPPInstance*& self, cpyrt_PyArgs_t args, size_t nargsf,
+                 PyObject* kwds, CallContext* ctxt = nullptr) override;
 
 private:
-    binaryfunc fStub;
+  binaryfunc fStub;
 };
 
 } // namespace cppjit::cpyrt

@@ -1,10 +1,13 @@
-import py, os, sys
+import os
+
 from pytest import mark, raises, skip
-from support import setup_make, IS_CLANG_REPL, IS_MAC_X86, IS_MAC_ARM
+from support import IS_MAC_ARM, IS_MAC_X86
 
 noboost = False
-if not (os.path.exists(os.path.join(os.path.sep, 'usr', 'include', 'boost')) or \
-        os.path.exists(os.path.join(os.path.sep, 'usr', 'local', 'include', 'boost'))):
+if not (
+    os.path.exists(os.path.join(os.path.sep, "usr", "include", "boost"))
+    or os.path.exists(os.path.join(os.path.sep, "usr", "local", "include", "boost"))
+):
     noboost = True
 
 
@@ -13,7 +16,7 @@ class TestBOOSTANY:
     def setup_class(cls):
         import cppjit
 
-        cppjit.include('boost/any.hpp')
+        cppjit.include("boost/any.hpp")
 
     @mark.skipif((IS_MAC_ARM or IS_MAC_X86), reason="Fails to include boost on OS X")
     def test01_any_class(self):
@@ -36,7 +39,7 @@ class TestBOOSTANY:
 
         assert cppjit.gbl.boost
 
-        from cppjit.gbl import std, boost
+        from cppjit.gbl import boost, std
 
         val = boost.any()
         # test both by-ref and by rvalue
@@ -51,17 +54,17 @@ class TestBOOSTANY:
         extract += range(100)
         assert len(extract) == 200
 
-        val.__assign__(std.move(extract))   # move forced
-        #assert len(extract) == 0      # not guaranteed by the standard
+        val.__assign__(std.move(extract))  # move forced
+        # assert len(extract) == 0      # not guaranteed by the standard
 
         # TODO: we hit boost::any_cast<int>(boost::any* operand) instead
         # of the reference version which raises
         boost.any_cast.__useffi__ = False
         try:
-          # raises(Exception, boost.any_cast[int], val)
+            # raises(Exception, boost.any_cast[int], val)
             assert not boost.any_cast[int](val)
         except Exception:
-          # getting here is good, too ...
+            # getting here is good, too ...
             pass
 
         extract = boost.any_cast[std.vector[int]](val)
@@ -73,7 +76,7 @@ class TestBOOSTOPERATORS:
     def setup_class(cls):
         import cppjit
 
-        cppjit.include('boost/operators.hpp')
+        cppjit.include("boost/operators.hpp")
 
     def test01_ordered(self):
         """ordered_field_operators as base used to crash"""
@@ -105,11 +108,11 @@ class TestBOOSTVARIANT:
     def test01_variant_usage(self):
         """boost::variant usage"""
 
-      # as posted on stackoverflow as example
+        # as posted on stackoverflow as example
         import cppjit
 
-        cpp   = cppjit.gbl
-        std   = cpp.std
+        cpp = cppjit.gbl
+        std = cpp.std
         boost = cpp.boost
 
         cppjit.cppdef("""namespace BV {
@@ -117,7 +120,7 @@ class TestBOOSTVARIANT:
           class B { };
           class C { }; } """)
 
-        VariantType = boost.variant['BV::A, BV::B, BV::C']
+        VariantType = boost.variant["BV::A, BV::B, BV::C"]
         VariantTypeList = std.vector[VariantType]
 
         v = VariantTypeList()
@@ -129,14 +132,14 @@ class TestBOOSTVARIANT:
         v.push_back(VariantType(cpp.BV.C()))
         assert v.back().which() == 2
 
-        assert type(boost.get['BV::A'](v[0])) == cpp.BV.A
+        assert type(boost.get["BV::A"](v[0])) == cpp.BV.A
 
         # Trying to raise this exception seg faults, by trying to execute an unfit instantiation.
         # This comes from `Instantiate` obtaining a single handle and providing a result
         # The same issue happens with trying `BestOverloadFunctionMatch` first since the candidate set is single
-        raises(Exception, boost.get['BV::B'], v[0])
-        assert type(boost.get['BV::B'](v[1])) == cpp.BV.B
-        assert type(boost.get['BV::C'](v[2])) == cpp.BV.C
+        raises(Exception, boost.get["BV::B"], v[0])
+        assert type(boost.get["BV::B"](v[1])) == cpp.BV.B
+        assert type(boost.get["BV::C"](v[2])) == cpp.BV.C
 
 
 @mark.skipif(((noboost == True) or IS_MAC_ARM or IS_MAC_X86), reason="boost not found")

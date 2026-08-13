@@ -4,22 +4,21 @@
 #include <exception>
 #include <string>
 
-
 class SomeError : public std::exception {
 public:
-    explicit SomeError(const std::string& msg) : fMsg(msg) {}
-    SomeError(const SomeError& s) : fMsg(s.fMsg) {}
+  explicit SomeError(const std::string& msg) : fMsg(msg) {}
+  SomeError(const SomeError& s) : fMsg(s.fMsg) {}
 
-    const char* what() const throw() override { return fMsg.c_str(); }
+  const char* what() const throw() override { return fMsg.c_str(); }
 
 private:
-    std::string fMsg;
+  std::string fMsg;
 };
 
 class SomeOtherError : public SomeError {
 public:
-    explicit SomeOtherError(const std::string& msg) : SomeError(msg) {}
-    SomeOtherError(const SomeOtherError& s) : SomeError(s) {}
+  explicit SomeOtherError(const std::string& msg) : SomeError(msg) {}
+  SomeOtherError(const SomeOtherError& s) : SomeError(s) {}
 };
 
 namespace DocHelper {

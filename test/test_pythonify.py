@@ -1,9 +1,15 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import setup_make, pylong, ispypy, IS_CLANG_REPL, IS_CLING, IS_MAC_ARM, IS_MAC_X86, IS_MAC
+import py
+from pytest import mark, raises, skip
+from support import (
+    IS_MAC,
+    ispypy,
+    pylong,
+    setup_make,
+)
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/example01Dict"))
+
 
 def setup_module(mod):
     setup_make("example01")
@@ -13,12 +19,14 @@ class TestPYTHONIFY:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.example01 = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_load_dictionary_cache(self):
         """Test whether loading a dictionary twice results in the same object"""
 
         import cppjit
+
         lib2 = cppjit.load_reflection_info(self.test_dct)
         assert self.example01 is lib2
 
@@ -26,6 +34,7 @@ class TestPYTHONIFY:
         """Test the lookup of a class, and its caching"""
 
         import cppjit
+
         example01_class = cppjit.gbl.example01
         cl2 = cppjit.gbl.example01
         assert example01_class is cl2
@@ -36,7 +45,8 @@ class TestPYTHONIFY:
     def test03_calling_static_functions(self):
         """Test calling of static methods"""
 
-        import cppjit, sys, math
+        import cppjit
+
         example01_class = cppjit.gbl.example01
         res = example01_class.staticAddOneToInt(1)
         assert res == 2
@@ -47,31 +57,32 @@ class TestPYTHONIFY:
         assert res == 4
         res = example01_class.staticAddOneToInt(-1)
         assert res == 0
-        maxint32 = int(2 ** 31 - 1)
-        res = example01_class.staticAddOneToInt(maxint32-1)
+        maxint32 = int(2**31 - 1)
+        res = example01_class.staticAddOneToInt(maxint32 - 1)
         assert res == maxint32
         res = example01_class.staticAddOneToInt(maxint32)
-        assert res == -maxint32-1
+        assert res == -maxint32 - 1
 
         raises(TypeError, example01_class.staticAddOneToInt, 1, [])
-        raises(TypeError, example01_class.staticAddOneToInt, 1.)
-        raises(TypeError, example01_class.staticAddOneToInt, maxint32+1)
+        raises(TypeError, example01_class.staticAddOneToInt, 1.0)
+        raises(TypeError, example01_class.staticAddOneToInt, maxint32 + 1)
         res = example01_class.staticAddToDouble(0.09)
         assert res == 0.09 + 0.01
 
         res = example01_class.staticAtoi("1")
         assert res == 1
 
-        res = example01_class.staticStrcpy("aap")     # TODO: this leaks
+        res = example01_class.staticStrcpy("aap")  # TODO: this leaks
         assert res == "aap"
-        res = example01_class.staticStrcpy(u"aap")    # TODO: id.
+        res = example01_class.staticStrcpy("aap")  # TODO: id.
         assert res == "aap"
-        raises(TypeError, example01_class.staticStrcpy, 1.)    # TODO: id.
+        raises(TypeError, example01_class.staticStrcpy, 1.0)  # TODO: id.
 
     def test04_constructing_and_calling(self):
         """Test object and method calls"""
 
         import cppjit
+
         example01_class = cppjit.gbl.example01
         assert example01_class.getCount() == 0
         instance = example01_class(7)
@@ -94,12 +105,12 @@ class TestPYTHONIFY:
 
         instance = example01_class(13)
         res = instance.addDataToDouble(16)
-        assert round(res-29, 8) == 0.
+        assert round(res - 29, 8) == 0.0
         instance.__destruct__()
         instance = example01_class(-13)
         res = instance.addDataToDouble(16)
-        assert round(res-3, 8) == 0.
-        instance.__destruct__() 
+        assert round(res - 3, 8) == 0.0
+        instance.__destruct__()
 
         instance = example01_class(42)
         assert example01_class.getCount() == 1
@@ -107,9 +118,9 @@ class TestPYTHONIFY:
         res = instance.addDataToAtoi("13")
         assert res == 55
 
-        res = instance.addToStringValue("12")    # TODO: this leaks
+        res = instance.addToStringValue("12")  # TODO: this leaks
         assert res == "54"
-        res = instance.addToStringValue("-12")   # TODO: this leaks
+        res = instance.addToStringValue("-12")  # TODO: this leaks
         assert res == "30"
 
         res = instance.staticAddOneToInt(pylong(1))
@@ -122,22 +133,23 @@ class TestPYTHONIFY:
         """Pass object by pointer"""
 
         import cppjit
+
         example01_class = cppjit.gbl.example01
         payload_class = cppjit.gbl.payload
 
         e = example01_class(14)
         pl = payload_class(3.14)
-        assert round(pl.getData()-3.14, 8) == 0
+        assert round(pl.getData() - 3.14, 8) == 0
 
-        example01_class.staticSetPayload(pl, 41.)
-        assert pl.getData() == 41.
-        example01_class.staticSetPayload(pl, 43.)
-        assert pl.getData() == 43.
-        e.staticSetPayload(pl, 45.)
-        assert pl.getData() == 45.
+        example01_class.staticSetPayload(pl, 41.0)
+        assert pl.getData() == 41.0
+        example01_class.staticSetPayload(pl, 43.0)
+        assert pl.getData() == 43.0
+        e.staticSetPayload(pl, 45.0)
+        assert pl.getData() == 45.0
 
         e.setPayload(pl)
-        assert round(pl.getData()-14., 8) == 0
+        assert round(pl.getData() - 14.0, 8) == 0
 
         pl.__destruct__()
         e.__destruct__()
@@ -147,19 +159,20 @@ class TestPYTHONIFY:
         """Return an object py pointer"""
 
         import cppjit
+
         example01_class = cppjit.gbl.example01
         payload_class = cppjit.gbl.payload
 
         pl = payload_class(3.14)
-        assert round(pl.getData()-3.14, 8) == 0
+        assert round(pl.getData() - 3.14, 8) == 0
 
-        pl2 = example01_class.staticCyclePayload(pl, 38.)
-        assert pl2.getData() == 38.
+        pl2 = example01_class.staticCyclePayload(pl, 38.0)
+        assert pl2.getData() == 38.0
 
         e = example01_class(14)
 
         pl2 = e.cyclePayload(pl)
-        assert round(pl2.getData()-14., 8) == 0
+        assert round(pl2.getData() - 14.0, 8) == 0
 
         pl.__destruct__()
         e.__destruct__()
@@ -169,20 +182,21 @@ class TestPYTHONIFY:
         """Return an object by value"""
 
         import cppjit
+
         example01_class = cppjit.gbl.example01
         payload_class = cppjit.gbl.payload
 
         pl = payload_class(3.14)
-        assert round(pl.getData()-3.14, 8) == 0
+        assert round(pl.getData() - 3.14, 8) == 0
 
-        pl2 = example01_class.staticCopyCyclePayload(pl, 38.)
-        assert pl2.getData() == 38.
+        pl2 = example01_class.staticCopyCyclePayload(pl, 38.0)
+        assert pl2.getData() == 38.0
         pl2.__destruct__()
 
         e = example01_class(14)
 
         pl2 = e.copyCyclePayload(pl)
-        assert round(pl2.getData()-14., 8) == 0
+        assert round(pl2.getData() - 14.0, 8) == 0
         pl2.__destruct__()
 
         pl.__destruct__()
@@ -194,8 +208,8 @@ class TestPYTHONIFY:
 
         import cppjit
 
-        assert cppjit.gbl.globalAddOneToInt(3) == 4     # creation lookup
-        assert cppjit.gbl.globalAddOneToInt(3) == 4     # cached lookup
+        assert cppjit.gbl.globalAddOneToInt(3) == 4  # creation lookup
+        assert cppjit.gbl.globalAddOneToInt(3) == 4  # cached lookup
 
         assert cppjit.gbl.ns_example01.globalAddOneToInt(4) == 5
         assert cppjit.gbl.ns_example01.globalAddOneToInt(4) == 5
@@ -203,17 +217,20 @@ class TestPYTHONIFY:
     def test09_memory(self):
         """Test proper C++ destruction by the garbage collector"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
+
         example01_class = cppjit.gbl.example01
         payload_class = cppjit.gbl.payload
 
         pl = payload_class(3.14)
         assert payload_class.count == 1
-        assert round(pl.getData()-3.14, 8) == 0
+        assert round(pl.getData() - 3.14, 8) == 0
 
-        pl2 = example01_class.staticCopyCyclePayload(pl, 38.)
+        pl2 = example01_class.staticCopyCyclePayload(pl, 38.0)
         assert payload_class.count == 2
-        assert pl2.getData() == 38.
+        assert pl2.getData() == 38.0
         pl2 = None
         gc.collect()
         assert payload_class.count == 1
@@ -222,7 +239,7 @@ class TestPYTHONIFY:
 
         pl2 = e.copyCyclePayload(pl)
         assert payload_class.count == 2
-        assert round(pl2.getData()-14., 8) == 0
+        assert round(pl2.getData() - 14.0, 8) == 0
         pl2 = None
         gc.collect()
         assert payload_class.count == 1
@@ -234,8 +251,8 @@ class TestPYTHONIFY:
         assert example01_class.getCount() == 0
 
         pl = payload_class(3.14)
-        pl_a = example01_class.staticCyclePayload(pl, 66.)
-        pl_a.getData() == 66.
+        pl_a = example01_class.staticCyclePayload(pl, 66.0)
+        pl_a.getData() == 66.0
         assert payload_class.count == 1
         pl_a = None
         pl = None
@@ -249,6 +266,7 @@ class TestPYTHONIFY:
         """Test propagation of default function arguments"""
 
         import cppjit
+
         a = cppjit.gbl.ArgPasser()
 
         # NOTE: when called through the stub, default args are fine
@@ -258,37 +276,38 @@ class TestPYTHONIFY:
         assert f(s("noot"), 1) == "default"
         assert f(s("mies")) == "mies"
 
-        for itype in ['short', 'ushort', 'int', 'uint', 'long', 'ulong']:
-            g = getattr(a, '%sValue' % itype)
+        for itype in ["short", "ushort", "int", "uint", "long", "ulong"]:
+            g = getattr(a, "%sValue" % itype)
             raises(TypeError, g, 1, 2, 3, 4, 6)
             assert g(11, 0, 12, 13) == 11
             assert g(11, 1, 12, 13) == 12
-            assert g(11, 1, 12)     == 12
-            assert g(11, 2, 12)     ==  2
-            assert g(11, 1)         ==  1
-            assert g(11, 2)         ==  2
-            assert g(11)            == 11
+            assert g(11, 1, 12) == 12
+            assert g(11, 2, 12) == 2
+            assert g(11, 1) == 1
+            assert g(11, 2) == 2
+            assert g(11) == 11
 
-        for ftype in ['float', 'double']:
-            g = getattr(a, '%sValue' % ftype)
-            raises(TypeError, g, 1., 2, 3., 4., 6.)
-            assert g(11., 0, 12., 13.) == 11.
-            assert g(11., 1, 12., 13.) == 12.
-            assert g(11., 1, 12.)      == 12.
-            assert g(11., 2, 12.)      ==  2.
-            assert g(11., 1)           ==  1.
-            assert g(11., 2)           ==  2.
-            assert g(11.)              == 11.
+        for ftype in ["float", "double"]:
+            g = getattr(a, "%sValue" % ftype)
+            raises(TypeError, g, 1.0, 2, 3.0, 4.0, 6.0)
+            assert g(11.0, 0, 12.0, 13.0) == 11.0
+            assert g(11.0, 1, 12.0, 13.0) == 12.0
+            assert g(11.0, 1, 12.0) == 12.0
+            assert g(11.0, 2, 12.0) == 2.0
+            assert g(11.0, 1) == 1.0
+            assert g(11.0, 2) == 2.0
+            assert g(11.0) == 11.0
 
     def test11_overload_on_arguments(self):
         """Test functions overloaded on arguments"""
 
         import cppjit
+
         e = cppjit.gbl.example01(1)
 
-        assert e.addDataToInt(2)                 ==  3
-        assert e.overloadedAddDataToInt(3)       ==  4
-        assert e.overloadedAddDataToInt(4, 5)    == 10
+        assert e.addDataToInt(2) == 3
+        assert e.overloadedAddDataToInt(3) == 4
+        assert e.overloadedAddDataToInt(4, 5) == 10
         assert e.overloadedAddDataToInt(6, 7, 8) == 22
 
     def test12_typedefs(self):
@@ -307,14 +326,14 @@ class TestPYTHONIFY:
 
         z = cppjit.gbl.z_()
 
-        assert hasattr(z, 'myint')
+        assert hasattr(z, "myint")
         assert z.gime_z_(z)
 
     def test14_bound_unbound_calls(self):
         """Test (un)bound method calls"""
 
         if ispypy:
-            skip('segfaults in pypy')
+            skip("segfaults in pypy")
 
         import cppjit
 
@@ -328,20 +347,23 @@ class TestPYTHONIFY:
         assert 5 == meth(e, 3)
 
     def test15_installable_function(self):
-       """Test installing and calling global C++ function as python method"""
+        """Test installing and calling global C++ function as python method"""
 
-       import cppjit
+        import cppjit
 
-       cppjit.gbl.example01.fresh = cppjit.gbl.installableAddOneToInt
+        cppjit.gbl.example01.fresh = cppjit.gbl.installableAddOneToInt
 
-       e = cppjit.gbl.example01(0)
-       assert 2 == e.fresh(1)
-       assert 3 == e.fresh(2)
+        e = cppjit.gbl.example01(0)
+        assert 2 == e.fresh(1)
+        assert 3 == e.fresh(2)
 
     def test16_subclassing(self):
         """A sub-class on the python side should have that class as type"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
+
         gc.collect()
 
         example01 = cppjit.gbl.example01
@@ -371,10 +393,10 @@ class TestPYTHONIFY:
                 example01.__init__(self)
                 self.what = what
 
-        o = MyClass2('hi')
+        o = MyClass2("hi")
         assert type(o) == MyClass2
         assert example01.getCount() == 1
-        assert o.what == 'hi'
+        assert o.what == "hi"
         o.__destruct__()
 
         assert example01.getCount() == 0
@@ -429,14 +451,14 @@ class TestPYTHONIFY:
             return callme(o.fChoice, a, b, c);
         } }""")
 
-      # constructor and implicit conversion with keywords
+        # constructor and implicit conversion with keywords
         A = cppjit.gbl.KeyWords.A
         B = cppjit.gbl.KeyWords.B
 
         def verify_b(b, val, ti, to):
-            assert b.fVal              == val
-            assert b.fIn.fVals.size()  == len(ti)
-            assert tuple(b.fIn.fVals)  == ti
+            assert b.fVal == val
+            assert b.fIn.fVals.size() == len(ti)
+            assert tuple(b.fIn.fVals) == ti
             assert b.fOut.fVals.size() == len(to)
             assert tuple(b.fOut.fVals) == to
 
@@ -456,14 +478,14 @@ class TestPYTHONIFY:
             b = B(17, val=23, out_A=(78,))
 
         with raises(TypeError):
-            b = B(17, out_A=(78,)) 
+            b = B(17, out_A=(78,))
 
-      # global function with keywords
+        # global function with keywords
         callme = cppjit.gbl.KeyWords.callme
         for i in range(3):
-            assert callme(i, a=1, b=2, c=3) == i+1
-            assert callme(i, b=2, c=3, a=1) == i+1
-            assert callme(i, c=3, a=1, b=2) == i+1
+            assert callme(i, a=1, b=2, c=3) == i + 1
+            assert callme(i, b=2, c=3, a=1) == i + 1
+            assert callme(i, c=3, a=1, b=2) == i + 1
 
         with raises(TypeError):
             callme(0, a=1, b=2, d=3)
@@ -474,15 +496,15 @@ class TestPYTHONIFY:
         with raises(TypeError):
             callme(0, a=1, b=2)
 
-      # global function as method with keywords
+        # global function as method with keywords
         c = cppjit.gbl.KeyWords.C()
         cppjit.gbl.KeyWords.C.callme = cppjit.gbl.KeyWords.callme_c
 
         for i in range(3):
             c.fChoice = i
-            assert c.callme(a=1, b=2, c=3) == i+1
-            assert c.callme(b=2, c=3, a=1) == i+1
-            assert c.callme(c=3, a=1, b=2) == i+1
+            assert c.callme(a=1, b=2, c=3) == i + 1
+            assert c.callme(b=2, c=3, a=1) == i + 1
+            assert c.callme(c=3, a=1, b=2) == i + 1
 
         c.fChoice = 0
         with raises(TypeError):
@@ -520,29 +542,29 @@ class TestPYTHONIFY:
         } }""")
 
         def pyfoo(a=10, b=20, c=5, d=4):
-            return a-b//c*d;
+            return a - b // c * d
 
         ns = cppjit.gbl.KeyWordsAndDefaults
 
-        assert ns.foo()                  == pyfoo()
-        assert ns.foo(a=100)             == pyfoo(a=100)
-        assert ns.foo(b=100)             == pyfoo(b=100)
-        assert ns.foo(a=100, b=200)      == pyfoo(a=100, b=200)
+        assert ns.foo() == pyfoo()
+        assert ns.foo(a=100) == pyfoo(a=100)
+        assert ns.foo(b=100) == pyfoo(b=100)
+        assert ns.foo(a=100, b=200) == pyfoo(a=100, b=200)
         assert ns.foo(a=100, b=200, d=0) == pyfoo(a=100, b=200, d=0)
-        assert ns.foo(b=100, a=200)      == pyfoo(b=100, a=200)
+        assert ns.foo(b=100, a=200) == pyfoo(b=100, a=200)
 
         with raises(TypeError):
             ns.foo(1, 2, 3, 4, b=5)
 
         assert ns.bar() == "ab"
-        assert ns.bar(b = " greeting") == "a greeting"
+        assert ns.bar(b=" greeting") == "a greeting"
 
-        ns.foobar(m2 = ns.MyClass())
+        ns.foobar(m2=ns.MyClass())
 
         assert not ns.barfoo()
         assert not ns.barfoo(opt2=True)
         assert not ns.barfoo(opt2=False)
-        assert     ns.barfoo(opt1=True, opt2=True)
+        assert ns.barfoo(opt1=True, opt2=True)
         assert not ns.barfoo(opt1=True, opt2=False)
 
 
@@ -550,6 +572,7 @@ class TestPYTHONIFY_UI:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.example01 = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_pythonizations(self):
@@ -558,9 +581,11 @@ class TestPYTHONIFY_UI:
         import cppjit
 
         def example01a_pythonize(pyclass, pyname):
-            if pyname == 'example01a':
+            if pyname == "example01a":
+
                 def getitem(self, idx):
                     return self.addDataToInt(idx)
+
                 pyclass.__getitem__ = getitem
 
         cppjit.py.add_pythonization(example01a_pythonize)
@@ -587,7 +612,7 @@ class TestPYTHONIFY_UI:
         oldval = cppjit.gbl.ns_example01.gMyGlobalInt
         assert oldval == 99
 
-        proxy = cppjit.gbl.ns_example01.__class__.__dict__['gMyGlobalInt']
+        proxy = cppjit.gbl.ns_example01.__class__.__dict__["gMyGlobalInt"]
         cppjit.gbl.ns_example01.gMyGlobalInt = 3
         assert proxy.__get__(proxy, None) == 3
 

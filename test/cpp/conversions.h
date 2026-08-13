@@ -1,6 +1,5 @@
 #include <vector>
 
-
 namespace CNS {
 
 //===========================================================================
@@ -9,12 +8,12 @@ double sumit(const std::vector<double>&, const std::vector<double>&);
 
 class Counter {
 public:
-    Counter();
-    Counter(const Counter&);
-    Counter& operator=(const Counter&);
-    ~Counter();
+  Counter();
+  Counter(const Counter&);
+  Counter& operator=(const Counter&);
+  ~Counter();
 
-    static int s_count;
+  static int s_count;
 };
 
 double myhowmany(const std::vector<Counter>&);

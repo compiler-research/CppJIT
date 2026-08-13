@@ -1,20 +1,21 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import ispypy, IS_MAC, IS_LINUX_ARM
+from pytest import mark, skip
+from support import IS_LINUX_ARM, IS_MAC, ispypy
 
 
 class TestAPI:
     def setup_class(cls):
         if ispypy:
-            skip('C++ API only available on CPython')
+            skip("C++ API only available on CPython")
 
         import cppjit
-        cppjit.include('cpyrt/API.h')
+
+        cppjit.include("cpyrt/API.h")
 
     def test01_type_checking(self):
         """Python class type checks"""
 
         import cppjit
+
         cpp = cppjit.gbl
         API = cpp.cppjit.cpyrt
 
@@ -40,15 +41,17 @@ class TestAPI:
         """Access to the python interpreter"""
 
         import cppjit
+
         API = cppjit.gbl.cppjit.cpyrt
 
-        assert API.Exec('import sys')
+        assert API.Exec("import sys")
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test03_instance_conversion(self):
         """Proxy object conversions"""
 
         import cppjit
+
         cpp = cppjit.gbl
         API = cpp.cppjit.cpyrt
 
@@ -61,7 +64,7 @@ class TestAPI:
         m = cpp.APICheck2()
 
         voidp = API.Instance_AsVoidPtr(m)
-        m2 = API.Instance_FromVoidPtr(voidp, 'APICheck2')
+        m2 = API.Instance_FromVoidPtr(voidp, "APICheck2")
         assert m is m2
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
@@ -188,7 +191,7 @@ class TestAPI:
         a4 = cppjit.gbl.CreateAPICheck4()
         assert a4
         assert type(a4) == cppjit.gbl.APICheck4
-        assert a4.wasExecutorCalled();
+        assert a4.wasExecutorCalled()
         del a4
 
         cppjit.gbl.unregister_a4()
@@ -196,7 +199,7 @@ class TestAPI:
         a4 = cppjit.gbl.CreateAPICheck4b()
         assert a4
         assert type(a4) == cppjit.gbl.APICheck4
-        assert not a4.wasExecutorCalled();
+        assert not a4.wasExecutorCalled()
 
     def test06_custom_executor(self):
         """Custom type executor"""
@@ -216,13 +219,13 @@ class TestAPI:
             int operator[](int) { return 42; }
         }; }""")
 
-        ns = cppjit.gbl.ArrayLike;
+        ns = cppjit.gbl.ArrayLike
         Sequence_Check = cppjit.gbl.cppjit.cpyrt.Sequence_Check
 
         assert not Sequence_Check(ns.my)
-        assert     Sequence_Check(ns.myA)
+        assert Sequence_Check(ns.myA)
         assert not Sequence_Check(ns.MyClass())
-        assert     Sequence_Check(ns.MyArray())
-        assert     Sequence_Check(tuple())
-        assert     Sequence_Check(cppjit.gbl.std.vector[ns.MyClass]())
+        assert Sequence_Check(ns.MyArray())
+        assert Sequence_Check(tuple())
+        assert Sequence_Check(cppjit.gbl.std.vector[ns.MyClass]())
         assert not Sequence_Check(cppjit.gbl.std.list[ns.MyClass]())

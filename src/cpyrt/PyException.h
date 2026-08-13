@@ -33,22 +33,21 @@
 // Bindings
 #include "cpyrt/CommonDefs.h"
 
-
 namespace cppjit::cpyrt {
 
 class CPYRT_CLASS_EXTERN PyException : public std::exception {
 public:
-    PyException();
-    ~PyException() noexcept override;
+  PyException();
+  ~PyException() noexcept override;
 
-// give reason for raised exception
-    const char* what() const noexcept override;
+  // give reason for raised exception
+  const char* what() const noexcept override;
 
-// clear Python error, to allow full error handling C++ side
-    void clear() const noexcept;
+  // clear Python error, to allow full error handling C++ side
+  void clear() const noexcept;
 
 private:
-    std::string fMsg;
+  std::string fMsg;
 };
 
 } // namespace cppjit::cpyrt

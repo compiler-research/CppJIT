@@ -1,9 +1,19 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import setup_make, pylong, pyunicode, IS_WINDOWS, ispypy, IS_CLING, IS_MAC, IS_VALGRIND
+import sys
+
+import py
+from pytest import mark, raises, skip
+from support import (
+    IS_CLING,
+    IS_MAC,
+    IS_VALGRIND,
+    IS_WINDOWS,
+    ispypy,
+    setup_make,
+)
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/datatypesDict"))
+
 
 def setup_module(mod):
     setup_make("datatypes")
@@ -39,55 +49,55 @@ class TestLOWLEVEL:
 
         for cast in (ll.cast, ll.static_cast):
             assert type(cast[float](1)) == float
-            assert cast[float](1) == 1.
+            assert cast[float](1) == 1.0
 
             assert type(cast[int](1.1)) == int
             assert cast[int](1.1) == 1
 
-        assert len(ll.reinterpret_cast['int*'](0)) == 0
-        raises(ReferenceError, ll.reinterpret_cast['int*'](0).__getitem__, 0)
+        assert len(ll.reinterpret_cast["int*"](0)) == 0
+        raises(ReferenceError, ll.reinterpret_cast["int*"](0).__getitem__, 0)
 
     def test03_memory(self):
         """Memory allocation and free-ing"""
 
         import cppjit
-        from cppjit import ll
 
-      # regular C malloc/free
+        # regular C malloc/free
         mem = cppjit.gbl.malloc(16)
         cppjit.gbl.free(mem)
 
-      # typed styles
+        # typed styles
         mem = cppjit.ll.malloc[int](self.N)
         assert len(mem) == self.N
         assert not mem.__cpp_array__
         for i in range(self.N):
-            mem[i] = i+1
+            mem[i] = i + 1
             assert type(mem[i]) == int
-            assert mem[i] == i+1
+            assert mem[i] == i + 1
         cppjit.ll.free(mem)
 
-      # C++ arrays
+        # C++ arrays
         mem = cppjit.ll.array_new[int](self.N)
         assert mem.__cpp_array__
         assert len(mem) == self.N
         for i in range(self.N):
-            mem[i] = i+1
+            mem[i] = i + 1
             assert type(mem[i]) == int
-            assert mem[i] == i+1
+            assert mem[i] == i + 1
         cppjit.ll.array_delete(mem)
 
         mem = cppjit.ll.array_new[int](self.N, managed=True)
-        assert     mem.__python_owns__
+        assert mem.__python_owns__
         mem.__python_owns__ = False
         assert not mem.__python_owns__
         mem.__python_owns__ = True
-        assert     mem.__python_owns__
+        assert mem.__python_owns__
 
     def test04_python_casts(self):
         """Casts to common Python pointer encapsulations"""
 
-        import cppjit, cppjit.ll
+        import cppjit
+        import cppjit.ll
 
         cppjit.cppdef("""namespace pycasts {
         struct SomeObject{};
@@ -109,33 +119,62 @@ class TestLOWLEVEL:
     def test05_array_as_ref(self):
         """Use arrays for pass-by-ref"""
 
-        import cppjit, sys
         from array import array
+
+        import cppjit
 
         ctd = cppjit.gbl.CppjitTestData()
 
-      # boolean type
-        b = array('b', [0]); ctd.set_bool_r(b); assert b[0] == True
+        # boolean type
+        b = array("b", [0])
+        ctd.set_bool_r(b)
+        assert b[0] == True
 
-      # char types (as data)
-        c = array('B', [0]); ctd.set_uchar_r(c); assert c[0] == ord('d')
+        # char types (as data)
+        c = array("B", [0])
+        ctd.set_uchar_r(c)
+        assert c[0] == ord("d")
 
-      # integer types
-        i = array('h', [0]);     ctd.set_short_r(i);  assert i[0] == -1
-        i = array('H', [0]);     ctd.set_ushort_r(i); assert i[0] ==  2
-        i = array('i', [0]);     ctd.set_int_r(i);    assert i[0] == -3
-        i = array('I', [0]);     ctd.set_uint_r(i);   assert i[0] ==  4
-        i = array('l', [0]);     ctd.set_long_r(i);   assert i[0] == -5
-        i = array('L', [0]);     ctd.set_ulong_r(i);  assert i[0] ==  6
+        # integer types
+        i = array("h", [0])
+        ctd.set_short_r(i)
+        assert i[0] == -1
+        i = array("H", [0])
+        ctd.set_ushort_r(i)
+        assert i[0] == 2
+        i = array("i", [0])
+        ctd.set_int_r(i)
+        assert i[0] == -3
+        i = array("I", [0])
+        ctd.set_uint_r(i)
+        assert i[0] == 4
+        i = array("l", [0])
+        ctd.set_long_r(i)
+        assert i[0] == -5
+        i = array("L", [0])
+        ctd.set_ulong_r(i)
+        assert i[0] == 6
         if sys.hexversion >= 0x3000000:
-            i = array('q', [0]); ctd.set_llong_r(i);  assert i[0] == -7
-            i = array('Q', [0]); ctd.set_ullong_r(i); assert i[0] ==  8
+            i = array("q", [0])
+            ctd.set_llong_r(i)
+            assert i[0] == -7
+            i = array("Q", [0])
+            ctd.set_ullong_r(i)
+            assert i[0] == 8
 
-      # floating point types
-        f = array('f', [0]);     ctd.set_float_r(f);  assert f[0] ==  5.
-        f = array('d', [0]);     ctd.set_double_r(f); assert f[0] == -5.
+            # floating point types
+        f = array("f", [0])
+        ctd.set_float_r(f)
+        assert f[0] == 5.0
+        f = array("d", [0])
+        ctd.set_double_r(f)
+        assert f[0] == -5.0
 
-    @mark.xfail(run=False, condition=IS_VALGRIND or IS_CLING, reason="Valgrind detects memory leak with invalid delete[] operator, crashes on Cling") 
+    @mark.xfail(
+        run=False,
+        condition=IS_VALGRIND or IS_CLING,
+        reason="Valgrind detects memory leak with invalid delete[] operator, crashes on Cling",
+    )
     def test06_ctypes_as_ref_and_ptr(self):
         """Use ctypes for pass-by-ref/ptr"""
 
@@ -167,129 +206,237 @@ class TestLOWLEVEL:
         # c_double          double                                      float
         # c_longdouble      long double                                 float
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
         import cppjit.ll
 
         ctd = cppjit.gbl.CppjitTestData()
 
-      ### pass by reference/pointer and set value back
+        ### pass by reference/pointer and set value back
 
-        for e in ['_r', '_p']:
-          # boolean type
-            b = ctypes.c_bool(False);      getattr(ctd, 'set_bool'+e)(b);     assert b.value == True
+        for e in ["_r", "_p"]:
+            # boolean type
+            b = ctypes.c_bool(False)
+            getattr(ctd, "set_bool" + e)(b)
+            assert b.value == True
 
-          # char types
-            if e == '_r':
-                c = ctypes.c_char(b'\0');  getattr(ctd, 'set_char'+e)(c);     assert c.value == b'a'
-                c = ctypes.c_wchar(u'\0'); getattr(ctd, 'set_wchar'+e)(c);    assert c.value == u'b'
-                c = ctypes.c_byte(0);      getattr(ctd, 'set_schar'+e)(c);    assert c.value == ord('c')
-            c = ctypes.c_ubyte(0);         getattr(ctd, 'set_uchar'+e)(c);    assert c.value == ord('d')
+            # char types
+            if e == "_r":
+                c = ctypes.c_char(b"\0")
+                getattr(ctd, "set_char" + e)(c)
+                assert c.value == b"a"
+                c = ctypes.c_wchar("\0")
+                getattr(ctd, "set_wchar" + e)(c)
+                assert c.value == "b"
+                c = ctypes.c_byte(0)
+                getattr(ctd, "set_schar" + e)(c)
+                assert c.value == ord("c")
+            c = ctypes.c_ubyte(0)
+            getattr(ctd, "set_uchar" + e)(c)
+            assert c.value == ord("d")
 
-          # integer types
-            i = ctypes.c_short(0);         getattr(ctd, 'set_short'+e)(i);    assert i.value == -1
-            i = ctypes.c_ushort(0);        getattr(ctd, 'set_ushort'+e)(i);   assert i.value ==  2
-            i = ctypes.c_int(0);           getattr(ctd, 'set_int'+e)(i);      assert i.value == -3
-            i = ctypes.c_uint(0);          getattr(ctd, 'set_uint'+e)(i);     assert i.value ==  4
-            i = ctypes.c_long(0);          getattr(ctd, 'set_long'+e)(i);     assert i.value == -5
-            i = ctypes.c_ulong(0);         getattr(ctd, 'set_ulong'+e)(i);    assert i.value ==  6
-            i = ctypes.c_longlong(0);      getattr(ctd, 'set_llong'+e)(i);    assert i.value == -7
-            i = ctypes.c_ulonglong(0);     getattr(ctd, 'set_ullong'+e)(i);   assert i.value ==  8
+            # integer types
+            i = ctypes.c_short(0)
+            getattr(ctd, "set_short" + e)(i)
+            assert i.value == -1
+            i = ctypes.c_ushort(0)
+            getattr(ctd, "set_ushort" + e)(i)
+            assert i.value == 2
+            i = ctypes.c_int(0)
+            getattr(ctd, "set_int" + e)(i)
+            assert i.value == -3
+            i = ctypes.c_uint(0)
+            getattr(ctd, "set_uint" + e)(i)
+            assert i.value == 4
+            i = ctypes.c_long(0)
+            getattr(ctd, "set_long" + e)(i)
+            assert i.value == -5
+            i = ctypes.c_ulong(0)
+            getattr(ctd, "set_ulong" + e)(i)
+            assert i.value == 6
+            i = ctypes.c_longlong(0)
+            getattr(ctd, "set_llong" + e)(i)
+            assert i.value == -7
+            i = ctypes.c_ulonglong(0)
+            getattr(ctd, "set_ullong" + e)(i)
+            assert i.value == 8
 
-          # floating point types
-            f = ctypes.c_float(0);         getattr(ctd, 'set_float'+e)(f);    assert f.value ==  5.
-            f = ctypes.c_double(0);        getattr(ctd, 'set_double'+e)(f);   assert f.value == -5.
-            f = ctypes.c_longdouble(0);    getattr(ctd, 'set_ldouble'+e)(f);  assert f.value == 10.
+            # floating point types
+            f = ctypes.c_float(0)
+            getattr(ctd, "set_float" + e)(f)
+            assert f.value == 5.0
+            f = ctypes.c_double(0)
+            getattr(ctd, "set_double" + e)(f)
+            assert f.value == -5.0
+            f = ctypes.c_longdouble(0)
+            getattr(ctd, "set_ldouble" + e)(f)
+            assert f.value == 10.0
 
-      ### pass by pointer and set value back, now using byref (not recommended)
+            ### pass by pointer and set value back, now using byref (not recommended)
 
         cb = ctypes.byref
 
-      # boolean type
-        b = ctypes.c_bool(False);     ctd.set_bool_p(cb(b));     assert b.value == True
+        # boolean type
+        b = ctypes.c_bool(False)
+        ctd.set_bool_p(cb(b))
+        assert b.value == True
 
-      # char types
-        c = ctypes.c_ubyte(0);        ctd.set_uchar_p(cb(c));    assert c.value == ord('d')
+        # char types
+        c = ctypes.c_ubyte(0)
+        ctd.set_uchar_p(cb(c))
+        assert c.value == ord("d")
 
-      # integer types
-        i = ctypes.c_int8(0);         ctd.set_int8_p(cb(i));     assert i.value == -27
-        i = ctypes.c_uint8(0);        ctd.set_uint8_p(cb(i));    assert i.value ==  28
-        i = ctypes.c_short(0);        ctd.set_short_p(cb(i));    assert i.value == -1
-        i = ctypes.c_ushort(0);       ctd.set_ushort_p(cb(i));   assert i.value ==  2
-        i = ctypes.c_int(0);          ctd.set_int_p(cb(i));      assert i.value == -3
-        i = ctypes.c_uint(0);         ctd.set_uint_p(cb(i));     assert i.value ==  4
-        i = ctypes.c_long(0);         ctd.set_long_p(cb(i));     assert i.value == -5
-        i = ctypes.c_ulong(0);        ctd.set_ulong_p(cb(i));    assert i.value ==  6
-        i = ctypes.c_longlong(0);     ctd.set_llong_p(cb(i));    assert i.value == -7
-        i = ctypes.c_ulonglong(0);    ctd.set_ullong_p(cb(i));   assert i.value ==  8
+        # integer types
+        i = ctypes.c_int8(0)
+        ctd.set_int8_p(cb(i))
+        assert i.value == -27
+        i = ctypes.c_uint8(0)
+        ctd.set_uint8_p(cb(i))
+        assert i.value == 28
+        i = ctypes.c_short(0)
+        ctd.set_short_p(cb(i))
+        assert i.value == -1
+        i = ctypes.c_ushort(0)
+        ctd.set_ushort_p(cb(i))
+        assert i.value == 2
+        i = ctypes.c_int(0)
+        ctd.set_int_p(cb(i))
+        assert i.value == -3
+        i = ctypes.c_uint(0)
+        ctd.set_uint_p(cb(i))
+        assert i.value == 4
+        i = ctypes.c_long(0)
+        ctd.set_long_p(cb(i))
+        assert i.value == -5
+        i = ctypes.c_ulong(0)
+        ctd.set_ulong_p(cb(i))
+        assert i.value == 6
+        i = ctypes.c_longlong(0)
+        ctd.set_llong_p(cb(i))
+        assert i.value == -7
+        i = ctypes.c_ulonglong(0)
+        ctd.set_ullong_p(cb(i))
+        assert i.value == 8
 
-      # floating point types
-        f = ctypes.c_float(0);        ctd.set_float_p(cb(f));    assert f.value ==  5.
-        f = ctypes.c_double(0);       ctd.set_double_p(cb(f));   assert f.value == -5.
+        # floating point types
+        f = ctypes.c_float(0)
+        ctd.set_float_p(cb(f))
+        assert f.value == 5.0
+        f = ctypes.c_double(0)
+        ctd.set_double_p(cb(f))
+        assert f.value == -5.0
 
-      ### pass by ptr/ptr with allocation (ptr/ptr is ambiguous in it's task, so many
+        ### pass by ptr/ptr with allocation (ptr/ptr is ambiguous in it's task, so many
         # types are allowed to pass; this tests allocation into the pointer)
 
         from ctypes import POINTER
+
         import cppjit.ll
 
-      # boolean type
-        b = POINTER(ctypes.c_bool)();     ctd.set_bool_ppa(b);
-        assert b[0] == True; assert b[1] == False; assert b[2] == True
+        # boolean type
+        b = POINTER(ctypes.c_bool)()
+        ctd.set_bool_ppa(b)
+        assert b[0] == True
+        assert b[1] == False
+        assert b[2] == True
         cppjit.ll.array_delete(b)
 
-      # char types
-        c = POINTER(ctypes.c_ubyte)();    ctd.set_uchar_ppa(c)
-        assert c[0] == ord('k'); assert c[1] == ord('l'); assert c[2] == ord('m')
+        # char types
+        c = POINTER(ctypes.c_ubyte)()
+        ctd.set_uchar_ppa(c)
+        assert c[0] == ord("k")
+        assert c[1] == ord("l")
+        assert c[2] == ord("m")
         cppjit.ll.array_delete(c)
 
-      # integer types
-        i = POINTER(ctypes.c_int8)();         ctd.set_int8_ppa(i)
-        assert i[0] == -27; assert i[1] == -28; assert i[2] == -29
-        cppjit.ll.array_delete['void'](i)    # template resolves as signed char*
-        i = POINTER(ctypes.c_uint8)();       ctd.set_uint8_ppa(i)
-        assert i[0] ==  28; assert i[1] ==  29; assert i[2] ==  30
-        cppjit.ll.array_delete['void'](i)    # template resolves as unsigned char*
-        i = POINTER(ctypes.c_short)();        ctd.set_short_ppa(i)
-        assert i[0] ==  -1; assert i[1] ==  -2; assert i[2] ==  -3
+        # integer types
+        i = POINTER(ctypes.c_int8)()
+        ctd.set_int8_ppa(i)
+        assert i[0] == -27
+        assert i[1] == -28
+        assert i[2] == -29
+        cppjit.ll.array_delete["void"](i)  # template resolves as signed char*
+        i = POINTER(ctypes.c_uint8)()
+        ctd.set_uint8_ppa(i)
+        assert i[0] == 28
+        assert i[1] == 29
+        assert i[2] == 30
+        cppjit.ll.array_delete["void"](i)  # template resolves as unsigned char*
+        i = POINTER(ctypes.c_short)()
+        ctd.set_short_ppa(i)
+        assert i[0] == -1
+        assert i[1] == -2
+        assert i[2] == -3
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_ushort)();       ctd.set_ushort_ppa(i)
-        assert i[0] ==   4; assert i[1] ==   5; assert i[2] ==   6
+        i = POINTER(ctypes.c_ushort)()
+        ctd.set_ushort_ppa(i)
+        assert i[0] == 4
+        assert i[1] == 5
+        assert i[2] == 6
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_int)();          ctd.set_int_ppa(i)
-        assert i[0] ==  -7; assert i[1] ==  -8; assert i[2] ==  -9
+        i = POINTER(ctypes.c_int)()
+        ctd.set_int_ppa(i)
+        assert i[0] == -7
+        assert i[1] == -8
+        assert i[2] == -9
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_uint)();         ctd.set_uint_ppa(i)
-        assert i[0] ==  10; assert i[1] ==  11; assert i[2] ==  12
+        i = POINTER(ctypes.c_uint)()
+        ctd.set_uint_ppa(i)
+        assert i[0] == 10
+        assert i[1] == 11
+        assert i[2] == 12
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_long)();         ctd.set_long_ppa(i)
-        assert i[0] == -13; assert i[1] == -14; assert i[2] == -15
+        i = POINTER(ctypes.c_long)()
+        ctd.set_long_ppa(i)
+        assert i[0] == -13
+        assert i[1] == -14
+        assert i[2] == -15
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_ulong)();        ctd.set_ulong_ppa(i)
-        assert i[0] ==  16; assert i[1] ==  17; assert i[2] ==  18
+        i = POINTER(ctypes.c_ulong)()
+        ctd.set_ulong_ppa(i)
+        assert i[0] == 16
+        assert i[1] == 17
+        assert i[2] == 18
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_longlong)();     ctd.set_llong_ppa(i)
-        assert i[0] == -19; assert i[1] == -20; assert i[2] == -21
+        i = POINTER(ctypes.c_longlong)()
+        ctd.set_llong_ppa(i)
+        assert i[0] == -19
+        assert i[1] == -20
+        assert i[2] == -21
         cppjit.ll.array_delete(i)
-        i = POINTER(ctypes.c_ulonglong)();    ctd.set_ullong_ppa(i)
-        assert i[0] ==  22; assert i[1] ==  23; assert i[2] ==  24
+        i = POINTER(ctypes.c_ulonglong)()
+        ctd.set_ullong_ppa(i)
+        assert i[0] == 22
+        assert i[1] == 23
+        assert i[2] == 24
         cppjit.ll.array_delete(i)
 
-      # floating point types
-        f = POINTER(ctypes.c_float)();        ctd.set_float_ppa(f)
-        assert f[0] ==   5; assert f[1] ==  10; assert f[2] ==  20
+        # floating point types
+        f = POINTER(ctypes.c_float)()
+        ctd.set_float_ppa(f)
+        assert f[0] == 5
+        assert f[1] == 10
+        assert f[2] == 20
         cppjit.ll.array_delete(f)
-        f = POINTER(ctypes.c_double)();       ctd.set_double_ppa(f)
-        assert f[0] ==  -5; assert f[1] == -10; assert f[2] == -20
+        f = POINTER(ctypes.c_double)()
+        ctd.set_double_ppa(f)
+        assert f[0] == -5
+        assert f[1] == -10
+        assert f[2] == -20
         cppjit.ll.array_delete(f)
-        f = POINTER(ctypes.c_longdouble)();   ctd.set_ldouble_ppa(f)
-        assert f[0] ==   5; assert f[1] ==  10; assert f[2] ==  20
+        f = POINTER(ctypes.c_longdouble)()
+        ctd.set_ldouble_ppa(f)
+        assert f[0] == 5
+        assert f[1] == 10
+        assert f[2] == 20
         cppjit.ll.array_delete(f)
 
     def test07_ctypes_pointer_types(self):
         """Use ctypes for pass-by-ptr/ptr-ptr"""
 
         if ispypy:
-            skip('memory corruption')
+            skip("memory corruption")
 
         # See:
         #  https://docs.python.org/2/library/ctypes.html#fundamental-data-types
@@ -300,18 +447,20 @@ class TestLOWLEVEL:
         # c_wchar_p         wchar_t* (NULL terminated)                  unicode or None
         # c_void_p          void*                                       int/long or None
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
 
         ctd = cppjit.gbl.CppjitTestData()
 
         ptr = ctypes.c_char_p()
-        for meth in ['char', 'cchar']:
-            val = getattr(ctd, 'set_'+meth+'_ppm')(ptr)
+        for meth in ["char", "cchar"]:
+            val = getattr(ctd, "set_" + meth + "_ppm")(ptr)
             assert ctd.freeit(ptr) == val
 
         ptr = ctypes.c_wchar_p()
-        for meth in ['wchar', 'cwchar']:
-            val = getattr(ctd, 'set_'+meth+'_ppm')(ptr)
+        for meth in ["wchar", "cwchar"]:
+            val = getattr(ctd, "set_" + meth + "_ppm")(ptr)
             assert ctd.freeit(ptr) == val
 
         ptr = ctypes.c_void_p()
@@ -321,29 +470,33 @@ class TestLOWLEVEL:
     def test08_ctypes_type_correctness(self):
         """If types don't match with ctypes, expect exceptions"""
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
 
         ctd = cppjit.gbl.CppjitTestData()
 
-        meth_types = ['bool', 'double']
+        meth_types = ["bool", "double"]
         if not IS_WINDOWS:
-            meth_types.append('long')
+            meth_types.append("long")
 
-        i = ctypes.c_int(0);
-        for ext in ['_r', '_p']:
+        i = ctypes.c_int(0)
+        for ext in ["_r", "_p"]:
             for meth in meth_types:
-                with raises(TypeError): getattr(ctd, 'set_'+meth+ext)(i)
+                with raises(TypeError):
+                    getattr(ctd, "set_" + meth + ext)(i)
 
     def test09_numpy_bool_array(self):
         """Test passing of numpy bool array"""
 
         import cppjit
+
         try:
             import numpy as np
         except ImportError:
-            skip('numpy is not installed')
+            skip("numpy is not installed")
 
-        cppjit.cppdef('int convert_bool(bool* x) {return *x;}')
+        cppjit.cppdef("int convert_bool(bool* x) {return *x;}")
 
         x = np.array([True], dtype=bool)
         assert cppjit.gbl.convert_bool(x)
@@ -352,13 +505,15 @@ class TestLOWLEVEL:
     def test10_array_of_const_char_star(self):
         """Test passting of const char*[]"""
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
 
         def py2c(pyargs):
             cargsn = (ctypes.c_char_p * len(pyargs))(*pyargs)
             return ctypes.POINTER(ctypes.c_char_p)(cargsn)
 
-        pyargs = [b'hello', b'world']
+        pyargs = [b"hello", b"world"]
 
         cargs = py2c(pyargs)
         v = cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(cargs, len(pyargs))
@@ -366,27 +521,31 @@ class TestLOWLEVEL:
         assert list(v) == [x.decode() for x in pyargs]
 
         for t in (tuple, list):
-            for pyargs in (t(['aap', 'noot', 'mies']), t([b'zus', 'jet', 'tim'])):
-                v = cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
+            for pyargs in (t(["aap", "noot", "mies"]), t([b"zus", "jet", "tim"])):
+                v = cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(
+                    pyargs, len(pyargs)
+                )
                 assert len(v) == len(pyargs)
                 assert t(v) == t([type(x) == str and x or x.decode() for x in pyargs])
 
-      # debatable, but the following works:
-        pyargs = ['aap', 1, 'mies']
+        # debatable, but the following works:
+        pyargs = ["aap", 1, "mies"]
         with raises(TypeError):
             cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
 
-        pyargs = ['aap', None, 'mies']
+        pyargs = ["aap", None, "mies"]
         with raises(TypeError):
             cppjit.gbl.ArrayOfCStrings.takes_array_of_cstrings(pyargs, len(pyargs))
 
     def test11_array_of_const_char_ref(self):
         """Test passting of const char**&"""
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
         import cppjit.ll
 
-      # IN parameter case
+        # IN parameter case
         cppjit.cppdef("""\
         namespace ConstCharStarStarRef {
         int initialize(int& argc, char**& argv) {
@@ -401,14 +560,14 @@ class TestLOWLEVEL:
             cargsn = (ctypes.c_char_p * len(pyargs))(*pyargs)
             return ctypes.POINTER(ctypes.c_char_p)(cargsn)
 
-        pyargs = [b'hello', b'world']
+        pyargs = [b"hello", b"world"]
         cargs = py2c(pyargs)
 
         assert initialize(ctypes.c_int(len(pyargs)), py2c(pyargs)) == len(pyargs)
-        assert cargs[0] == b'Hello'
-        assert cargs[1] == b'World'
+        assert cargs[0] == b"Hello"
+        assert cargs[1] == b"World"
 
-      # OUT parameter case
+        # OUT parameter case
         cppjit.cppdef("""\
         namespace ConstCharStarStarRef {
         void fill(int& argc, char**& argv) {
@@ -432,8 +591,12 @@ class TestLOWLEVEL:
 
         voidpp = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_void_p))
         for i in range(argc.value):
-            cppjit.ll.array_delete(ctypes.cast(voidpp[i], ctypes.POINTER(ctypes.c_ubyte)))
-        cppjit.ll.array_delete['char*'](ctypes.cast(ptr, ctypes.POINTER(ctypes.c_char_p)))
+            cppjit.ll.array_delete(
+                ctypes.cast(voidpp[i], ctypes.POINTER(ctypes.c_ubyte))
+            )
+        cppjit.ll.array_delete["char*"](
+            ctypes.cast(ptr, ctypes.POINTER(ctypes.c_char_p))
+        )
 
     def test12_null_array(self):
         """Null low level view as empty list"""
@@ -458,7 +621,7 @@ class TestLOWLEVEL:
         try:
             import numpy as np
         except ImportError:
-            skip('numpy is not installed')
+            skip("numpy is not installed")
 
         cppjit.cppdef("""\
         namespace ArrayConversions {
@@ -469,7 +632,7 @@ class TestLOWLEVEL:
 
         a = ns.ivals
 
-        b = np.array(a, copy=True)     # default behavior
+        b = np.array(a, copy=True)  # default behavior
         assert len(a) == len(b)
         a[0] = 4
         assert a[0] == 4
@@ -490,9 +653,12 @@ class TestLOWLEVEL:
 
         import cppjit
 
-        assert cppjit.gbl.std.vector[int].value_type == 'int'
-        assert cppjit.gbl.std.vector[cppjit.gbl.std.vector[int]].value_type == 'std::vector<int>'
-        assert cppjit.gbl.std.vector['int[1]'].value_type == 'int[1]'
+        assert cppjit.gbl.std.vector[int].value_type == "int"
+        assert (
+            cppjit.gbl.std.vector[cppjit.gbl.std.vector[int]].value_type
+            == "std::vector<int>"
+        )
+        assert cppjit.gbl.std.vector["int[1]"].value_type == "int[1]"
 
     def test15_templated_arrays_gmpxx(self):
         """Use of gmpxx array types in templates"""
@@ -501,7 +667,7 @@ class TestLOWLEVEL:
 
         try:
             cppjit.include("gmpxx.h")
-            cppjit.load_library('gmpxx')
+            cppjit.load_library("gmpxx")
         except ImportError:
             skip("gmpxx not installed")
 
@@ -513,9 +679,10 @@ class TestLOWLEVEL:
            using value_type = typename T::value_type;
         }""")
 
-
         g = cppjit.gbl
-        assert g.test15_templated_arrays_gmpxx.vector.value_type[g.std.vector[g.mpz_class]]
+        assert g.test15_templated_arrays_gmpxx.vector.value_type[
+            g.std.vector[g.mpz_class]
+        ]
 
     def test16_addressof_nullptr(self):
         import cppjit
@@ -537,10 +704,12 @@ class TestLOWLEVEL:
     def test17_array_delete_multidim(self):
         """Free a multidimensional (jagged) heap array with ll.array_delete"""
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
         import cppjit.ll
 
-      # C++ allocates a jagged 2D array (array of pointers to rows)
+        # C++ allocates a jagged 2D array (array of pointers to rows)
         cppjit.cppdef("""\
         namespace ArrayDeleteMD {
         void make2d(int& n, int& m, double**& a) {
@@ -552,7 +721,8 @@ class TestLOWLEVEL:
             }
         } }""")
 
-        n = ctypes.c_int(0); m = ctypes.c_int(0)
+        n = ctypes.c_int(0)
+        m = ctypes.c_int(0)
         ptr = ctypes.c_void_p()
         cppjit.gbl.ArrayDeleteMD.make2d(n, m, ptr)
 
@@ -562,20 +732,24 @@ class TestLOWLEVEL:
         for i in range(n.value):
             row = ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double))
             for j in range(m.value):
-                assert row[j] == 10.*i + j
+                assert row[j] == 10.0 * i + j
 
-      # delete[] each row, then the (outer) array of row pointers
+        # delete[] each row, then the (outer) array of row pointers
         for i in range(n.value):
-            cppjit.ll.array_delete(ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double)))
-        cppjit.ll.array_delete['void'](ptr)
+            cppjit.ll.array_delete(
+                ctypes.cast(rows[i], ctypes.POINTER(ctypes.c_double))
+            )
+        cppjit.ll.array_delete["void"](ptr)
 
     def test18_array_delete_fixed(self):
         """Free a fixed-size contiguous multidimensional heap array"""
 
-        import cppjit, ctypes
+        import ctypes
+
+        import cppjit
         import cppjit.ll
 
-      # C++ allocates a contiguous 2D array (single new int[3][4])
+        # C++ allocates a contiguous 2D array (single new int[3][4])
         cppjit.cppdef("""\
         namespace ArrayDeleteFixed {
         intptr_t make(int& r, int& c) {
@@ -586,15 +760,19 @@ class TestLOWLEVEL:
             return (intptr_t)a;
         } }""")
 
-        r = ctypes.c_int(0); c = ctypes.c_int(0)
+        r = ctypes.c_int(0)
+        c = ctypes.c_int(0)
         addr = cppjit.gbl.ArrayDeleteFixed.make(r, c)
 
         blk = ctypes.cast(addr, ctypes.POINTER(ctypes.c_int))
         for k in range(r.value * c.value):
             assert blk[k] == k
 
-      # a single contiguous allocation is released with a single delete[]
-        cppjit.ll.array_delete(ctypes.cast(ctypes.c_void_p(addr), ctypes.POINTER(ctypes.c_int)))
+        # a single contiguous allocation is released with a single delete[]
+        cppjit.ll.array_delete(
+            ctypes.cast(ctypes.c_void_p(addr), ctypes.POINTER(ctypes.c_int))
+        )
+
 
 class TestMULTIDIMARRAYS:
     def setup_class(cls):
@@ -603,27 +781,55 @@ class TestMULTIDIMARRAYS:
         cls.test_dct = test_dct
         cls.datatypes = cppjit.load_reflection_info(cls.test_dct)
         cls.numeric_builtin_types = [
-            'short', 'unsigned short', 'int', 'unsigned int', 'long', 'unsigned long',
-            'long long', 'unsigned long long', 'float', 'double'
+            "short",
+            "unsigned short",
+            "int",
+            "unsigned int",
+            "long",
+            "unsigned long",
+            "long long",
+            "unsigned long long",
+            "float",
+            "double",
         ]
         cls.nbt_short_names = [
-            'short', 'ushort', 'int', 'uint', 'long', 'ulong', 'llong', 'ullong', 'float', 'double'
+            "short",
+            "ushort",
+            "int",
+            "uint",
+            "long",
+            "ulong",
+            "llong",
+            "ullong",
+            "float",
+            "double",
         ]
         try:
             import numpy as np
+
             if IS_WINDOWS:
                 np_long, np_ulong = np.int32, np.uint32
             else:
                 np_long, np_ulong = np.int64, np.uint64
             cls.numpy_builtin_types = [
-                np.short, np.ushort, np.int32, np.uint32, np_long, np_ulong,
-                np.longlong, np.ulonglong, np.float32, np.double
+                np.short,
+                np.ushort,
+                np.int32,
+                np.uint32,
+                np_long,
+                np_ulong,
+                np.longlong,
+                np.ulonglong,
+                np.float32,
+                np.double,
             ]
         except ImportError:
             pass
 
     def _data_m(self, lbl):
-        return [('m_'+tp.replace(' ', '_')+lbl, tp) for tp in self.numeric_builtin_types]
+        return [
+            ("m_" + tp.replace(" ", "_") + lbl, tp) for tp in self.numeric_builtin_types
+        ]
 
     def test01_2D_arrays(self):
         """Access and use of 2D data members"""
@@ -633,7 +839,7 @@ class TestMULTIDIMARRAYS:
         ns = cppjit.gbl.MultiDimArrays
         h = ns.DataHolder()
 
-        data2a = self._data_m('2a')
+        data2a = self._data_m("2a")
         for m, tp in data2a:
             getattr(h, m).reshape((5, 7))
 
@@ -642,28 +848,28 @@ class TestMULTIDIMARRAYS:
             elem_tp = getattr(cppjit.gbl, tp)
             for i in range(5):
                 for j in range(7):
-                    val = elem_tp(5*i+j)
+                    val = elem_tp(5 * i + j)
                     assert arr[i][j] == val
                     assert arr[i, j] == val
 
             for i in range(5):
                 for j in range(7):
-                    arr[i][j] = elem_tp(4+5*i+j)
+                    arr[i][j] = elem_tp(4 + 5 * i + j)
 
             for i in range(5):
                 for j in range(7):
-                    val = elem_tp(4+5*i+j)
+                    val = elem_tp(4 + 5 * i + j)
                     assert arr[i][j] == val
                     assert arr[i, j] == val
 
-        data2c = self._data_m('2c')
+        data2c = self._data_m("2c")
         for m, tp in data2c:
             arr = getattr(h, m)
             assert arr.shape == (3, 5)
             elem_tp = getattr(cppjit.gbl, tp)
             for i in range(3):
                 for j in range(5):
-                    val = elem_tp(3*i+j)
+                    val = elem_tp(3 * i + j)
                     assert arr[i][j] == val
                     assert arr[i, j] == val
 
@@ -675,13 +881,13 @@ class TestMULTIDIMARRAYS:
         try:
             import numpy as np
         except ImportError:
-            skip('numpy is not installed')
+            skip("numpy is not installed")
 
         ns = cppjit.gbl.MultiDimArrays
         h = ns.DataHolder()
 
-      # copy assignment
-        data2c = self._data_m('2c')
+        # copy assignment
+        data2c = self._data_m("2c")
         for itp, (m, tp) in enumerate(data2c):
             setattr(h, m, np.ones((3, 5), dtype=self.numpy_builtin_types[itp]))
 
@@ -693,7 +899,7 @@ class TestMULTIDIMARRAYS:
                     assert arr[i][j] == val
                     assert arr[i, j] == val
 
-      # size checking for copy assignment
+        # size checking for copy assignment
         for itp, (m, tp) in enumerate(data2c):
             with raises(ValueError):
                 setattr(h, m, np.ones((5, 5), dtype=self.numpy_builtin_types[itp]))
@@ -701,17 +907,17 @@ class TestMULTIDIMARRAYS:
             with raises(ValueError):
                 setattr(h, m, np.ones((3, 7), dtype=self.numpy_builtin_types[itp]))
 
-      # pointer assignment
+        # pointer assignment
         N, M = 11, 7
-        data2b = self._data_m('2b')
+        data2b = self._data_m("2b")
         for itp, (m, tp) in enumerate(data2b):
-            setattr(h, m, getattr(h, 'new_'+self.nbt_short_names[itp]+'2d')(N, M))
+            setattr(h, m, getattr(h, "new_" + self.nbt_short_names[itp] + "2d")(N, M))
 
             arr = getattr(h, m)
             elem_tp = getattr(cppjit.gbl, tp)
             for i in range(N):
                 for j in range(M):
-                    val = elem_tp(7*i+j)
+                    val = elem_tp(7 * i + j)
                     assert arr[i][j] == val
                     assert arr[i, j] == val
 
@@ -727,7 +933,7 @@ class TestMULTIDIMARRAYS:
         ns = cppjit.gbl.MultiDimArrays
         h = ns.DataHolder()
 
-        data3a = self._data_m('3a')
+        data3a = self._data_m("3a")
         for m, tp in data3a:
             getattr(h, m).reshape((5, 7, 11))
 
@@ -737,23 +943,23 @@ class TestMULTIDIMARRAYS:
             for i in range(5):
                 for j in range(7):
                     for k in range(11):
-                        val = elem_tp(7*i+3*j+k)
+                        val = elem_tp(7 * i + 3 * j + k)
                         assert arr[i][j][k] == val
                         assert arr[i, j, k] == val
 
             for i in range(5):
                 for j in range(7):
                     for k in range(11):
-                        arr[i][j][k] = elem_tp(4+7*i+3*j+k)
+                        arr[i][j][k] = elem_tp(4 + 7 * i + 3 * j + k)
 
             for i in range(5):
                 for j in range(7):
                     for k in range(11):
-                        val = elem_tp(4+7*i+3*j+k)
+                        val = elem_tp(4 + 7 * i + 3 * j + k)
                         assert arr[i][j][k] == val
                         assert arr[i, j, k] == val
 
-        data3c = self._data_m('3c')
+        data3c = self._data_m("3c")
         for m, tp in data3c:
             arr = getattr(h, m)
             assert arr.shape == (3, 5, 7)
@@ -761,7 +967,7 @@ class TestMULTIDIMARRAYS:
             for i in range(3):
                 for j in range(5):
                     for k in range(7):
-                        val = elem_tp(3*i+2*j+k)
+                        val = elem_tp(3 * i + 2 * j + k)
                         assert arr[i][j][k] == val
                         assert arr[i, j, k] == val
 
@@ -790,20 +996,24 @@ class TestMULTIDIMARRAYS:
 
         ns = cppjit.gbl.MallocChecker
 
-        for dtype in ["int", "int*", "int**",]:
+        for dtype in [
+            "int",
+            "int*",
+            "int**",
+        ]:
             bar = cppjit.ll.malloc[dtype](4)
             assert len(bar) == 4
 
-          # variable assignment
+            # variable assignment
             foo = ns.Foo[dtype]()
             foo.bar = bar
             assert foo.eq(bar)
 
-          # pointer passed to the constructor
+            # pointer passed to the constructor
             foo2 = ns.Foo[dtype](bar)
             assert foo2.eq(bar)
 
-          # pointer passed to a function
+            # pointer passed to a function
             foo3 = ns.create[dtype](bar)
             assert foo3.eq(bar)
 
@@ -823,8 +1033,8 @@ class TestMULTIDIMARRAYS:
 
         for i, v in enumerate(("s1", "s23", "s456")):
             assert len(ns.str_array[i]) == 8
-            assert list(ns.str_array[i])[:len(v)] == list(v)
-    
+            assert list(ns.str_array[i])[: len(v)] == list(v)
+
     def test06_fixed_multidim_array_itemsize(self):
         """conversion of fixed-length array low level views into NumPy arrays"""
         import cppjit
@@ -862,7 +1072,6 @@ class TestMULTIDIMARRAYS:
             arr = np.array(s.a, dtype=np_dtype)
             assert arr.shape == (rows, cols)
 
-    
     def test07_3D_custom_struct(self):
         import cppjit
         from cppjit import gbl

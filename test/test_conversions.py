@@ -1,9 +1,10 @@
-import py, os, sys
-from pytest import raises, mark
-from support import setup_make, IS_LINUX, IS_CLANG_REPL, IS_CLING, IS_MAC
+import py
+from pytest import mark, raises
+from support import IS_CLANG_REPL, IS_CLING, IS_MAC, setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/conversionsDict"))
+
 
 def setup_module(mod):
     setup_make("conversions")
@@ -13,43 +14,49 @@ class TestCONVERSIONS:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.conversion = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_implicit_vector_conversions(self):
         """Test implicit conversions of std::vector"""
 
         import cppjit
+
         CNS = cppjit.gbl.CNS
 
         N = 10
         total = float(sum(range(N)))
 
-        v = cppjit.gbl.std.vector['double'](range(N))
+        v = cppjit.gbl.std.vector["double"](range(N))
         assert CNS.sumit(v) == total
         assert sum(v) == total
         assert CNS.sumit(range(N)) == total
 
         M = 5
         total = float(sum(range(N)) + sum(range(M, N)))
-        v1 = cppjit.gbl.std.vector['double'](range(N))
-        v2 = cppjit.gbl.std.vector['double'](range(M, N))
+        v1 = cppjit.gbl.std.vector["double"](range(N))
+        v2 = cppjit.gbl.std.vector["double"](range(M, N))
         assert CNS.sumit(v1, v2) == total
-        assert sum(v1)+sum(v2)   == total
-        assert CNS.sumit(v1, range(M, N))       == total
-        assert CNS.sumit(range(N), v2)          == total
+        assert sum(v1) + sum(v2) == total
+        assert CNS.sumit(v1, range(M, N)) == total
+        assert CNS.sumit(range(N), v2) == total
         assert CNS.sumit(range(N), range(M, N)) == total
 
     def test02_memory_handling_of_temporaries(self):
         """Verify that memory of temporaries is properly cleaned up"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
+
         CNS, CC = cppjit.gbl.CNS, cppjit.gbl.CNS.Counter
 
         assert CC.s_count == 0
         c = CC()
         assert c.__python_owns__
         assert CC.s_count == 1
-        del c; gc.collect()
+        del c
+        gc.collect()
         assert CC.s_count == 0
 
         assert CNS.myhowmany((CC(), CC(), CC())) == 3
@@ -63,7 +70,10 @@ class TestCONVERSIONS:
     def test03_error_handling(self):
         """Verify error handling"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
+
         CNS, CC = cppjit.gbl.CNS, cppjit.gbl.CNS.Counter
 
         N = 13
@@ -71,11 +81,11 @@ class TestCONVERSIONS:
         assert CNS.sumints(range(N)) == total
         assert CNS.sumit([float(x) for x in range(N)]) == float(total)
         raises(TypeError, CNS.sumints, [float(x) for x in range(N)])
-        raises(TypeError, CNS.sumints, list(range(N))+[0.])
+        raises(TypeError, CNS.sumints, list(range(N)) + [0.0])
 
         assert CC.s_count == 0
 
-        raises(TypeError, CNS.sumints, list(range(N))+[CC()])
+        raises(TypeError, CNS.sumints, list(range(N)) + [CC()])
         gc.collect()
         assert CC.s_count == 0
 
@@ -87,7 +97,9 @@ class TestCONVERSIONS:
         gc.collect()
         assert CC.s_count == 0
 
-    @mark.xfail(run=IS_CLANG_REPL, condition = IS_MAC or IS_CLING, reason = "Crashes on Cling")
+    @mark.xfail(
+        run=IS_CLANG_REPL, condition=IS_MAC or IS_CLING, reason="Crashes on Cling"
+    )
     def test04_implicit_conversion_from_tuple(self):
         """Allow implicit conversions from tuples as arguments {}-like"""
 
@@ -96,9 +108,9 @@ class TestCONVERSIONS:
         import cppjit
 
         m = cppjit.gbl.std.map[str, str]()
-        m.insert(('a', 'b'))      # implicit conversion to std::pair
+        m.insert(("a", "b"))  # implicit conversion to std::pair
 
-        assert m['a'] == 'b'
+        assert m["a"] == "b"
 
     def test05_bool_conversions(self):
         """Test operator bool() and null pointer behavior"""
@@ -123,6 +135,6 @@ class TestCONVERSIONS:
         for t in [ns.CreateNullTest1(), ns.CreateNullTest2()]:
             assert not t
 
-        assert     ns.Test1()
-        assert     ns.Test2(True)
+        assert ns.Test1()
+        assert ns.Test2(True)
         assert not ns.Test2(False)

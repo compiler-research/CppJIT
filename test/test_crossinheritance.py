@@ -1,25 +1,41 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import setup_make, pylong, IS_MAC_ARM, IS_MAC, IS_CLANG_REPL, IS_CLANG_DEBUG, IS_LINUX_ARM, IS_LINUX, IS_CLING, IS_VALGRIND
+import os
 
+import py
+from pytest import mark, raises, skip
+from support import (
+    IS_CLANG_DEBUG,
+    IS_CLING,
+    IS_LINUX_ARM,
+    IS_MAC,
+    IS_MAC_ARM,
+    IS_VALGRIND,
+    setup_make,
+)
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/crossinheritanceDict"))
 
+
 def setup_module(mod):
     setup_make("crossinheritance")
+
 
 class TestCROSSINHERITANCE:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.example01 = cppjit.load_reflection_info(cls.test_dct)
 
-    @mark.xfail(run=not (IS_CLANG_DEBUG or IS_CLING), reason="Crashes with ClangRepl with 'toString not implemented' and on Cling")
+    @mark.xfail(
+        run=not (IS_CLANG_DEBUG or IS_CLING),
+        reason="Crashes with ClangRepl with 'toString not implemented' and on Cling",
+    )
     def test01_override_function(self):
         """Test ability to override a simple function"""
 
         import cppjit
+
         Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1().get_value() == 42
@@ -30,10 +46,10 @@ class TestCROSSINHERITANCE:
 
         assert Derived().get_value() == 13
 
-        assert 'Derived' in str(Derived())
-        assert 'Derived' in repr(Derived())
+        assert "Derived" in str(Derived())
+        assert "Derived" in repr(Derived())
 
-        assert Base1.call_get_value(Base1())   == 42
+        assert Base1.call_get_value(Base1()) == 42
         assert Base1.call_get_value(Derived()) == 13
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
@@ -41,6 +57,7 @@ class TestCROSSINHERITANCE:
         """Test constructor usage for derived classes"""
 
         import cppjit
+
         Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).get_value() == 27
@@ -51,12 +68,12 @@ class TestCROSSINHERITANCE:
                 self.m_pyint = pyval
 
             def get_value(self):
-                return self.m_pyint+self.m_int
+                return self.m_pyint + self.m_int
 
         d = Derived1(2)
-        assert d.m_int   == 42
-        assert d.m_pyint ==  2
-        assert d.get_value()           == 44
+        assert d.m_int == 42
+        assert d.m_pyint == 2
+        assert d.get_value() == 44
         assert Base1.call_get_value(d) == 44
 
         class Derived2(Base1):
@@ -65,12 +82,12 @@ class TestCROSSINHERITANCE:
                 self.m_pyint = pyval
 
             def get_value(self):
-                return self.m_pyint+self.m_int
+                return self.m_pyint + self.m_int
 
         d = Derived2(2, 27)
-        assert d.m_int   == 27
-        assert d.m_pyint ==  2
-        assert d.get_value()           == 29
+        assert d.m_int == 27
+        assert d.m_pyint == 2
+        assert d.get_value() == 29
         assert Base1.call_get_value(d) == 29
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
@@ -78,6 +95,7 @@ class TestCROSSINHERITANCE:
         """Test ability to override a simple function with an abstract base"""
 
         import cppjit
+
         CX = cppjit.gbl.CrossInheritance
 
         class C1PyBase2(CX.IBase2):
@@ -106,10 +124,10 @@ class TestCROSSINHERITANCE:
                 return 13
 
         try:
-            c2 = C2PyBase2()           # direct call to init can not work
+            c2 = C2PyBase2()  # direct call to init can not work
             assert not "should have raised TypeError"
         except TypeError as e:
-            assert "super" in str(e)   # clarifying message
+            assert "super" in str(e)  # clarifying message
             assert "abstract" in str(e)
 
         c1, c3, c4 = C1PyBase2(), C3PyBase2(), C4PyBase2()
@@ -130,11 +148,16 @@ class TestCROSSINHERITANCE:
         assert c4.m_int == 88
         assert CX.IBase2.call_get_value(c4) == 77
 
-    @mark.xfail(run=False, condition=IS_MAC_ARM, reason="Crashes with exception not being caught on Apple Silicon")
+    @mark.xfail(
+        run=False,
+        condition=IS_MAC_ARM,
+        reason="Crashes with exception not being caught on Apple Silicon",
+    )
     def test04_arguments(self):
         """Test ability to override functions that take arguments"""
 
         import cppjit
+
         Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_value(-7) == 20
@@ -144,36 +167,41 @@ class TestCROSSINHERITANCE:
                 return val + 13
 
         d1 = Derived1()
-        assert d1.m_int   == 42
-        assert d1.sum_value(-7)             == 6
+        assert d1.m_int == 42
+        assert d1.sum_value(-7) == 6
         assert Base1.call_sum_value(d1, -7) == 6
 
         b1 = Base1()
-        assert Base1.sum_pass_value(b1) == 6+2*b1.m_int
+        assert Base1.sum_pass_value(b1) == 6 + 2 * b1.m_int
 
         class Derived2(Base1):
             def pass_value1(self, a):
-                return a*2
+                return a * 2
+
             def pass_value2(self, a):
-                return a.value*2
+                return a.value * 2
+
             def pass_value3(self, a):
-                return a.value*2
+                return a.value * 2
+
             def pass_value4(self, b):
-                return b.m_int*2
+                return b.m_int * 2
+
             def pass_value5(self, b):
-                return b.m_int*2
+                return b.m_int * 2
 
         d2 = Derived2()
-        assert Base1.sum_pass_value(d2) == 12+4*d2.m_int
+        assert Base1.sum_pass_value(d2) == 12 + 4 * d2.m_int
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
     def test05_override_overloads(self):
         """Test ability to override overloaded functions"""
 
         import cppjit
+
         Base1 = cppjit.gbl.CrossInheritance.Base1
 
-        assert Base1(27).sum_all(-7)     == 20
+        assert Base1(27).sum_all(-7) == 20
         assert Base1(27).sum_all(-3, -4) == 20
 
         class Derived(Base1):
@@ -181,10 +209,10 @@ class TestCROSSINHERITANCE:
                 return sum(args) + 13
 
         d = Derived()
-        assert d.m_int   == 42
-        assert d.sum_all(-7)             == 6
+        assert d.m_int == 42
+        assert d.sum_all(-7) == 6
         assert Base1.call_sum_all(d, -7) == 6
-        assert d.sum_all(-7, -5)             == 1
+        assert d.sum_all(-7, -5) == 1
         assert Base1.call_sum_all(d, -7, -5) == 1
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
@@ -192,6 +220,7 @@ class TestCROSSINHERITANCE:
         """Declared const methods should keep that qualifier"""
 
         import cppjit
+
         CX = cppjit.gbl.CrossInheritance
 
         class C1PyBase4(CX.IBase4):
@@ -210,13 +239,13 @@ class TestCROSSINHERITANCE:
         assert CX.IBase4.call_get_value(c1) == 17
         assert CX.IBase4.call_get_value(c2) == 27
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Fails with ModuleNotFound error")
+    @mark.xfail(
+        run=False, condition=IS_LINUX_ARM, reason="Fails with ModuleNotFound error"
+    )
     def test07_templated_base(self):
         """Derive from a base class that is instantiated from a template"""
 
-        import cppjit
-
-        from cppjit.gbl.CrossInheritance import TBase1, TDerived1, TBase1_I
+        from cppjit.gbl.CrossInheritance import TBase1, TBase1_I, TDerived1
 
         class TPyDerived1(TBase1_I):
             def __init__(self):
@@ -240,11 +269,13 @@ class TestCROSSINHERITANCE:
         """Python errors should propagate through wrapper"""
 
         import cppjit
+
         Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_value(-7) == 20
 
         errmsg = "I do not like the given value"
+
         class Derived(Base1):
             def sum_value(self, val):
                 raise ValueError(errmsg)
@@ -275,22 +306,28 @@ class TestCROSSINHERITANCE:
 
         res = cppjit.gbl.CrossInheritance.call_base1(d)
 
-        assert 'ValueError' in res
+        assert "ValueError" in res
         assert os.path.basename(__file__) in res
 
-    @mark.xfail(run=not IS_MAC_ARM, condition=IS_MAC_ARM, reason="Crashes with exception not being caught on Apple Silicon")
+    @mark.xfail(
+        run=not IS_MAC_ARM,
+        condition=IS_MAC_ARM,
+        reason="Crashes with exception not being caught on Apple Silicon",
+    )
     def test09_interface_checking(self):
         """Conversion errors should be Python exceptions"""
 
         import cppjit
+
         Base1 = cppjit.gbl.CrossInheritance.Base1
 
         assert Base1(27).sum_value(-7) == 20
 
         errmsg = "I do not like the given value"
+
         class Derived(Base1):
             def get_value(self):
-                self.m_int*2       # missing return
+                self.m_int * 2  # missing return
 
         d = Derived(4)
 
@@ -299,7 +336,9 @@ class TestCROSSINHERITANCE:
     def test10_python_in_templates(self):
         """Usage of Python derived objects in std::vector"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         CB = cppjit.gbl.CrossInheritance.CountableBase
 
@@ -313,7 +352,7 @@ class TestCROSSINHERITANCE:
         start_count = CB.s_count
 
         v = cppjit.gbl.std.vector[PyCountable]()
-        v.emplace_back(PyCountable())     # uses copy ctor
+        v.emplace_back(PyCountable())  # uses copy ctor
         assert len(v) == 1
         gc.collect()
         assert CB.s_count == 1 + start_count
@@ -324,7 +363,7 @@ class TestCROSSINHERITANCE:
         assert p.call() == 84
         v.emplace_back(p)
         assert len(v) == 2
-        assert v[1].call() == 84          # copy ctor copies python state
+        assert v[1].call() == 84  # copy ctor copies python state
         p.extra = 13
         assert p.call() == 55
         assert v[1].call() == 84
@@ -332,7 +371,7 @@ class TestCROSSINHERITANCE:
         gc.collect()
         assert CB.s_count == 2 + start_count
 
-        v.push_back(PyCountable())        # uses copy ctor
+        v.push_back(PyCountable())  # uses copy ctor
         assert len(v) == 3
         gc.collect()
         assert CB.s_count == 3 + start_count
@@ -360,13 +399,14 @@ class TestCROSSINHERITANCE:
           return ptr->some_imp();
         } }""")
 
-        from cppjit.gbl import std, MakeSharedTest
+        from cppjit.gbl import MakeSharedTest, std  # noqa: F401
         from cppjit.gbl.MakeSharedTest import Abstract, call_shared
 
         class PyDerived(Abstract):
             def __init__(self, val):
                 super(PyDerived, self).__init__()
                 self.val = val
+
             def some_imp(self):
                 return self.val
 
@@ -383,10 +423,12 @@ class TestCROSSINHERITANCE:
     def test12a_counter_test(self):
         """Test countable base counting"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         std = cppjit.gbl.std
-        CB  = cppjit.gbl.CrossInheritance.CountableBase
+        CB = cppjit.gbl.CrossInheritance.CountableBase
 
         class PyCountable(CB):
             def call(self):
@@ -397,7 +439,7 @@ class TestCROSSINHERITANCE:
 
         start_count = CB.s_count
 
-      # test counter
+        # test counter
         pyc = PyCountable()
         assert CB.s_count == 1 + start_count
 
@@ -405,14 +447,16 @@ class TestCROSSINHERITANCE:
         gc.collect()
         assert CB.s_count == 0 + start_count
 
-    @mark.xfail(run=False, condition=IS_VALGRIND, reason = "Valgrind issue")
+    @mark.xfail(run=False, condition=IS_VALGRIND, reason="Valgrind issue")
     def test12_python_shared_ptr_memory(self):
         """Usage of Python derived objects with std::shared_ptr"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         std = cppjit.gbl.std
-        CB  = cppjit.gbl.CrossInheritance.CountableBase
+        CB = cppjit.gbl.CrossInheritance.CountableBase
 
         class PyCountable(CB):
             def call(self):
@@ -436,7 +480,9 @@ class TestCROSSINHERITANCE:
     def test13_virtual_dtors_and_del(self):
         """Usage of virtual destructors and Python-side del."""
 
-        import cppjit, warnings
+        import warnings
+
+        import cppjit
 
         cppjit.cppdef("""namespace VirtualDtor {
         class MyClass1 {};    // no virtual dtor ...
@@ -456,9 +502,9 @@ class TestCROSSINHERITANCE:
 
         VD = cppjit.gbl.VirtualDtor
 
-      # rethought this: just issue a warning if there is no virtual destructor
-      # as the C++ side now carries the type of the dispatcher, not the type of
-      # the direct base class
+        # rethought this: just issue a warning if there is no virtual destructor
+        # as the C++ side now carries the type of the dispatcher, not the type of
+        # the direct base class
         with warnings.catch_warnings(record=True) as w:
             # ensure warnings are not turned into errors, even if we run python -W error
             # The reason why we don't turn warnings into errors instead and just
@@ -467,21 +513,22 @@ class TestCROSSINHERITANCE:
             warnings.simplefilter("default")
 
             class MyPyDerived1(VD.MyClass1):
-                pass        # TODO: verify warning is given
+                pass  # TODO: verify warning is given
+
             assert len(w) == 1
             assert issubclass(w[-1].category, RuntimeWarning)
             assert "has no virtual destructor" in str(w[-1].message)
 
             d = MyPyDerived1()
-            del d             # used to crash
+            del d  # used to crash
 
         class MyPyDerived2(VD.MyClass2):
             pass
 
         d = MyPyDerived2()
-        del d                 # used to crash
+        del d  # used to crash
 
-      # check a few more derivations that should not fail
+        # check a few more derivations that should not fail
         class MyPyDerived3(VD.MyClass3):
             pass
 
@@ -495,13 +542,13 @@ class TestCROSSINHERITANCE:
 
         ns = cppjit.gbl.AccessProtected
 
-        assert not 'my_data' in ns.MyBase.__dict__
-        assert not hasattr(ns.MyBase(), 'my_data')
+        assert "my_data" not in ns.MyBase.__dict__
+        assert not hasattr(ns.MyBase(), "my_data")
 
         class MyPyDerived(ns.MyBase):
             pass
 
-        assert 'my_data' in MyPyDerived.__dict__
+        assert "my_data" in MyPyDerived.__dict__
         assert MyPyDerived().my_data == 101
 
         class MyPyDerived(ns.MyBase):
@@ -512,18 +559,18 @@ class TestCROSSINHERITANCE:
                 self.my_data = 42
 
         m = MyPyDerived()
-        assert m.py_data      == 13
-        assert m.my_data      == 42
-        assert m.get_data()   == 42
+        assert m.py_data == 13
+        assert m.my_data == 42
+        assert m.get_data() == 42
         assert m.get_data_v() == 42
-    
+
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
     def test15_object_returns(self):
         """Return of C++ objects from overridden functions"""
 
         import cppjit
 
-      # Part 1: return of a new C++ object
+        # Part 1: return of a new C++ object
         cppjit.cppdef("""namespace object_returns {
         class Base {
         public:
@@ -558,7 +605,7 @@ class TestCROSSINHERITANCE:
         obj = PyDerived2()
         assert not not ns.call_foo(obj)
 
-      # Part 2: return of a new Python derived object
+        # Part 2: return of a new Python derived object
         class PyDerived3(ns.Base):
             def foo(self):
                 return PyDerived3()
@@ -620,6 +667,7 @@ class TestCROSSINHERITANCE:
         ns = cppjit.gbl.cctor_access_controlled
 
         for base in (ns.Base1, ns.Base2):
+
             class PyDerived(base):
                 def whoami(self):
                     return "PyDerived"
@@ -655,7 +703,7 @@ class TestCROSSINHERITANCE:
             pass
 
         obj = PyDerived2()
-        assert obj.whoami()   == "PyDerived1"
+        assert obj.whoami() == "PyDerived1"
         assert ns.callit(obj) == "PyDerived1"
 
         class PyDerived3(PyDerived1):
@@ -663,7 +711,7 @@ class TestCROSSINHERITANCE:
                 return "PyDerived3"
 
         obj = PyDerived3()
-        assert obj.whoami()   == "PyDerived3"
+        assert obj.whoami() == "PyDerived3"
         assert ns.callit(obj) == "PyDerived3"
 
         class PyDerived4(PyDerived2):
@@ -671,13 +719,12 @@ class TestCROSSINHERITANCE:
                 return "PyDerived4"
 
         obj = PyDerived4()
-        assert obj.whoami()   == "PyDerived4"
+        assert obj.whoami() == "PyDerived4"
         assert ns.callit(obj) == "PyDerived4"
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test18_abstract_hierarchy(self):
         """Hierarchy with abstract classes"""
-
 
         import cppjit
 
@@ -711,10 +758,10 @@ class TestCROSSINHERITANCE:
                 return self._message
 
         obj = PyDerived2()
-        assert obj.whoami()  == "PyDerived1"
+        assert obj.whoami() == "PyDerived1"
         assert ns.whois(obj) == "PyDerived1"
 
-        assert obj.message()  == "Hello, World!"
+        assert obj.message() == "Hello, World!"
         assert ns.saywot(obj) == "Hello, World!"
 
     def test19_cpp_side_multiple_inheritance(self):
@@ -831,7 +878,11 @@ class TestCROSSINHERITANCE:
         assert a.m_2 == 42
         assert a.m_3 == 67
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM and IS_VALGRIND, reason="Crashes with Valgrind on Linux ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_LINUX_ARM and IS_VALGRIND,
+        reason="Crashes with Valgrind on Linux ARM",
+    )
     def test21_multiple_inheritance_with_constructors(self):
         """Multiple inheritance with constructors"""
 
@@ -915,11 +966,15 @@ class TestCROSSINHERITANCE:
         assert a.y() == ns.cally(a)
         assert a.z() == ns.callz(a)
 
-        assert a.m_1 ==  27
-        assert a.m_2 ==  88
+        assert a.m_1 == 27
+        assert a.m_2 == 88
         assert a.m_3 == -11
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM and IS_VALGRIND, reason="Crashes with Valgrind on Linux ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_LINUX_ARM and IS_VALGRIND,
+        reason="Crashes with Valgrind on Linux ARM",
+    )
     def test22_multiple_inheritance_with_defaults(self):
         """Multiple inheritance with defaults"""
 
@@ -1033,14 +1088,14 @@ class TestCROSSINHERITANCE:
         ns = cppjit.gbl.const_byvalue_return
 
         class ReturnConstByValue(ns.Abstract):
-             def return_const(self):
-                 return ns.Const("abcdef")
+            def return_const(self):
+                return ns.Const("abcdef")
 
         a = ReturnConstByValue()
         assert a.return_const().m_value == "abcdef"
-        assert ns.callit(a).m_value     == "abcdef"
+        assert ns.callit(a).m_value == "abcdef"
 
-    @mark.xfail(condition = IS_MAC, reason = "Fails on OS X")
+    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test24_non_copyable(self):
         """Inheriting from a non-copyable base class"""
 
@@ -1093,27 +1148,27 @@ class TestCROSSINHERITANCE:
         ns = cppjit.gbl.non_copyable
 
         Copyable = ns.Copyable
-        Movable  = ns.Movable
+        Movable = ns.Movable
         NoCopyNoMove = ns.NoCopyNoMove
 
         class DerivedCopyable(Copyable):
             pass
 
-      # used to fail with compilation error
+        # used to fail with compilation error
         class DerivedMovable(Movable):
             pass
 
-      # used to fail with compilation error
+        # used to fail with compilation error
         class DerivedMulti(cppjit.multi(Movable, Copyable)):
             pass
 
-     # used to fail with compilation error
+        # used to fail with compilation error
         class DerivedNoCopyNoMove(NoCopyNoMove):
             def __init__(self):
                 super(DerivedNoCopyNoMove, self).__init__(self)
-              # TODO: chicken-and-egg situation here, 'this' from 'self' is
-              # nullptr until the constructor has been called, so it can't
-              # be passed as an argument to the same constructor
+                # TODO: chicken-and-egg situation here, 'this' from 'self' is
+                # nullptr until the constructor has been called, so it can't
+                # be passed as an argument to the same constructor
                 self.fActual = self
 
             def callme_imp(self):
@@ -1150,8 +1205,8 @@ class TestCROSSINHERITANCE:
         }; }""")
 
         ns = cppjit.gbl.default_ctor_and_multiple
-        Copyable  = ns.Copyable
-        Movable   = ns.Movable
+        Copyable = ns.Copyable
+        Movable = ns.Movable
         SomeClass = ns.SomeClass
 
         class DerivedMulti(cppjit.multi(Movable, Copyable, SomeClass)):
@@ -1192,6 +1247,7 @@ class TestCROSSINHERITANCE:
         ns = cppjit.gbl.no_default_ctor
 
         for kls in (ns.NoDefCtor1, ns.NoDefCtor2, ns.NoDefCtor3):
+
             class PyDerived(kls):
                 def __init__(self):
                     super(PyDerived, self).__init__()
@@ -1250,10 +1306,10 @@ class TestCROSSINHERITANCE:
 
         obj = MyPyDerived()
 
-        assert obj.calc1()       == 1
+        assert obj.calc1() == 1
         assert ns.callback1(obj) == 1
 
-        assert obj.calc2()       == 2
+        assert obj.calc2() == 2
         assert ns.callback2(obj) == 2
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
@@ -1276,11 +1332,11 @@ class TestCROSSINHERITANCE:
         A = cppjit.gbl.CrossDeep.A
 
         class B(A):
-            def __init__ (self, name = 'b'):
+            def __init__(self, name="b"):
                 super(B, self).__init__(name)
 
             def fun1(self):
-                return  1
+                return 1
 
         class C(B):
             def fun1(self):
@@ -1289,11 +1345,15 @@ class TestCROSSINHERITANCE:
         class D(B):
             pass
 
-        for inst, val1 in [(A('a'), 0), (B('b'), 1), (C('c'), -1), (D('d'), 1)]:
+        for inst, val1 in [(A("a"), 0), (B("b"), 1), (C("c"), -1), (D("d"), 1)]:
             assert inst.fun1() == val1
             assert inst.fun2() == inst.fun1()
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM and IS_VALGRIND, reason="Crashes with Valgrind on Linux ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_LINUX_ARM and IS_VALGRIND,
+        reason="Crashes with Valgrind on Linux ARM",
+    )
     def test29_cross_deep_multi(self):
         """Deep multi-inheritance hierarchy"""
 
@@ -1379,7 +1439,6 @@ class TestCROSSINHERITANCE:
         j = J()
         assert ns.calc_a(j) == 88
 
-
     def test30_access_and_overload(self):
         """Inheritance with access and overload complications"""
 
@@ -1406,14 +1465,16 @@ class TestCROSSINHERITANCE:
 
         ns = cppjit.gbl.AccessAndOverload
 
-      # used to produce uncompilable code
+        # used to produce uncompilable code
         class PyDerived(ns.Base):
             pass
 
     def test31_object_rebind(self):
         """Usage of bind_object to cast with Python derived objects"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         ns = cppjit.gbl.CrossInheritance
         ns.build_component.__creates__ = True
@@ -1428,8 +1489,8 @@ class TestCROSSINHERITANCE:
 
         assert ns.Component.get_count() == 1
 
-      # introduce the actual component type; would have been a header,
-      # but this simply has to match what is in crossinheritance.cxx
+        # introduce the actual component type; would have been a header,
+        # but this simply has to match what is in crossinheritance.cxx
         cppjit.cppdef("""namespace CrossInheritance {
         class ComponentWithValue : public Component {
         public:
@@ -1440,9 +1501,9 @@ class TestCROSSINHERITANCE:
             int m_value;
         }; }""")
 
-      # rebind cmp1 to its actual C++ class
+        # rebind cmp1 to its actual C++ class
         act_cmp1 = cppjit.bind_object(cmp1, ns.ComponentWithValue)
-        assert not cmp1.__python_owns__          # b/c transferred
+        assert not cmp1.__python_owns__  # b/c transferred
         assert act_cmp1.__python_owns__
         assert act_cmp1.getValue() == 42
 
@@ -1450,13 +1511,14 @@ class TestCROSSINHERITANCE:
         gc.collect()
         assert ns.Component.get_count() == 0
 
-      # introduce a Python derived class
+        # introduce a Python derived class
         ns.ComponentWithValue.__init__.__creates__ = False
+
         class PyComponentWithValue(ns.ComponentWithValue):
             def getValue(self):
                 return self.m_value + 12
 
-      # wipe the python-side connection
+        # wipe the python-side connection
         pycmp2a = PyComponentWithValue(27)
         assert not pycmp2a.__python_owns__
         pycmp2a.__python_owns__ = True
@@ -1470,24 +1532,27 @@ class TestCROSSINHERITANCE:
         gc.collect()
         assert ns.Component.get_count() == 0
 
-        cmp2 = cppjit.bind_object(cppjit.addressof(PyComponentWithValue(13)), ns.Component)
+        cmp2 = cppjit.bind_object(
+            cppjit.addressof(PyComponentWithValue(13)), ns.Component
+        )
         assert ns.Component.get_count() == 1
 
-        cmp2 = ns.cycle_component(cmp2)     # causes auto down-cast
+        cmp2 = ns.cycle_component(cmp2)  # causes auto down-cast
         assert ns.Component.get_count() == 1
-        #assert type(cmp2) != PyComponentWithValue
+        # assert type(cmp2) != PyComponentWithValue
 
-      # rebind cmp2 to the python type
+        # rebind cmp2 to the python type
         act_cmp2 = cppjit.bind_object(cmp2, PyComponentWithValue)
         act_cmp2.__python_owns__ = True
-        assert act_cmp2.getValue() == 13+12
+        assert act_cmp2.getValue() == 13 + 12
 
         del cmp2, act_cmp2
         gc.collect()
         assert ns.Component.get_count() == 0
 
-      # introduce a Python derived class with initialization
+        # introduce a Python derived class with initialization
         ns.ComponentWithValue.__init__.__creates__ = True
+
         class PyComponentWithInit(ns.ComponentWithValue):
             def __init__(self, cppvalue):
                 super(PyComponentWithInit, self).__init__(cppvalue)
@@ -1500,7 +1565,7 @@ class TestCROSSINHERITANCE:
         assert type(cmp3) == PyComponentWithInit
         assert ns.Component.get_count() == 1
 
-        assert cmp3.getValue() == 77+11
+        assert cmp3.getValue() == 77 + 11
 
         del cmp3
         gc.collect()
@@ -1511,31 +1576,37 @@ class TestCROSSINHERITANCE:
         assert type(cmp4) == ns.Component
         assert ns.Component.get_count() == 1
 
-      # rebind cmp4 to the python type
+        # rebind cmp4 to the python type
         act_cmp4 = cppjit.bind_object(cmp4, PyComponentWithInit)
-        assert act_cmp4.getValue() == 88+11
+        assert act_cmp4.getValue() == 88 + 11
 
         del cmp4, act_cmp4, pyc
         gc.collect()
         assert ns.Component.get_count() == 0
 
         ns.ComponentWithValue.__init__.__creates__ = False
-        cmp5 = cppjit.bind_object(cppjit.addressof(PyComponentWithInit(22)), ns.Component)
+        cmp5 = cppjit.bind_object(
+            cppjit.addressof(PyComponentWithInit(22)), ns.Component
+        )
         cmp5.__python_owns__ = True
         assert type(cmp5) == ns.Component
         assert ns.Component.get_count() == 1
 
-      # rebind cmp5 to the python type
+        # rebind cmp5 to the python type
         act_cmp5 = cppjit.bind_object(cmp5, PyComponentWithInit)
         assert not cmp5.__python_owns__
         assert act_cmp5.__python_owns__
-        assert act_cmp5.getValue() == 22+11
+        assert act_cmp5.getValue() == 22 + 11
 
         del cmp5, act_cmp5
         gc.collect()
         assert ns.Component.get_count() == 0
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM and IS_VALGRIND, reason="Crashes with Valgrind on Linux ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_LINUX_ARM and IS_VALGRIND,
+        reason="Crashes with Valgrind on Linux ARM",
+    )
     def test32_by_value_arguments(self):
         """Override base function taking by-value arguments"""
 
@@ -1591,11 +1662,11 @@ class TestCROSSINHERITANCE:
         ns = cppjit.gbl.DirectCalls
 
         a = ns.A()
-        assert a.func()     == 1
+        assert a.func() == 1
         assert ns.A.func(a) == 1
 
         b = ns.B()
-        assert b.func()     == 2
+        assert b.func() == 2
         assert ns.B.func(b) == 2
         assert ns.A.func(b) == 1
 
@@ -1674,6 +1745,7 @@ class TestCROSSINHERITANCE:
 
         class Derived(ns.Base):
             was_deleted = False
+
             def __del__(self):
                 Derived.was_deleted = True
 
@@ -1708,13 +1780,13 @@ class TestCROSSINHERITANCE:
 
         class Derived(ns.Base):
             was_cpp_deleted = False
-            was_py_deleted  = False
+            was_py_deleted = False
 
             def __destruct__(self):
                 Derived.was_cpp_deleted = True
 
             def __del__(self):
-                Derived.was_py_deleted  = True
+                Derived.was_py_deleted = True
 
         o1 = Derived()
         o1.do_work()
@@ -1724,9 +1796,9 @@ class TestCROSSINHERITANCE:
             o1.do_work()
 
         assert Derived.was_cpp_deleted == True
-        assert Derived.was_py_deleted  == False
+        assert Derived.was_py_deleted == False
         del o1
-        assert Derived.was_py_deleted  == True
+        assert Derived.was_py_deleted == True
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test37_deep_tree(self):
@@ -1855,6 +1927,6 @@ class TestCROSSINHERITANCE:
 
         # Compiling the dispatcher for the overridden member function used to
         # fail because of the `unsigned int` type, whose name has two keywords.
-        class MyUIntDerivedClass( cppjit.gbl.MyUIntBaseClass ):
-            def give_unsigned_int( self ):
+        class MyUIntDerivedClass(cppjit.gbl.MyUIntBaseClass):
+            def give_unsigned_int(self):
                 return 1

@@ -1,10 +1,8 @@
-import py, os, sys
-from pytest import raises, skip, mark
-from support import IS_MAC_ARM, IS_MAC_X86, IS_LINUX_ARM
+from pytest import mark, skip
+from support import IS_LINUX_ARM, IS_MAC_ARM, IS_MAC_X86
 
 
 class TestCONCURRENT:
-
     def setup_class(cls):
         import cppjit
 
@@ -21,8 +19,9 @@ class TestCONCURRENT:
     def test01_simple_threads(self):
         """Run basic Python threads"""
 
-        import cppjit
         import threading
+
+        import cppjit
 
         cppjit.gbl.Workers.calc.__release_gil__ = True
 
@@ -47,19 +46,23 @@ class TestCONCURRENT:
         except ImportError:
             skip("module concurrent is not installed")
 
-        total = 0.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(self.data)) as executor:
+        total = 0.0
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=len(self.data)
+        ) as executor:
             futures = [executor.submit(cppjit.gbl.Workers.calc, d) for d in self.data]
             for f in concurrent.futures.as_completed(futures):
                 total += f.result()
-        assert round(total+26.4642, 8) == 0.0
+        assert round(total + 26.4642, 8) == 0.0
 
     def test03_timeout(self):
         """Time-out with threads"""
 
         return
+        import threading
+        import time
+
         import cppjit
-        import threading, time
 
         cppjit.cppdef("""\
         namespace test12_timeout {
@@ -73,17 +76,19 @@ class TestCONCURRENT:
            while (!*test12_timeout::stopit);
         """
 
-        t = threading.Thread(target=cppjit.gbl.cling.runtime.gCling.process, args=(cmd,))
+        t = threading.Thread(
+            target=cppjit.gbl.cling.runtime.gCling.process, args=(cmd,)
+        )
         t.start()
 
-      # have to give ProcessLine() time to actually start doing work
+        # have to give ProcessLine() time to actually start doing work
         while not cppjit.gbl.test12_timeout.islive:
-            time.sleep(0.1)     # in seconds
+            time.sleep(0.1)  # in seconds
 
-      # join the thread with a timeout after 0.1s
-        t.join(0.1)             # id.
+        # join the thread with a timeout after 0.1s
+        t.join(0.1)  # id.
 
-        if t.is_alive():        # was timed-out
+        if t.is_alive():  # was timed-out
             cppjit.gbl.test12_timeout.stopit[0] = True
 
     @mark.xfail(condition=IS_MAC_X86, reason="Fails on OS X x86")
@@ -140,6 +145,7 @@ class TestCONCURRENT:
 
         class C(consumer):
             count = 0
+
             def process(self, c):
                 self.count += 1
 
@@ -154,6 +160,7 @@ class TestCONCURRENT:
 
         class C(consumer):
             count = 0
+
             def process(self, c):
                 raise RuntimeError("all wrong")
 
@@ -164,7 +171,7 @@ class TestCONCURRENT:
         w.wait()
 
         assert "RuntimeError" in w.err_msg
-        assert "all wrong"    in w.err_msg
+        assert "all wrong" in w.err_msg
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
     def test05_float2d_callback(self):
@@ -226,7 +233,7 @@ class TestCONCURRENT:
                 try:
                     for c in range(channels):
                         for s in range(samples):
-                            self.buffer.setSample(c, s, 0.0) # < used to crash here
+                            self.buffer.setSample(c, s, 0.0)  # < used to crash here
                 except Exception as e:
                     print(e)
 
@@ -236,8 +243,9 @@ class TestCONCURRENT:
     def test06_overload_reuse_in_threads(self):
         """Threads reuse overload objects; check for clashes"""
 
-        import cppjit
         import threading
+
+        import cppjit
 
         cppjit.cppdef("""\
         namespace CPPOverloadReuse {
@@ -247,7 +255,7 @@ class TestCONCURRENT:
         }; }""")
 
         def test():
-            o = {"a": "b"}        # causes a temporary to be created
+            o = {"a": "b"}  # causes a temporary to be created
             simulation = cppjit.gbl.CPPOverloadReuse.Simulation1()
             simulation.set_something(o, ".")
 
@@ -264,11 +272,12 @@ class TestCONCURRENT:
         """Threads reuse overload objects; check for clashes if no GIL"""
 
         if IS_MAC_ARM:
-          # the culprit here is occasional std::system_error if a thread can not be joined
+            # the culprit here is occasional std::system_error if a thread can not be joined
             skip("JIT exceptions can not be caught in JITed code on Mac ARM")
 
-        import cppjit
         import threading
+
+        import cppjit
 
         cppjit.cppdef("""\
         namespace CPPOverloadReuse {
@@ -286,7 +295,7 @@ class TestCONCURRENT:
             c1, c2, c3 = 0, 0, 0
 
         def test(i, state=State):
-            #global c1, c2, c3, lock
+            # global c1, c2, c3, lock
 
             simulation = cppjit.gbl.CPPOverloadReuse.Simulation2(i)
             res = simulation.do_something()
@@ -320,10 +329,8 @@ class TestCONCURRENT:
             };
         """)
 
-
         def add(x: int, y: int) -> int:
             return x + y
-
 
         callback = gbl.NS1.callback
         callback.__release_gil__ = True

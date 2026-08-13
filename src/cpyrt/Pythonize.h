@@ -4,7 +4,6 @@
 // Standard
 #include <string>
 
-
 namespace cppjit::cpyrt {
 
 // make the named C++ class more python-like

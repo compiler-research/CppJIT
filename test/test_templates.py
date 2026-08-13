@@ -1,9 +1,18 @@
-import py, os
-from pytest import raises, mark
-from support import setup_make, pylong, IS_CLANG_REPL, IS_CLING, IS_CLANG_DEBUG, IS_MAC_X86, IS_MAC_ARM, IS_MAC, IS_LINUX_ARM, IS_VALGRIND
+import py
+from pytest import mark, raises
+from support import (
+    IS_CLANG_REPL,
+    IS_CLING,
+    IS_LINUX_ARM,
+    IS_MAC,
+    IS_VALGRIND,
+    pylong,
+    setup_make,
+)
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/templatesDict"))
+
 
 def setup_module(mod):
     setup_make("templates")
@@ -13,6 +22,7 @@ class TestTEMPLATES:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.templates = cppjit.load_reflection_info(cls.test_dct)
 
     def test00_template_back_reference(self):
@@ -26,40 +36,43 @@ class TestTEMPLATES:
     def test01_template_member_functions(self):
         """Template member functions lookup and calls"""
 
-        import cppjit
         import ctypes
         import sys
 
+        import cppjit
+
         m = cppjit.gbl.MyTemplatedMethodClass()
 
-      # implicit (called before other tests to check caching)
-        assert m.get_size(1)          == m.get_int_size()+1
-        assert 'get_size<int>' in dir(cppjit.gbl.MyTemplatedMethodClass)
+        # implicit (called before other tests to check caching)
+        assert m.get_size(1) == m.get_int_size() + 1
+        assert "get_size<int>" in dir(cppjit.gbl.MyTemplatedMethodClass)
 
-      # pre-instantiated
-        assert m.get_size['char']()   == m.get_char_size()
-        assert m.get_size[int]()      == m.get_int_size()
+        # pre-instantiated
+        assert m.get_size["char"]() == m.get_char_size()
+        assert m.get_size[int]() == m.get_int_size()
 
-      # specialized
+        # specialized
         if sys.hexversion >= 0x3000000:
-            targ = 'long'
+            targ = "long"
         else:
-            targ = long
-        assert m.get_size[targ]()     == m.get_long_size()
-        
-        assert m.get_size(ctypes.c_double(3.14)) == m.get_size['double']()
-        assert m.get_size(ctypes.c_double(3.14).value) == m.get_size['double']()+1
+            targ = long  # noqa: F821
+        assert m.get_size[targ]() == m.get_long_size()
 
-      # auto-instantiation
-        assert m.get_size[float]()    == m.get_float_size()
-        assert m.get_size['double']() == m.get_double_size()
-        assert m.get_size['MyTemplatedMethodClass']() == m.get_self_size()
-        assert 'get_size<MyTemplatedMethodClass>' in dir(cppjit.gbl.MyTemplatedMethodClass)
+        assert m.get_size(ctypes.c_double(3.14)) == m.get_size["double"]()
+        assert m.get_size(ctypes.c_double(3.14).value) == m.get_size["double"]() + 1
 
-      # auto through typedef
-        assert m.get_size['MyTMCTypedef_t']() == m.get_self_size()
-        assert 'get_size<MyTMCTypedef_t>' in dir(cppjit.gbl.MyTemplatedMethodClass)
-        assert m.get_size['MyTemplatedMethodClass']() == m.get_self_size()
+        # auto-instantiation
+        assert m.get_size[float]() == m.get_float_size()
+        assert m.get_size["double"]() == m.get_double_size()
+        assert m.get_size["MyTemplatedMethodClass"]() == m.get_self_size()
+        assert "get_size<MyTemplatedMethodClass>" in dir(
+            cppjit.gbl.MyTemplatedMethodClass
+        )
+
+        # auto through typedef
+        assert m.get_size["MyTMCTypedef_t"]() == m.get_self_size()
+        assert "get_size<MyTMCTypedef_t>" in dir(cppjit.gbl.MyTemplatedMethodClass)
+        assert m.get_size["MyTemplatedMethodClass"]() == m.get_self_size()
 
     def test02_non_type_template_args(self):
         """Use of non-types as template arguments"""
@@ -68,7 +81,7 @@ class TestTEMPLATES:
 
         cppjit.cppdef("template<int i> int nt_templ_args() { return i; };")
 
-        assert cppjit.gbl.nt_templ_args[1]()   == 1
+        assert cppjit.gbl.nt_templ_args[1]() == 1
         assert cppjit.gbl.nt_templ_args[256]() == 256
 
     def test03_templated_function(self):
@@ -79,17 +92,17 @@ class TestTEMPLATES:
         # TODO: the following only works if something else has already
         # loaded the headers associated with this template
         ggs = cppjit.gbl.global_get_size
-        assert ggs['char']() == 1
+        assert ggs["char"]() == 1
 
         gsf = cppjit.gbl.global_some_foo
 
         assert gsf[int](3) == 42
-        assert gsf(3)      == 42
-        assert gsf(3.)     == 42
+        assert gsf(3) == 42
+        assert gsf(3.0) == 42
 
         gsbv = cppjit.gbl.global_some_bar_var
-        assert gsbv(3)            == 13
-        assert gsbv['double'](3.) == 13
+        assert gsbv(3) == 13
+        assert gsbv["double"](3.0) == 13
 
         gsb = cppjit.gbl.global_some_bar
         assert gsb[1]
@@ -105,34 +118,36 @@ class TestTEMPLATES:
 
         # test forced creation of subsequent overloads
         from cppjit.gbl.std import vector
-        # float in, float out
-        ggsr = cppjit.gbl.global_get_some_result['std::vector<float>']
-        assert type(ggsr(vector['float']([0.5])).m_retval) == float
-        assert ggsr(vector['float']([0.5])).m_retval == 0.5
-        # int in, float out
-        ggsr = cppjit.gbl.global_get_some_result['std::vector<int>']
-        assert type(ggsr(vector['int']([5])).m_retval) == float
-        assert ggsr(vector['int']([5])).m_retval == 5.
-        # float in, int out
-        ggsr = cppjit.gbl.global_get_some_result['std::vector<float>, int']
-        assert type(ggsr(vector['float']([0.3])).m_retval) == int
-        assert ggsr(vector['float']([0.3])).m_retval == 0
-        # int in, int out
-        ggsr = cppjit.gbl.global_get_some_result['std::vector<int>, int']
-        assert type(ggsr(vector['int']([5])).m_retval) == int
-        assert ggsr(vector['int']([5])).m_retval == 5
 
-    @mark.xfail(condition = IS_MAC, reason = "Fails on OS X")
+        # float in, float out
+        ggsr = cppjit.gbl.global_get_some_result["std::vector<float>"]
+        assert type(ggsr(vector["float"]([0.5])).m_retval) == float
+        assert ggsr(vector["float"]([0.5])).m_retval == 0.5
+        # int in, float out
+        ggsr = cppjit.gbl.global_get_some_result["std::vector<int>"]
+        assert type(ggsr(vector["int"]([5])).m_retval) == float
+        assert ggsr(vector["int"]([5])).m_retval == 5.0
+        # float in, int out
+        ggsr = cppjit.gbl.global_get_some_result["std::vector<float>, int"]
+        assert type(ggsr(vector["float"]([0.3])).m_retval) == int
+        assert ggsr(vector["float"]([0.3])).m_retval == 0
+        # int in, int out
+        ggsr = cppjit.gbl.global_get_some_result["std::vector<int>, int"]
+        assert type(ggsr(vector["int"]([5])).m_retval) == int
+        assert ggsr(vector["int"]([5])).m_retval == 5
+
+    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test04_variadic_function(self):
         """Call a variadic function"""
 
         import cppjit
+
         std = cppjit.gbl.std
 
-        s = std.ostringstream('(', std.ios_base.ate)
+        s = std.ostringstream("(", std.ios_base.ate)
         # Fails; wrong overload on PyPy, none on CPython
-        #s << "("
-        cppjit.gbl.SomeNS.tuplify(s, 1, 4., "aap")
+        # s << "("
+        cppjit.gbl.SomeNS.tuplify(s, 1, 4.0, "aap")
         assert s.str() == "(1, 4, aap, NULL)"
 
         cppjit.cppdef("""
@@ -140,31 +155,32 @@ class TestTEMPLATES:
             int test04_variadic_func() { return sizeof...(myTypes); }
         """)
 
-        assert cppjit.gbl.test04_variadic_func['int', 'double', 'void*']() == 3
+        assert cppjit.gbl.test04_variadic_func["int", "double", "void*"]() == 3
 
     def test05_variadic_overload(self):
         """Call an overloaded variadic function"""
 
         import cppjit
 
-        assert cppjit.gbl.isSomeInt(3.)         == False
-        assert cppjit.gbl.isSomeInt(1)          == True
-        assert cppjit.gbl.isSomeInt()           == False
-        assert cppjit.gbl.isSomeInt(1, 2, 3)    == False
+        assert cppjit.gbl.isSomeInt(3.0) == False
+        assert cppjit.gbl.isSomeInt(1) == True
+        assert cppjit.gbl.isSomeInt() == False
+        assert cppjit.gbl.isSomeInt(1, 2, 3) == False
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test06_variadic_sfinae(self):
         """Attribute testing through SFINAE"""
 
         import cppjit
-        cppjit.gbl.AttrTesting      # load
-        from cppjit.gbl.AttrTesting import Obj1, Obj2, has_var1, call_has_var1
+
+        cppjit.gbl.AttrTesting  # load
+        from cppjit.gbl.AttrTesting import Obj1, Obj2, call_has_var1, has_var1
         from cppjit.gbl.std import move
 
-        assert has_var1(Obj1()) == hasattr(Obj1(), 'var1')
-        assert has_var1(Obj2()) == hasattr(Obj2(), 'var1')
-        assert has_var1(3)      == hasattr(3,      'var1')
-        assert has_var1("aap")  == hasattr("aap",  'var1')
+        assert has_var1(Obj1()) == hasattr(Obj1(), "var1")
+        assert has_var1(Obj2()) == hasattr(Obj2(), "var1")
+        assert has_var1(3) == hasattr(3, "var1")
+        assert has_var1("aap") == hasattr("aap", "var1")
 
         assert call_has_var1(move(Obj1())) == True
         assert call_has_var1(move(Obj2())) == False
@@ -173,13 +189,14 @@ class TestTEMPLATES:
         """Traits/type deduction"""
 
         import cppjit
-        cppjit.gbl.AttrTesting      # load
-        from cppjit.gbl.AttrTesting import select_template_arg, Obj1, Obj2
+
+        cppjit.gbl.AttrTesting  # load
+        from cppjit.gbl.AttrTesting import Obj1, Obj2, select_template_arg
 
         assert select_template_arg[0, Obj1, Obj2].argument == Obj1
         assert select_template_arg[1, Obj1, Obj2].argument == Obj2
         # TODO: the following crashes deep inside cling/clang ...
-        #raises(TypeError, getattr, select_template_arg[2, Obj1, Obj2], 'argument')
+        # raises(TypeError, getattr, select_template_arg[2, Obj1, Obj2], 'argument')
 
         # This is a bit subtle: to be able to use typedefs in templates, builtin
         # types are present as subclasses that carry __cpp_name__, hence the result
@@ -213,14 +230,14 @@ class TestTEMPLATES:
 
         assert cppjit.gbl.BaseClassWithStatic["size_t"].ref_value == 42
 
-        b1 = cppjit.gbl.DerivedClassUsingStatic["size_t"](  0)
+        b1 = cppjit.gbl.DerivedClassUsingStatic["size_t"](0)
         b2 = cppjit.gbl.DerivedClassUsingStatic["size_t"](100)
 
-      # assert b1.ref_value == 42
-        assert b1.m_value   ==  0
+        # assert b1.ref_value == 42
+        assert b1.m_value == 0
 
-      # assert b2.ref_value == 42
-        assert b2.m_value   == 42
+        # assert b2.ref_value == 42
+        assert b2.m_value == 42
 
     def test09_templated_callable(self):
         """Test that templated operator() translates to __call__"""
@@ -229,7 +246,7 @@ class TestTEMPLATES:
 
         tc = cppjit.gbl.TemplatedCallable()
 
-        assert tc(5) == 5.
+        assert tc(5) == 5.0
 
     def test10_templated_hidding_methods(self):
         """Test that base class methods are not considered when hidden"""
@@ -240,7 +257,7 @@ class TestTEMPLATES:
         D = cppjit.gbl.TemplateHiding.Derived
 
         assert B().callme(1) == 2
-        assert D().callme()  == 2
+        assert D().callme() == 2
         assert D().callme(2) == 2
 
     def test11_templated_ctor(self):
@@ -270,11 +287,13 @@ class TestTEMPLATES:
 
         from cppjit import gbl
 
-        assert round(gbl.RTTest_SomeClassWithTCtor[int](1, 3.1).m_double - 4.1, 8) == 0.
+        assert (
+            round(gbl.RTTest_SomeClassWithTCtor[int](1, 3.1).m_double - 4.1, 8) == 0.0
+        )
 
         RTTest2 = gbl.RTTest_SomeNamespace.RTTest_SomeClassWithTCtor
-        assert round(RTTest2[int](1, 3.1).m_double - 4.1, 8) == 0.
-        assert round(RTTest2[int]().m_double + 1., 8) == 0.
+        assert round(RTTest2[int](1, 3.1).m_double - 4.1, 8) == 0.0
+        assert round(RTTest2[int]().m_double + 1.0, 8) == 0.0
 
     @mark.xfail(run=False, condition=IS_CLING, reason="Crashes on Cling")
     def test12_template_aliases(self):
@@ -284,28 +303,28 @@ class TestTEMPLATES:
 
         nsup = cppjit.gbl.using_problem
 
-      # through dictionary
+        # through dictionary
         davec = cppjit.gbl.DA_vector["float"]()
         davec += range(10)
         assert davec[5] == 5
 
-      # through interpreter
+        # through interpreter
         cppjit.cppdef("template<typename T> using IA_vector = std::vector<T>;")
         iavec = cppjit.gbl.IA_vector["float"]()
         iavec += range(10)
         assert iavec[5] == 5
 
-      # with variadic template
+        # with variadic template
         assert nsup.matryoshka[int, 3].type
         assert nsup.matryoshka[int, 3, 4].type
-        assert nsup.make_vector[int , 3]
-        assert nsup.make_vector[int , 3]().m_val == 3
-        assert nsup.make_vector[int , 4]().m_val == 4
+        assert nsup.make_vector[int, 3]
+        assert nsup.make_vector[int, 3]().m_val == 3
+        assert nsup.make_vector[int, 4]().m_val == 4
 
-      # with inner types using
+        # with inner types using
         assert cppjit.evaluate("using_problem::Bar::Foo")
         assert nsup.Foo
-        assert nsup.Bar.Foo       # used to fail
+        assert nsup.Bar.Foo  # used to fail
 
     def test13_using_templated_method(self):
         """Access to base class templated methods through 'using'"""
@@ -315,18 +334,18 @@ class TestTEMPLATES:
         b = cppjit.gbl.using_problem.Base[int]()
         assert type(b.get3()) == int
         assert b.get3() == 5
-        assert type(b.get3['double'](5)) == float
-        assert b.get3['double'](5) == 10.
+        assert type(b.get3["double"](5)) == float
+        assert b.get3["double"](5) == 10.0
 
         d = cppjit.gbl.using_problem.Derived[int]()
-        #assert type(d.get1['double'](5)) == float
-        #assert d.get1['double'](5) == 10.
+        # assert type(d.get1['double'](5)) == float
+        # assert d.get1['double'](5) == 10.
 
         assert type(d.get2()) == int
         assert d.get2() == 5
 
-        assert type(d.get3['double'](5)) == float
-        assert d.get3['double'](5) == 10.
+        assert type(d.get3["double"](5)) == float
+        assert d.get3["double"](5) == 10.0
         assert type(d.get3()) == int
         assert d.get3() == 5
 
@@ -351,8 +370,12 @@ class TestTEMPLATES:
             return RTTest_SomeNamespace::RTTest_TemplatedList2<T...>{};
         } """)
 
-        from cppjit.gbl import rttest_make_tlist, rttest_make_tlist2, \
-            RTTest_SomeNamespace, RTTest_SomeStruct1
+        from cppjit.gbl import (
+            RTTest_SomeNamespace,
+            RTTest_SomeStruct1,
+            rttest_make_tlist,
+            rttest_make_tlist2,
+        )
 
         assert rttest_make_tlist(RTTest_SomeStruct1())
         assert rttest_make_tlist(RTTest_SomeNamespace.RTTest_SomeStruct2())
@@ -366,17 +389,17 @@ class TestTEMPLATES:
 
         is_valid = cppjit.gbl.T_WithRValue.is_valid
 
-      # bit of regression testing
+        # bit of regression testing
         assert is_valid(3)
-        assert is_valid['int'](3)      # used to crash
+        assert is_valid["int"](3)  # used to crash
 
-      # actual method calls
+        # actual method calls
         assert is_valid[int](1)
         assert not is_valid(0)
-        assert is_valid(1.)
-        assert not is_valid(0.)
+        assert is_valid(1.0)
+        assert not is_valid(0.0)
 
-    @mark.xfail(condition = IS_MAC, reason = "Fails on OS X")
+    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test16_variadic(self):
         """Range of variadic templates"""
 
@@ -385,49 +408,68 @@ class TestTEMPLATES:
         ns = cppjit.gbl.some_variadic
 
         def get_tn(ns):
-          # helper to make all platforms look the same
+            # helper to make all platforms look the same
             tn = ns.gTypeName
-            tn = tn.replace(' ', '')
-            tn = tn.replace('class', '')
-            tn = tn.replace('__cdecl', '')
-            tn = tn.replace('__thiscall', '')
-            tn = tn.replace('__ptr64', '')
+            tn = tn.replace(" ", "")
+            tn = tn.replace("class", "")
+            tn = tn.replace("__cdecl", "")
+            tn = tn.replace("__thiscall", "")
+            tn = tn.replace("__ptr64", "")
             return tn
 
-      # templated class
-        a = ns.A['int', 'double']()
+        # templated class
+        a = ns.A["int", "double"]()
         assert get_tn(ns) == "some_variadic::A<int,double>"
 
-      # static functions
-        a.sa(1, 1., 'a')
-        assert get_tn(ns).find("some_variadic::A<int,double>::void(int&&,double&&,std::") == 0
-        ns.A['char&', 'double*'].sa(1, 1., 'a')
-        assert get_tn(ns).find("some_variadic::A<char&,double*>::void(int&&,double&&,std::") == 0
-        ns.A['char&', 'double*'].sa_T['int'](1, 1., 'a')
-        assert get_tn(ns).find("some_variadic::A<char&,double*>::int(int&&,double&&,std::") == 0
+        # static functions
+        a.sa(1, 1.0, "a")
+        assert (
+            get_tn(ns).find("some_variadic::A<int,double>::void(int&&,double&&,std::")
+            == 0
+        )
+        ns.A["char&", "double*"].sa(1, 1.0, "a")
+        assert (
+            get_tn(ns).find(
+                "some_variadic::A<char&,double*>::void(int&&,double&&,std::"
+            )
+            == 0
+        )
+        ns.A["char&", "double*"].sa_T["int"](1, 1.0, "a")
+        assert (
+            get_tn(ns).find("some_variadic::A<char&,double*>::int(int&&,double&&,std::")
+            == 0
+        )
 
-      # member functions
-        a.a(1, 1., 'a')
-        assert get_tn(ns).find("void(some_variadic::A<int,double>::*)(int&&,double&&,std::") == 0
-        a.a_T['int'](1, 1., 'a')
-        assert get_tn(ns).find("int(some_variadic::A<int,double>::*)(int&&,double&&,std::") == 0
+        # member functions
+        a.a(1, 1.0, "a")
+        assert (
+            get_tn(ns).find(
+                "void(some_variadic::A<int,double>::*)(int&&,double&&,std::"
+            )
+            == 0
+        )
+        a.a_T["int"](1, 1.0, "a")
+        assert (
+            get_tn(ns).find("int(some_variadic::A<int,double>::*)(int&&,double&&,std::")
+            == 0
+        )
 
-      # non-templated class
+        # non-templated class
         b = ns.B()
         assert get_tn(ns) == "some_variadic::B"
 
-      # static functions
-        b.sb(1, 1., 'a')
+        # static functions
+        b.sb(1, 1.0, "a")
         assert get_tn(ns).find("some_variadic::B::void(int&&,double&&,std::") == 0
-        ns.B.sb(1, 1., 'a')
+        ns.B.sb(1, 1.0, "a")
         assert get_tn(ns).find("some_variadic::B::void(int&&,double&&,std::") == 0
-        ns.B.sb_T['int'](1, 1., 'a')
+        ns.B.sb_T["int"](1, 1.0, "a")
         assert get_tn(ns).find("some_variadic::B::int(int&&,double&&,std::") == 0
 
-      # member functions
-        b.b(1, 1., 'a')
+        # member functions
+        b.b(1, 1.0, "a")
         assert get_tn(ns).find("void(some_variadic::B::*)(int&&,double&&,std::") == 0
-        b.b_T['int'](1, 1., 'a')
+        b.b_T["int"](1, 1.0, "a")
         assert get_tn(ns).find("int(some_variadic::B::*)(int&&,double&&,std::") == 0
 
     @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
@@ -450,22 +492,22 @@ class TestTEMPLATES:
 
         ns = cppjit.gbl.T_WithGreedyOverloads
 
-      # check that void* does not mask template instantiations
+        # check that void* does not mask template instantiations
         g1 = ns.WithGreedy1()
         assert g1.get_size(ns.SomeClass(), True) == -1
         assert g1.get_size(ns.SomeClass()) == cppjit.sizeof(ns.SomeClass)
 
-      # check that void* does not mask template instantiations
+        # check that void* does not mask template instantiations
         g2 = ns.WithGreedy2()
         assert g2.get_size(ns.SomeClass()) == cppjit.sizeof(ns.SomeClass)
         assert g2.get_size(ns.SomeClass(), True) == -1
 
-      # check that unknown classes do not mask template instantiations
+        # check that unknown classes do not mask template instantiations
         g3 = ns.WithGreedy3()
         assert g3.get_size(ns.SomeClass()) == cppjit.sizeof(ns.SomeClass)
         assert g3.get_size(cppjit.nullptr, True) == -1
 
-    @mark.xfail(condition = IS_CLING, reason = "Fails on Cling")
+    @mark.xfail(condition=IS_CLING, reason="Fails on Cling")
     def test19_templated_operator_add(self):
         """Templated operator+ is ambiguous: either __pos__ or __add__"""
 
@@ -488,12 +530,12 @@ class TestTEMPLATES:
             }
         }; }""")
 
-        c = gbl.OperatorAddTest.CustomVec['double'](5.3)
-        d = gbl.OperatorAddTest.CustomVec['int'](1)
+        c = gbl.OperatorAddTest.CustomVec["double"](5.3)
+        d = gbl.OperatorAddTest.CustomVec["int"](1)
 
         q = c + d
 
-        assert round(q.X() - 6.3, 8) == 0.
+        assert round(q.X() - 6.3, 8) == 0.0
 
     def test20_templated_ctor_with_defaults(self):
         """Templated constructor with defaults used to be ignored"""
@@ -537,16 +579,16 @@ class TestTEMPLATES:
 
         d1 = l2v.Derived()
 
-        assert l2v.test1([d1])     == 1
+        assert l2v.test1([d1]) == 1
         assert l2v.test1([d1, d1]) == 2
 
-        assert l2v.test2[int]([d1])     == 1
+        assert l2v.test2[int]([d1]) == 1
         assert l2v.test2[int]([d1, d1]) == 2
 
-        assert l2v.test2a[int]([d1])     == 1
+        assert l2v.test2a[int]([d1]) == 1
         assert l2v.test2a[int]([d1, d1]) == 2
 
-        assert l2v.test3[int]([d1])     == 1
+        assert l2v.test3[int]([d1]) == 1
         assert l2v.test3[int]([d1, d1]) == 2
 
     def test22_type_deduction_of_proper_integer_size(self):
@@ -558,10 +600,10 @@ class TestTEMPLATES:
 
         from cppjit.gbl import PassSomeInt
 
-        for val in [1, 100000000000, -2**32, 2**32-1, 2**64-1 -2**63]:
+        for val in [1, 100000000000, -(2**32), 2**32 - 1, 2**64 - 1 - 2**63]:
             assert val == PassSomeInt(val)
 
-        for val in [2**64, -2**63-1]:
+        for val in [2**64, -(2**63) - 1]:
             raises(OverflowError, PassSomeInt, val)
 
     def test23_overloaded_setitem(self):
@@ -572,9 +614,13 @@ class TestTEMPLATES:
         MyVec = cppjit.gbl.TemplateWithSetItem.MyVec
 
         v = MyVec["float"](2)
-        v[0] = 1        # used to throw TypeError
+        v[0] = 1  # used to throw TypeError
 
-    @mark.xfail(run=False, condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLING, reason="Crashes on Valgind Cling-ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLING,
+        reason="Crashes on Valgind Cling-ARM",
+    )
     def test24_stdfunction_templated_arguments(self):
         """Use of std::function with templated arguments"""
 
@@ -588,7 +634,7 @@ class TestTEMPLATES:
                 return callback(x);
         }""")
 
-        assert cppjit.gbl.std.function['double(std::vector<double>)']
+        assert cppjit.gbl.std.function["double(std::vector<double>)"]
 
         assert cppjit.gbl.callback_vector(callback, [1, 2, 3]) == 6
 
@@ -599,13 +645,17 @@ class TestTEMPLATES:
 
         assert cppjit.gbl.wrap_callback_vector(callback, [4, 5, 6]) == 15
 
-        assert cppjit.gbl.std.function['double(std::vector<double>)']
+        assert cppjit.gbl.std.function["double(std::vector<double>)"]
 
-    @mark.xfail(run=False, condition=IS_VALGRIND and IS_LINUX_ARM, reason="Crashes on Valgrind-ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_VALGRIND and IS_LINUX_ARM,
+        reason="Crashes on Valgrind-ARM",
+    )
     def test25_stdfunction_ref_and_ptr_args(self):
         """Use of std::function with reference or pointer args"""
 
-      # used to fail b/c type trimming threw away end ')' together with '*' or '&'
+        # used to fail b/c type trimming threw away end ')' together with '*' or '&'
 
         import cppjit
 
@@ -635,7 +685,7 @@ class TestTEMPLATES:
         assert ns.f_noref[int](lambda arg: True)
         assert ns.f_notemplate(lambda arg: True)
 
-      # similar/same problem as above
+        # similar/same problem as above
         cppjit.cppdef("""\
         namespace LambdaAndTemplates {
         template <typename T>
@@ -645,7 +695,7 @@ class TestTEMPLATES:
 
         assert ns.f_nofun[int](lambda arg: True)
 
-      # following used to fail argument conversion
+        # following used to fail argument conversion
         assert ns.f[int](lambda arg: True)
 
         cppjit.cppdef("""\
@@ -666,7 +716,7 @@ class TestTEMPLATES:
 
         foo = ns.Foo()
         foo.fnc = ns.bar
-        foo.fnc       # <- this access used to fail
+        foo.fnc  # <- this access used to fail
 
     def test26_partial_templates(self):
         """Deduction of types with partial templates"""
@@ -690,17 +740,17 @@ class TestTEMPLATES:
 
         ns = cppjit.gbl.partial_template
 
-        assert cppjit.gbl.partial_template_foo1['double', 'int'](17) == 17
-        assert cppjit.gbl.partial_template_foo1['double'](17) == 17
+        assert cppjit.gbl.partial_template_foo1["double", "int"](17) == 17
+        assert cppjit.gbl.partial_template_foo1["double"](17) == 17
 
-        assert cppjit.gbl.partial_template_foo1['double'](17) == 17
-        assert cppjit.gbl.partial_template_foo1['double', 'int'](17) == 17
+        assert cppjit.gbl.partial_template_foo1["double"](17) == 17
+        assert cppjit.gbl.partial_template_foo1["double", "int"](17) == 17
 
-        assert ns.foo1['double', 'int'](17) == 17
-        assert ns.foo1['double'](17) == 17
+        assert ns.foo1["double", "int"](17) == 17
+        assert ns.foo1["double"](17) == 17
 
-        assert ns.foo2['double'](17) == 17
-        assert ns.foo2['double', 'int'](17) == 17
+        assert ns.foo2["double"](17) == 17
+        assert ns.foo2["double", "int"](17) == 17
 
         cppjit.cppdef("""\
         template <typename A, typename... Other, typename B>
@@ -717,17 +767,17 @@ class TestTEMPLATES:
             B bar2(B b) { return b; }
         }""")
 
-        assert cppjit.gbl.partial_template_bar1['double','int'](17) == 17
-        assert cppjit.gbl.partial_template_bar1['double'](17) == 17
+        assert cppjit.gbl.partial_template_bar1["double", "int"](17) == 17
+        assert cppjit.gbl.partial_template_bar1["double"](17) == 17
 
-        assert cppjit.gbl.partial_template_bar2['double'](17) == 17
-        assert cppjit.gbl.partial_template_bar2['double','int'](17) == 17
+        assert cppjit.gbl.partial_template_bar2["double"](17) == 17
+        assert cppjit.gbl.partial_template_bar2["double", "int"](17) == 17
 
-        assert ns.bar1['double','int'](17) == 17
-        assert ns.bar1['double'](17) == 17
+        assert ns.bar1["double", "int"](17) == 17
+        assert ns.bar1["double"](17) == 17
 
-        assert ns.bar2['double'](17) == 17
-        assert ns.bar2['double','int'](17) == 17
+        assert ns.bar2["double"](17) == 17
+        assert ns.bar2["double", "int"](17) == 17
 
     def test27_variadic_constructor(self):
         """Use of variadic template function as contructor"""
@@ -763,7 +813,7 @@ class TestTEMPLATES:
         a = ns.Atom(1567.0)
         assert a.m_m == 1567.0
 
-    @mark.xfail(condition = IS_MAC, reason = "Fails on OS X ")
+    @mark.xfail(condition=IS_MAC, reason="Fails on OS X ")
     def test28_enum_in_constructor(self):
         """Use of enums in template function as constructor"""
 
@@ -784,15 +834,18 @@ class TestTEMPLATES:
 
         ns = cppjit.gbl.EnumConstructor
 
-        assert ns.FS('i', ns.ST.I32,    ns.FS.EQ,   10)
-        assert ns.FS('i', ns.ST.TI.I32, ns.FS.R.EQ, 10)
+        assert ns.FS("i", ns.ST.I32, ns.FS.EQ, 10)
+        assert ns.FS("i", ns.ST.TI.I32, ns.FS.R.EQ, 10)
 
-
-    @mark.xfail(run=False, condition=IS_VALGRIND and IS_LINUX_ARM, reason="Crashes on Valgrind-ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_VALGRIND and IS_LINUX_ARM,
+        reason="Crashes on Valgrind-ARM",
+    )
     def test29_function_ptr_as_template_arg(self):
         """Function pointers as template arguments"""
 
-        import cppjit, sys
+        import cppjit
 
         # different templates used to prevent memoization caches resolving calls
         cppjit.cppdef("""\
@@ -837,12 +890,13 @@ class TestTEMPLATES:
 
         def adapt(node):
             return ns.EventId(node.fData)
+
         adapt.__cpp_name__ = "FPTA::EventId (*)(FPTA::Node&)"
 
-        def ann_adapt(node: 'FPTA::Node&') -> ns.EventId:
+        def ann_adapt(node: "FPTA::Node&") -> ns.EventId:  # noqa: F722
             return ns.EventId(node.fData)
 
-        def ann_ref_mod(node: 'FPTA::Node&') -> ns.EventId:
+        def ann_ref_mod(node: "FPTA::Node&") -> ns.EventId:  # noqa: F722
             ev_id = ns.EventId(node.fData)
             node.fData = 81
             return ev_id
@@ -850,23 +904,28 @@ class TestTEMPLATES:
         s = ns.Simulator()
 
         # based on reflected __cpp_name__
-        assert s.Schedule1(ns.Time(1.0), ns.cpp_adapt, ns.Node(42)).fId                == 42
-        assert s.Schedule2['FPTA::Node&'](ns.Time(1.0), ns.cpp_adapt, ns.Node(37)).fId == 37
+        assert s.Schedule1(ns.Time(1.0), ns.cpp_adapt, ns.Node(42)).fId == 42
+        assert (
+            s.Schedule2["FPTA::Node&"](ns.Time(1.0), ns.cpp_adapt, ns.Node(37)).fId
+            == 37
+        )
 
         # based on explicit __cpp_name__
-        assert s.Schedule3(ns.Time(1.0), adapt, ns.Node(57)).fId                == 57
-        assert s.Schedule4['FPTA::Node&'](ns.Time(1.0), adapt, ns.Node(77)).fId == 77
+        assert s.Schedule3(ns.Time(1.0), adapt, ns.Node(57)).fId == 57
+        assert s.Schedule4["FPTA::Node&"](ns.Time(1.0), adapt, ns.Node(77)).fId == 77
 
         # based on __annotations__ (p3.5 and later)
-        assert s.Schedule5(ns.Time(1.0), ann_adapt, ns.Node(25)).fId                == 25
-        assert s.Schedule6['FPTA::Node&'](ns.Time(1.0), ann_adapt, ns.Node(88)).fId == 88
+        assert s.Schedule5(ns.Time(1.0), ann_adapt, ns.Node(25)).fId == 25
+        assert (
+            s.Schedule6["FPTA::Node&"](ns.Time(1.0), ann_adapt, ns.Node(88)).fId == 88
+        )
 
         # verify that the node is correctly modified
         tn = ns.Node(25)
-        assert s.Schedule5(ns.Time(1.0), ann_ref_mod, tn).fId                == 25
+        assert s.Schedule5(ns.Time(1.0), ann_ref_mod, tn).fId == 25
         assert tn.fData == 81
         tn = ns.Node(88)
-        assert s.Schedule6['FPTA::Node&'](ns.Time(1.0), ann_ref_mod, tn).fId == 88
+        assert s.Schedule6["FPTA::Node&"](ns.Time(1.0), ann_ref_mod, tn).fId == 88
         assert tn.fData == 81
 
     def test30_mix_and_match(self):
@@ -891,7 +950,7 @@ class TestTEMPLATES:
 
         ns = cppjit.gbl.MixNMatch
 
-        ns.Templated()       # used to crash
+        ns.Templated()  # used to crash
 
     @mark.xfail(run=False, condition=IS_CLING, reason="Crashed with Cling")
     def test31_ltlt_in_template_name(self):
@@ -937,27 +996,27 @@ class TestTEMPLATES:
         lut = ns.Lut[int, X, Y]()
 
         assert lut
-        assert lut.size() == (1<<X)+1
+        assert lut.size() == (1 << X) + 1
 
         assert len(lut.data1) == 3
         assert len(lut.data2) == X
-        assert len(lut.data3) == 2*X
+        assert len(lut.data3) == 2 * X
         assert len(lut.data4) == 16385
-        assert len(lut.data5) == (1<<3)+1
-        assert len(lut.data6) == (1<<3)+1
-        assert len(lut.data7) == (1<<X)+1
-        assert len(lut.data8) == X<<2
+        assert len(lut.data5) == (1 << 3) + 1
+        assert len(lut.data6) == (1 << 3) + 1
+        assert len(lut.data7) == (1 << X) + 1
+        assert len(lut.data8) == X << 2
 
         lut2 = ns.Lut2[int, X, Y]()
 
         assert lut2
-        assert lut2.size() == (1<<X)+1
+        assert lut2.size() == (1 << X) + 1
 
         assert len(lut2.data) == lut2.size()
 
-        assert len(cppjit.gbl.gLutData5) == (1<<3)+1
-        assert len(cppjit.gbl.gLutData6) == (1<<3)+1
-        assert len(cppjit.gbl.gLutData8) == 14<<2
+        assert len(cppjit.gbl.gLutData5) == (1 << 3) + 1
+        assert len(cppjit.gbl.gLutData6) == (1 << 3) + 1
+        assert len(cppjit.gbl.gLutData8) == 14 << 2
 
     def test32_template_of_function_with_templated_args(self):
         """Lookup of templates of function with templated args used to fail"""
@@ -993,13 +1052,25 @@ class TestTEMPLATES:
 
         ns = cppjit.gbl.parenthesis
 
-        for t in ['i','v',
-                  'ii', 'iv', 'vi', 'vv',
-                  'iii', 'ivi', 'vii', 'vvi',
-                  'iiv', 'ivv', 'viv', 'vvv']:
+        for t in [
+            "i",
+            "v",
+            "ii",
+            "iv",
+            "vi",
+            "vv",
+            "iii",
+            "ivi",
+            "vii",
+            "vvi",
+            "iiv",
+            "ivv",
+            "viv",
+            "vvv",
+        ]:
             assert getattr(ns, t)
 
-      # second, more elaborate set
+        # second, more elaborate set
 
         cppjit.cppdef("""\
         #include <vector>
@@ -1086,21 +1157,49 @@ class TestTEMPLATES:
 
         n = 0
         results = {}
-        types = ['fi', 'fv',
-                 'fii', 'fiv', 'fvi', 'fvv',
-                 'fiii', 'fivi', 'fvii', 'fvvi',
-                 'fiiv', 'fivv', 'fviv', 'fvvv']
+        types = [
+            "fi",
+            "fv",
+            "fii",
+            "fiv",
+            "fvi",
+            "fvv",
+            "fiii",
+            "fivi",
+            "fvii",
+            "fvvi",
+            "fiiv",
+            "fivv",
+            "fviv",
+            "fvvv",
+        ]
 
-        for v in ['TNaV<T>', 'TNaN::TNaV<T>', 'TNaVA<T>', 'TNaN::TNaVA<T>', 'TNaVU<T>', 'TNaN::TNaVU<T>', 'std::vector<T>']:
-            for f in ['TNaF<T>', 'TNaFn<T>', 'TNaN::TNaF<T>', 'TNaN::TNaFn<T>', 'std::function<T>']:
-                for i in ['TNaI', 'TNaN::TNaI', 'TNaN2::TNaI', 'int']:
+        for v in [
+            "TNaV<T>",
+            "TNaN::TNaV<T>",
+            "TNaVA<T>",
+            "TNaN::TNaVA<T>",
+            "TNaVU<T>",
+            "TNaN::TNaVU<T>",
+            "std::vector<T>",
+        ]:
+            for f in [
+                "TNaF<T>",
+                "TNaFn<T>",
+                "TNaN::TNaF<T>",
+                "TNaN::TNaFn<T>",
+                "std::function<T>",
+            ]:
+                for i in ["TNaI", "TNaN::TNaI", "TNaN2::TNaI", "int"]:
                     n += 1
                     cppjit.cppdef(cpp.format(v=v, f=f, i=i, n=n))
                     for t in types:
-                        run_n = getattr(cppjit.gbl, 'TNaRun_%d' % n)
+                        run_n = getattr(cppjit.gbl, "TNaRun_%d" % n)
                         getattr(run_n, t)
 
-    @mark.xfail(run = False, condition=IS_MAC and IS_CLING, reason="Crashes on OS X + Cling")
+    @mark.xfail(
+        run=False, condition=IS_MAC and IS_CLING, reason="Crashes on OS X + Cling"
+    )
     def test33_using_template_argument(self):
         """`using` type as template argument"""
 
@@ -1123,19 +1222,22 @@ class TestTEMPLATES:
         # from UsingPtr::Test*const& to UsingPtr::Test*& (ie. `const` is lost)
         assert ns.testfun["UsingPtr::testptr"](cppjit.nullptr)
 
-        assert ns.testptr.__name__     == "Test"
+        assert ns.testptr.__name__ == "Test"
         assert ns.testptr.__cpp_name__ == "UsingPtr::Test*"
 
         assert cppjit.gbl.std.vector[ns.Test]
         assert ns.testptr
         assert cppjit.gbl.std.vector[ns.testptr]
 
-    @mark.xfail(condition=IS_MAC, run=IS_CLANG_REPL, reason="fails on OSX & crashes with cling")
+    @mark.xfail(
+        condition=IS_MAC, run=IS_CLANG_REPL, reason="fails on OSX & crashes with cling"
+    )
     def test34_cstring_template_argument(self):
         """`const char*` use over std::string"""
 
-        import cppjit
         import ctypes
+
+        import cppjit
 
         cppjit.cppdef(r"""\
         namespace CStringTemplateArg {
@@ -1149,14 +1251,14 @@ class TestTEMPLATES:
         ns = cppjit.gbl.CStringTemplateArg
 
         assert type(ns.stringify("Alice")) == cppjit.gbl.std.string
-        assert ns.stringify("Alice", "Bob")                          == "Alice Bob "
-        assert ns.stringify(1, 2, 3)                                 == "1 2 3 "
-        assert ns.stringify["const char*"]("Aap")                    == "Aap "
+        assert ns.stringify("Alice", "Bob") == "Alice Bob "
+        assert ns.stringify(1, 2, 3) == "1 2 3 "
+        assert ns.stringify["const char*"]("Aap") == "Aap "
         assert ns.stringify(ctypes.c_char_p(bytes("Noot", "ascii"))) == "Noot "
 
         def test35_templated_callbacks(self):
             import cppjit
-    
+
             cppjit.cppdef(
                 r"""
             std::string foo() { return "foo!";}
@@ -1176,10 +1278,18 @@ class TestTEMPLATES:
             }
             """
             )
-    
+
             assert cppjit.gbl.dataframe_define_mock(cppjit.gbl.foo) == "foo!"
-            assert cppjit.gbl.dataframe_define_mock(cppjit.gbl.bar, 42, 11.11) == "bar(42, 11.110000)"
-            assert cppjit.gbl.dataframe_define_mock(cppjit.gbl.baz["int", "double"], 33, 101.101, "hello") == "baz(33, 101.101000, \"hello\")"
+            assert (
+                cppjit.gbl.dataframe_define_mock(cppjit.gbl.bar, 42, 11.11)
+                == "bar(42, 11.110000)"
+            )
+            assert (
+                cppjit.gbl.dataframe_define_mock(
+                    cppjit.gbl.baz["int", "double"], 33, 101.101, "hello"
+                )
+                == 'baz(33, 101.101000, "hello")'
+            )
 
     @mark.xfail(condition=IS_MAC, reason="Conversion fails in OSX")
     def test36_templated_callbacks(self):
@@ -1217,18 +1327,14 @@ class TestTEMPLATES:
         """
         )
 
-
         class CallBackError(Exception):
             pass
-
 
         def callback(x: int) -> float:
             return x * 2.0
 
-
         def raise_error() -> float:
             raise CallBackError("called raise_error")
-
 
         o = gbl.ERDataFrame()
         assert o.rows == 0
@@ -1250,10 +1356,10 @@ class TestTEMPLATES:
 
         # with raises(CallBackError):
         #     o.Define("errA", raise_error) # FIXME: raises TypeError for failure in overload selection
-        
+
         # with raises(gbl.std.runtime_error):
         #     o.Define("errB", gbl.throw_error) # FIXME: raises TypeError for failure in overload selection
-        
+
         assert o.rows == 5
 
     def test37_enum_template_argument_function(self):
@@ -1281,7 +1387,7 @@ class TestTEMPLATES:
 
         assert gbl.get[gbl.What.NO]() == 0
         assert gbl.get[gbl.What.YES]() == 1
-    
+
     def test38_constructor_implicit_conversion(self):
         """Implicit conversion to call a templated constructor"""
 
@@ -1332,7 +1438,9 @@ class TestTEMPLATES:
 
         import cppjit
 
-        cppjit.cppdef("namespace errpath { template <unsigned N> struct Buf { int tag; }; }")
+        cppjit.cppdef(
+            "namespace errpath { template <unsigned N> struct Buf { int tag; }; }"
+        )
 
         # Check that the failed instantiation error message contains the
         # correct template name.
@@ -1348,6 +1456,7 @@ class TestTEMPLATED_TYPEDEFS:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.templates = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail
@@ -1363,16 +1472,22 @@ class TestTEMPLATED_TYPEDEFS:
         assert tct[int, dum, 8].vsize == 8
 
         in_type = tct[int, dum, 4].in_type
-        assert 'in_type' in dir(tct[int, dum, 4])
+        assert "in_type" in dir(tct[int, dum, 4])
 
-        assert in_type.__name__ == 'in_type'
-        assert in_type.__cpp_name__ == 'TemplatedTypedefs::DerivedWithUsing<int, TemplatedTypedefs::SomeDummy, 4>::in_type'
+        assert in_type.__name__ == "in_type"
+        assert (
+            in_type.__cpp_name__
+            == "TemplatedTypedefs::DerivedWithUsing<int, TemplatedTypedefs::SomeDummy, 4>::in_type"
+        )
 
         in_type_tt = tct[int, dum, 4].in_type_tt
-        assert 'in_type_tt' in dir(tct[int, dum, 4])
+        assert "in_type_tt" in dir(tct[int, dum, 4])
 
-        assert in_type_tt.__name__ == 'in_type_tt'
-        assert in_type_tt.__cpp_name__ == 'TemplatedTypedefs::DerivedWithUsing<int, TemplatedTypedefs::SomeDummy, 4>::in_type_tt'
+        assert in_type_tt.__name__ == "in_type_tt"
+        assert (
+            in_type_tt.__cpp_name__
+            == "TemplatedTypedefs::DerivedWithUsing<int, TemplatedTypedefs::SomeDummy, 4>::in_type_tt"
+        )
 
     def test02_mapped_type_as_internal(self):
         """Test that mapped types can be used as builtin"""
@@ -1382,25 +1497,29 @@ class TestTEMPLATED_TYPEDEFS:
         tct = cppjit.gbl.TemplatedTypedefs.DerivedWithUsing
         dum = cppjit.gbl.TemplatedTypedefs.SomeDummy
 
-        for argname in ['short', 'unsigned short', 'int']:
+        for argname in ["short", "unsigned short", "int"]:
             in_type = tct[argname, dum, 4].in_type
             assert issubclass(in_type, int)
             assert in_type(13) == 13
-            assert 2*in_type(42) - 84 == 0
+            assert 2 * in_type(42) - 84 == 0
 
-        for argname in ['unsigned int', 'long', 'unsigned long']:# TODO: 'long long', 'unsigned long long'
+        for argname in [
+            "unsigned int",
+            "long",
+            "unsigned long",
+        ]:  # TODO: 'long long', 'unsigned long long'
             in_type = tct[argname, dum, 4].in_type
             assert issubclass(in_type, pylong)
             assert in_type(13) == 13
-            assert 2*in_type(42) - 84 == 0
+            assert 2 * in_type(42) - 84 == 0
 
-        for argname in ['float', 'double', 'long double']:
+        for argname in ["float", "double", "long double"]:
             in_type = tct[argname, dum, 4].in_type
             assert issubclass(in_type, float)
-            assert in_type(13) == 13.
-            assert 2*in_type(42) - 84. == 0.
+            assert in_type(13) == 13.0
+            assert 2 * in_type(42) - 84.0 == 0.0
 
-        raises(TypeError, tct.__getitem__, 'gibberish', dum, 4)
+        raises(TypeError, tct.__getitem__, "gibberish", dum, 4)
 
     def test03_mapped_type_as_template_arg(self):
         """Test that mapped types can be used as template arguments"""
@@ -1410,12 +1529,12 @@ class TestTEMPLATED_TYPEDEFS:
         tct = cppjit.gbl.TemplatedTypedefs.DerivedWithUsing
         dum = cppjit.gbl.TemplatedTypedefs.SomeDummy
 
-        in_type = tct['unsigned int', dum, 4].in_type
-        assert tct['unsigned int', dum, 4] is tct[in_type, dum, 4]
+        in_type = tct["unsigned int", dum, 4].in_type
+        assert tct["unsigned int", dum, 4] is tct[in_type, dum, 4]
 
-        in_type = tct['long double', dum, 4].in_type
-        assert tct['long double', dum, 4] is tct[in_type, dum, 4]
-        assert tct['double', dum, 4] is not tct[in_type, dum, 4]
+        in_type = tct["long double", dum, 4].in_type
+        assert tct["long double", dum, 4] is tct[in_type, dum, 4]
+        assert tct["double", dum, 4] is not tct[in_type, dum, 4]
 
     def test04_type_deduction(self):
         """Usage of type reducer"""
@@ -1435,8 +1554,9 @@ class TestTEMPLATED_TYPEDEFS:
     def test05_type_deduction_and_extern(self):
         """Usage of type reducer with extern template"""
 
-        import cppjit
         import sys
+
+        import cppjit
 
         cppjit.cppdef("""\
         namespace FailedTypeDeducer {
@@ -1449,13 +1569,13 @@ class TestTEMPLATED_TYPEDEFS:
         extern template class A<int>;
         }""")
 
-        if sys.platform != 'darwin':   # feature disabled
-            assert cppjit.gbl.FailedTypeDeducer.A[int]().result()  == 42
-        assert cppjit.gbl.FailedTypeDeducer.A['double']().result() == 5.
+        if sys.platform != "darwin":  # feature disabled
+            assert cppjit.gbl.FailedTypeDeducer.A[int]().result() == 42
+        assert cppjit.gbl.FailedTypeDeducer.A["double"]().result() == 5.0
 
-      # FailedTypeDeducer::B is defined in the templates.h header
-        assert cppjit.gbl.FailedTypeDeducer.B['double']().result() == 5.
-        assert cppjit.gbl.FailedTypeDeducer.B[int]().result()      == 5
+        # FailedTypeDeducer::B is defined in the templates.h header
+        assert cppjit.gbl.FailedTypeDeducer.B["double"]().result() == 5.0
+        assert cppjit.gbl.FailedTypeDeducer.B[int]().result() == 5
 
     def test06_type_deduction_and_scoping(self):
         """Possible shadowing of types used in template construction"""
@@ -1480,20 +1600,22 @@ class TestTEMPLATED_TYPEDEFS:
         ns = cppjit.gbl.ShadowY.ShadowZ
         C = cppjit.gbl.ShadowX.ShadowC
 
-      # TODO: This should error out
-      # raises(TypeError, ns.f.__getitem__(C.__cpp_name__))
-      # lookup of shadowed class no longer fails, but gives us the same template proxy to f()
+        # TODO: This should error out
+        # raises(TypeError, ns.f.__getitem__(C.__cpp_name__))
+        # lookup of shadowed class no longer fails, but gives us the same template proxy to f()
         assert ns.f.__getitem__(C.__cpp_name__) == ns.f
 
-      # direct instantiation now succeeds
+        # direct instantiation now succeeds
         ns.f[C]()
-        ns.f['::'+C.__cpp_name__]()
+        ns.f["::" + C.__cpp_name__]()
+
 
 @mark.skipif((IS_MAC and IS_CLING), reason="setup class fails with OS X cling")
 class TestTEMPLATE_TYPE_REDUCTION:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.templates = cppjit.load_reflection_info(cls.test_dct)
 
     def test01_reduce_binary(self):
@@ -1504,6 +1626,8 @@ class TestTEMPLATE_TYPE_REDUCTION:
         e1 = cppjit.gbl.TypeReduction.Expr[int]()
         e2 = cppjit.gbl.TypeReduction.Expr[int]()
 
-        cppjit.py.add_type_reducer('TypeReduction::BinaryExpr<int>', 'TypeReduction::Expr<int>')
+        cppjit.py.add_type_reducer(
+            "TypeReduction::BinaryExpr<int>", "TypeReduction::Expr<int>"
+        )
 
-        assert type(e1+e2) == cppjit.gbl.TypeReduction.Expr[int]
+        assert type(e1 + e2) == cppjit.gbl.TypeReduction.Expr[int]

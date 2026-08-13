@@ -30,3 +30,24 @@ metadata.version.input = "python/cppjit/_version.py"
 [tool.pytest.ini_options]
 testpaths = ["test"]
 pythonpath = ["test"]
+
+[tool.ruff]
+show-fixes = true
+
+[tool.ruff.lint]
+# pyflakes/pycodestyle errors plus import sorting; wider rule sets are a
+# post-squash cleanup
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = [
+    "E722",  # bare excepts deliberately swallow C++-originated exceptions
+]
+
+[tool.ruff.lint.per-file-ignores]
+# the star import is load-bearing: it pulls the merged extension's names into
+# the package namespace, and everything below it depends on them
+"python/cppjit/__init__.py" = ["F403", "F405"]
+"test/assert_interactive.py" = ["F403", "F405"]
+# binding-test idioms: == True/False and type(x) == y assert proxy comparison
+# semantics, fixtures use short upstream names, and unused locals hold
+# references to control C++ object lifetimes
+"test/**" = ["E712", "E721", "E741", "E742", "F841"]

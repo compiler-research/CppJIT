@@ -1,13 +1,15 @@
-import py, os, sys
-from pytest import mark, raises
-from support import setup_make, IS_CLANG_REPL, IS_CLING, IS_MAC_X86
+import os
 
-inc_paths = [os.path.join(os.path.sep, 'usr', 'include'),
-             os.path.join(os.path.sep, 'usr', 'local', 'include')]
+from pytest import mark
+
+inc_paths = [
+    os.path.join(os.path.sep, "usr", "include"),
+    os.path.join(os.path.sep, "usr", "local", "include"),
+]
 
 eigen_path = None
 for p in inc_paths:
-    p = os.path.join(p, 'eigen3')
+    p = os.path.join(p, "eigen3")
     if os.path.exists(p):
         eigen_path = p
 
@@ -15,31 +17,33 @@ for p in inc_paths:
 @mark.skipif(eigen_path is None, reason="Eigen not found")
 class TestEIGEN:
     def setup_class(cls):
-        import cppjit, warnings
+        import warnings
+
+        import cppjit
 
         cppjit.add_include_path(eigen_path)
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            cppjit.include('Eigen/Dense')
+            warnings.simplefilter("ignore")
+            cppjit.include("Eigen/Dense")
 
     def test01_simple_matrix_and_vector(self):
         """Basic creation of an Eigen::Matrix and Eigen::Vector"""
 
         import cppjit
 
-        a = cppjit.gbl.Eigen.Matrix['double', 2, 2]()
+        a = cppjit.gbl.Eigen.Matrix["double", 2, 2]()
         assert a.rows() == 2
         assert a.cols() == 2
 
         b = cppjit.gbl.Eigen.MatrixXd(2, 2)
-        b[0,0] = 3
-        assert b(0,0) == 3.
-        b[1,0] = 2.5
-        assert b(1,0) == 2.5
-        b[0,1] = -1
-        assert b(0,1) == -1.
-        b[1,1] = b(1,0) + b(0,1)
-        assert b(1,1) == b[1,0] + b[0,1]
+        b[0, 0] = 3
+        assert b(0, 0) == 3.0
+        b[1, 0] = 2.5
+        assert b(1, 0) == 2.5
+        b[0, 1] = -1
+        assert b(0, 1) == -1.0
+        b[1, 1] = b(1, 0) + b(0, 1)
+        assert b(1, 1) == b[1, 0] + b[0, 1]
 
         v = cppjit.gbl.Eigen.VectorXd(2)
         v[0] = 4
@@ -57,36 +61,36 @@ class TestEIGEN:
         assert m.cols() == 5
 
         # TODO: this calls a conversion to int ...
-        #m.resize(cppjit.gbl.Eigen.NoChange_t(), 3)
-        #assert m.rows() == 2
-        #assert m.cols() == 3
+        # m.resize(cppjit.gbl.Eigen.NoChange_t(), 3)
+        # assert m.rows() == 2
+        # assert m.cols() == 3
 
         m.resize(4, 3)
         assert m.rows() == 4
         assert m.cols() == 3
 
         # equivalent of 'm << 12, 11, ..., 1' in C++
-        c = (m << 12)
+        c = m << 12
         for i in range(11, 0, -1):
             c = c.__comma__(i)
-        assert m[0, 0] == 12.
-        assert m[0, 1] == 11.
-        assert m[0, 2] == 10.
-        assert m[1, 0] ==  9.
-        assert m[1, 1] ==  8.
-        assert m[1, 2] ==  7.
-        assert m[2, 0] ==  6.
-        assert m[2, 1] ==  5.
-        assert m[2, 2] ==  4.
-        assert m[3, 0] ==  3.
-        assert m[3, 1] ==  2.
-        assert m[3, 2] ==  1.
+        assert m[0, 0] == 12.0
+        assert m[0, 1] == 11.0
+        assert m[0, 2] == 10.0
+        assert m[1, 0] == 9.0
+        assert m[1, 1] == 8.0
+        assert m[1, 2] == 7.0
+        assert m[2, 0] == 6.0
+        assert m[2, 1] == 5.0
+        assert m[2, 2] == 4.0
+        assert m[3, 0] == 3.0
+        assert m[3, 1] == 2.0
+        assert m[3, 2] == 1.0
 
         matA = cppjit.gbl.Eigen.MatrixXf(2, 2)
         (matA << 1).__comma__(2).__comma__(3).__comma__(4)
         matB = cppjit.gbl.Eigen.MatrixXf(4, 4)
         # TODO: the insertion operator is a template that expect only the base class
-        #(matB << matA).__comma__(matA/10).__comma__(matA/10).__comma__(matA)
+        # (matB << matA).__comma__(matA/10).__comma__(matA/10).__comma__(matA)
 
         v = cppjit.gbl.Eigen.VectorXd(2)
         v.resize(5)
@@ -96,16 +100,17 @@ class TestEIGEN:
         # the following is equivalent to:
         #   (v << 1).__comma__(2).__comma__(3).__comma__(4).__comma__(5)
         from functools import reduce
+
         reduce(lambda x, y: x.__comma__(y), range(2, 6), v << 1)
         for i in range(5):
-            assert v(i) == i+1
+            assert v(i) == i + 1
 
     def test03_matrices_and_vectors(self):
         """Matrices and vectors"""
 
         import cppjit
 
-     # 'dynamic' matrices/vectors
+        # 'dynamic' matrices/vectors
         MatrixXd = cppjit.gbl.Eigen.MatrixXd
         VectorXd = cppjit.gbl.Eigen.VectorXd
 
@@ -115,11 +120,10 @@ class TestEIGEN:
         m = (m + MatrixXd.Constant(3, 3, 1.2)) * 50
 
         v = VectorXd(3)
-        (v << 1).__comma__(2).__comma__(3);
+        (v << 1).__comma__(2).__comma__(3)
+        assert (m * v).size() == v.size()
 
-        assert (m*v).size() == v.size()
-
-     # 'static' matrices/vectors
+        # 'static' matrices/vectors
         Matrix3d = cppjit.gbl.Eigen.Matrix3d
         Vector3d = cppjit.gbl.Eigen.Vector3d
 
@@ -128,7 +132,7 @@ class TestEIGEN:
 
         v = Vector3d(1, 2, 3)
 
-        assert (m*v).size() == v.size()
+        assert (m * v).size() == v.size()
 
     def test04_resizing_through_assignment(self):
         """Resize on assignment"""
@@ -147,20 +151,21 @@ class TestEIGEN:
 @mark.skipif(eigen_path is None, reason="Eigen not found")
 class TestEIGEN_REGRESSIOn:
     def setup_class(cls):
-        import cppjit, warnings
+        import warnings
+
+        import cppjit
 
         cppjit.add_include_path(eigen_path)
         with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            cppjit.include('Eigen/Dense')
+            warnings.simplefilter("ignore")
+            cppjit.include("Eigen/Dense")
 
     def test01_use_of_Map(self):
         """Use of Map (used to crash)"""
 
-        import cppjit
         from cppjit.gbl import Eigen
 
         assert Eigen.VectorXd
         assert Eigen.Map
 
-        assert Eigen.Map[Eigen.VectorXd]    # used to crash
+        assert Eigen.Map[Eigen.VectorXd]  # used to crash

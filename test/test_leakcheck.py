@@ -1,17 +1,19 @@
-import py, os, sys
+import os
+import sys
+
 from pytest import mark, skip
-from support import setup_make, pylong, pyunicode, IS_CLANG_REPL
 
 nopsutil = False
 try:
-    import psutil
+    import psutil  # noqa: F401
 except ImportError:
     nopsutil = True
+
 
 @mark.skipif(nopsutil == True, reason="module psutil not installed")
 class TestLEAKCHECK:
     def setup_class(cls):
-        import cppjit, psutil
+        import psutil
 
         cls.process = psutil.Process(os.getpid())
 
@@ -32,28 +34,28 @@ class TestLEAKCHECK:
 
         import gc
 
-      # if tmpl_args is provided as a keyword, then this is a templated
-      # function that is to be found on each call python-side
-        tmpl_args = kwds.pop('tmpl_args', None)
+        # if tmpl_args is provided as a keyword, then this is a templated
+        # function that is to be found on each call python-side
+        tmpl_args = kwds.pop("tmpl_args", None)
 
-      # warmup function
+        # warmup function
         gc.collect()
         if tmpl_args is None:
             getattr(scope, func)(*args, **kwds)
         else:
             getattr(scope, func)[tmpl_args](*args, **kwds)
 
-      # number of iterations
+        # number of iterations
         N = 100000
 
-      # The use of arena's, free-lists, etc. means that checking rss remains
-      # unreliable, unless looking for consistent jumps, so the leak check will
-      # be run M times and only considered failed if it "leaks" every time. In
-      # actual practice, the number of fails is 0, 1, or M. Note that the total
-      # number of gc objects tracked is always required to remain the same.
+        # The use of arena's, free-lists, etc. means that checking rss remains
+        # unreliable, unless looking for consistent jumps, so the leak check will
+        # be run M times and only considered failed if it "leaks" every time. In
+        # actual practice, the number of fails is 0, 1, or M. Note that the total
+        # number of gc objects tracked is always required to remain the same.
         M = 3
 
-      # leak check
+        # leak check
         fail = 0
         for i in range(M):
             gc.collect()
@@ -89,13 +91,13 @@ class TestLEAKCHECK:
 
         ns = cppjit.gbl.LeakCheck
 
-        self.check_func(ns, 'free_f')
-        self.check_func(ns, 'free_f_ol', 42)
-        self.check_func(ns, 'free_f_ol', '42')
-        self.check_func(ns, 'free_f_ol', 42.)    # template
-        self.check_func(ns, 'free_f_ol', 42., tmpl_args='float')
-        self.check_func(ns, 'free_f_ret1')
-        self.check_func(ns, 'free_f_ret1')
+        self.check_func(ns, "free_f")
+        self.check_func(ns, "free_f_ol", 42)
+        self.check_func(ns, "free_f_ol", "42")
+        self.check_func(ns, "free_f_ol", 42.0)  # template
+        self.check_func(ns, "free_f_ol", 42.0, tmpl_args="float")
+        self.check_func(ns, "free_f_ret1")
+        self.check_func(ns, "free_f_ret1")
 
     def test02_test_static_methods(self):
         """Leak test of static methods"""
@@ -116,12 +118,12 @@ class TestLEAKCHECK:
         ns = cppjit.gbl.LeakCheck
 
         for m in [ns.MyClass02, ns.MyClass02()]:
-            self.check_func(m, 'static_method')
-            self.check_func(m, 'static_method_ol', 42)
-            self.check_func(m, 'static_method_ol', '42')
-            self.check_func(m, 'static_method_ol', 42.)    # template
-            self.check_func(m, 'static_method_ol', 42., tmpl_args='float')
-            self.check_func(m, 'static_method_ret')
+            self.check_func(m, "static_method")
+            self.check_func(m, "static_method_ol", 42)
+            self.check_func(m, "static_method_ol", "42")
+            self.check_func(m, "static_method_ol", 42.0)  # template
+            self.check_func(m, "static_method_ol", 42.0, tmpl_args="float")
+            self.check_func(m, "static_method_ret")
 
     def test03_test_methods(self):
         """Leak test of methods"""
@@ -142,12 +144,12 @@ class TestLEAKCHECK:
         ns = cppjit.gbl.LeakCheck
 
         m = ns.MyClass03()
-        self.check_func(m, 'method')
-        self.check_func(m, 'method_ol', 42)
-        self.check_func(m, 'method_ol', '42')
-        self.check_func(m, 'method_ol', 42.)     # template
-        self.check_func(m, 'method_ol', 42., tmpl_args='float')
-        self.check_func(m, 'method_ret')
+        self.check_func(m, "method")
+        self.check_func(m, "method_ol", 42)
+        self.check_func(m, "method_ol", "42")
+        self.check_func(m, "method_ol", 42.0)  # template
+        self.check_func(m, "method_ol", 42.0, tmpl_args="float")
+        self.check_func(m, "method_ret")
 
     def test04_default_arguments(self):
         """Leak test for functions with default arguments"""
@@ -172,23 +174,23 @@ class TestLEAKCHECK:
 
         ns = cppjit.gbl.LeakCheck
 
-        self.check_func(ns, 'free_default')
-        self.check_func(ns, 'free_default', a=-99)
-        self.check_func(ns, 'free_default', b=-99)
-        self.check_func(ns, 'free_default', c=-99)
+        self.check_func(ns, "free_default")
+        self.check_func(ns, "free_default", a=-99)
+        self.check_func(ns, "free_default", b=-99)
+        self.check_func(ns, "free_default", c=-99)
 
         # TODO: no keyword arguments for static methods yet
-        #for m in [ns.MyClass04, ns.MyClass04()]:
+        # for m in [ns.MyClass04, ns.MyClass04()]:
         #    self.check_func(m, 'static_default')
         #    self.check_func(m, 'static_default', a=-99)
         #    self.check_func(m, 'static_default', b=-99)
         #    self.check_func(m, 'static_default', c=-99)
 
         m = ns.MyClass04()
-        self.check_func(m, 'method_default')
-        self.check_func(m, 'method_default', a=-99)
-        self.check_func(m, 'method_default', b=-99)
-        self.check_func(m, 'method_default', c=-99)
+        self.check_func(m, "method_default")
+        self.check_func(m, "method_default", a=-99)
+        self.check_func(m, "method_default", b=-99)
+        self.check_func(m, "method_default", c=-99)
 
     def test05_aggregates(self):
         """Leak test of aggregate creation"""
@@ -212,14 +214,14 @@ class TestLEAKCHECK:
 
         ns = cppjit.gbl.LeakCheck
 
-        self.check_func(ns, 'SomePOD')
-        self.check_func(ns, 'SomePOD', fInt=42)
-        self.check_func(ns, 'SomePOD', fDouble=42.)
-        self.check_func(ns, 'SomePOD', fInt=42, fDouble=42.)
-        self.check_func(ns, 'SomePOD', fDouble=42., fInt=42)
+        self.check_func(ns, "SomePOD")
+        self.check_func(ns, "SomePOD", fInt=42)
+        self.check_func(ns, "SomePOD", fDouble=42.0)
+        self.check_func(ns, "SomePOD", fInt=42, fDouble=42.0)
+        self.check_func(ns, "SomePOD", fDouble=42.0, fInt=42)
 
-        self.check_func(ns, 'SomeBuf')
-        self.check_func(ns, 'SomeBuf', val=10, name="aap", buf_type=ns.SHAPE)
+        self.check_func(ns, "SomeBuf")
+        self.check_func(ns, "SomeBuf", val=10, name="aap", buf_type=ns.SHAPE)
 
     def test06_dir(self):
         """Global function uploads used to cause more function generation"""
@@ -229,7 +231,7 @@ class TestLEAKCHECK:
 
         import cppjit
 
-        self.check_func(cppjit.gbl, '__dir__', cppjit.gbl)
+        self.check_func(cppjit.gbl, "__dir__", cppjit.gbl)
 
     def test07_string_handling(self):
         """Leak check of returning an std::string by value"""
@@ -250,7 +252,7 @@ class TestLEAKCHECK:
         ns = cppjit.gbl.LeakCheck
 
         obj = ns.Leaker()
-        self.check_func(obj, 'leak_string', 2048)
+        self.check_func(obj, "leak_string", 2048)
 
     def test08_list_creation(self):
         """Leak check of creating a python list from an std::list"""
@@ -269,4 +271,4 @@ class TestLEAKCHECK:
 
         ns.leak_list = wrapped_list_by_value
 
-        self.check_func(ns, 'leak_list')
+        self.check_func(ns, "leak_list")

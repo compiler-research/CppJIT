@@ -1,27 +1,42 @@
-import py, os, sys
-from pytest import raises, mark
-from support import setup_make, ispypy, IS_CLANG_REPL, IS_CLING, IS_LINUX_ARM, IS_LINUX, IS_MAC, IS_VALGRIND
+import sys
 
+import py
+from pytest import mark, raises
+from support import (
+    IS_LINUX,
+    IS_LINUX_ARM,
+    IS_MAC,
+    IS_VALGRIND,
+    ispypy,
+    setup_make,
+)
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/cpp11featuresDict"))
 
+
 def setup_module(mod):
     setup_make("cpp11features")
+
 
 class TestCPP11FEATURES:
     def setup_class(cls):
         cls.test_dct = test_dct
         import cppjit
+
         cls.cpp11features = cppjit.load_reflection_info(cls.test_dct)
 
     @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
     def test01_smart_ptr(self):
         """Usage and access of std::shared/unique_ptr<>"""
 
-        from cppjit.gbl import TestSmartPtr
-        from cppjit.gbl import create_shared_ptr_instance, create_unique_ptr_instance
         import gc
+
+        from cppjit.gbl import (
+            TestSmartPtr,
+            create_shared_ptr_instance,
+            create_unique_ptr_instance,
+        )
 
         for cf in [create_shared_ptr_instance, create_unique_ptr_instance]:
             assert TestSmartPtr.s_counter == 0
@@ -44,12 +59,17 @@ class TestCPP11FEATURES:
             gc.collect()
             assert TestSmartPtr.s_counter == 0
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM and IS_VALGRIND, reason="Valgrind issues on ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_LINUX_ARM and IS_VALGRIND,
+        reason="Valgrind issues on ARM",
+    )
     def test02_smart_ptr_construction(self):
         """Shared/Unique pointer ctor is templated, requiring special care"""
 
-        from cppjit.gbl import std, TestSmartPtr
         import gc
+
+        from cppjit.gbl import TestSmartPtr, std
 
         class C(TestSmartPtr):
             pass
@@ -72,12 +92,13 @@ class TestCPP11FEATURES:
             gc.collect()
             assert TestSmartPtr.s_counter == 0
 
-    @mark.xfail(run=False, condition=IS_LINUX and IS_VALGRIND, reason = "Valgrind issue")
+    @mark.xfail(run=False, condition=IS_LINUX and IS_VALGRIND, reason="Valgrind issue")
     def test03_smart_ptr_memory_handling(self):
         """Test shared/unique pointer memory ownership"""
 
-        from cppjit.gbl import std, TestSmartPtr
         import gc
+
+        from cppjit.gbl import TestSmartPtr, std
 
         class C(TestSmartPtr):
             pass
@@ -107,9 +128,16 @@ class TestCPP11FEATURES:
     def test04_shared_ptr_passing(self):
         """Ability to pass shared_ptr<Derived> through shared_ptr<Base>"""
 
-        from cppjit.gbl import std, TestSmartPtr, DerivedTestSmartPtr
-        from cppjit.gbl import pass_shared_ptr, move_shared_ptr, create_TestSmartPtr_by_value
         import gc
+
+        from cppjit.gbl import (
+            DerivedTestSmartPtr,
+            TestSmartPtr,
+            create_TestSmartPtr_by_value,
+            move_shared_ptr,
+            pass_shared_ptr,
+            std,
+        )
 
         for ff, mv in [(pass_shared_ptr, lambda x: x), (move_shared_ptr, std.move)]:
             assert TestSmartPtr.s_counter == 0
@@ -122,7 +150,7 @@ class TestCPP11FEATURES:
             gc.collect()
             assert TestSmartPtr.s_counter == 0
 
-      # ability to take over by-value python-owned objects
+        # ability to take over by-value python-owned objects
         tsp = create_TestSmartPtr_by_value()
         assert TestSmartPtr.s_counter == 1
         assert tsp.__python_owns__
@@ -135,7 +163,7 @@ class TestCPP11FEATURES:
         gc.collect()
         assert TestSmartPtr.s_counter == 0
 
-      # alternative make_shared with type taken from pointer
+        # alternative make_shared with type taken from pointer
         tsp = create_TestSmartPtr_by_value()
         shared_stp = std.make_shared(tsp)
         assert TestSmartPtr.s_counter == 1
@@ -146,14 +174,20 @@ class TestCPP11FEATURES:
     def test05_unique_ptr_passing(self):
         """Ability to pass unique_ptr<Derived> through unique_ptr<Base>"""
 
-        from cppjit.gbl import std, TestSmartPtr, DerivedTestSmartPtr
-        from cppjit.gbl import move_unique_ptr, move_unique_ptr_derived
-        from cppjit.gbl import create_TestSmartPtr_by_value
         import gc
+
+        from cppjit.gbl import (
+            DerivedTestSmartPtr,
+            TestSmartPtr,
+            create_TestSmartPtr_by_value,
+            move_unique_ptr,  # noqa: F401
+            move_unique_ptr_derived,
+            std,
+        )
 
         assert TestSmartPtr.s_counter == 0
 
-      # move matching unique_ptr
+        # move matching unique_ptr
         dd = std.make_unique[DerivedTestSmartPtr](DerivedTestSmartPtr(24))
         assert TestSmartPtr.s_counter == 1
         assert move_unique_ptr_derived(std.move(dd)) == 100
@@ -163,7 +197,7 @@ class TestCPP11FEATURES:
         gc.collect()
         assert TestSmartPtr.s_counter == 0
 
-      # move with conversion
+        # move with conversion
         dd = std.make_unique[DerivedTestSmartPtr](DerivedTestSmartPtr(24))
         assert TestSmartPtr.s_counter == 1
         # TODO: why does the following fail, but succeed for shared_ptr??
@@ -174,7 +208,7 @@ class TestCPP11FEATURES:
         gc.collect()
         assert TestSmartPtr.s_counter == 0
 
-      # ability to take over by-value python-owned objects
+        # ability to take over by-value python-owned objects
         tsp = create_TestSmartPtr_by_value()
         assert TestSmartPtr.s_counter == 1
         assert tsp.__python_owns__
@@ -187,7 +221,7 @@ class TestCPP11FEATURES:
         gc.collect()
         assert TestSmartPtr.s_counter == 0
 
-      # alternative make_unique with type taken from pointer
+        # alternative make_unique with type taken from pointer
         tsp = create_TestSmartPtr_by_value()
         unique_stp = std.make_unique(tsp)
         assert TestSmartPtr.s_counter == 1
@@ -201,26 +235,30 @@ class TestCPP11FEATURES:
 
         import cppjit
 
-      # test existence
+        # test existence
         nullptr = cppjit.nullptr
-      # assert not hasattr(cppjit.gbl, 'nullptr')
+        # assert not hasattr(cppjit.gbl, 'nullptr')
 
-        assert     cppjit.bind_object(cppjit.nullptr, 'std::vector<int>') == cppjit.nullptr
-        assert not cppjit.bind_object(cppjit.nullptr, 'std::vector<int>') != cppjit.nullptr
+        assert cppjit.bind_object(cppjit.nullptr, "std::vector<int>") == cppjit.nullptr
+        assert (
+            not cppjit.bind_object(cppjit.nullptr, "std::vector<int>") != cppjit.nullptr
+        )
 
-      # further usage is tested in datatypes.py:test15_nullptr_passing
+    # further usage is tested in datatypes.py:test15_nullptr_passing
 
     def test07_move(self):
         """Move construction, assignment, and methods"""
 
-        import cppjit, gc
+        import gc
+
+        import cppjit
 
         def moveit(T):
             assert T.s_instance_counter == 0
 
             from cppjit.gbl import std
 
-          # move constructor
+            # move constructor
             i1 = T()
             assert T.s_move_counter == 0
 
@@ -228,23 +266,23 @@ class TestCPP11FEATURES:
             assert T.s_move_counter == 0
 
             if ispypy or 0x3000000 <= sys.hexversion:
-                i3 = T(std.move(T()))            # can't check ref-count
+                i3 = T(std.move(T()))  # can't check ref-count
             else:
-                i3 = T(T()) # should call move, not memoized cctor
+                i3 = T(T())  # should call move, not memoized cctor
             assert T.s_move_counter == 1
 
-            i3 = T(std.move(T()))                # both move and ref-count
+            i3 = T(std.move(T()))  # both move and ref-count
             assert T.s_move_counter == 2
 
             i4 = T(std.move(i1))
             assert T.s_move_counter == 3
 
-          # move assignment
+            # move assignment
             i4.__assign__(i2)
             assert T.s_move_counter == 3
 
             if ispypy or 0x3000000 <= sys.hexversion:
-                i4.__assign__(std.move(T()))     # can't check ref-count
+                i4.__assign__(std.move(T()))  # can't check ref-count
             else:
                 i4.__assign__(T())
             assert T.s_move_counter == 4
@@ -256,12 +294,12 @@ class TestCPP11FEATURES:
             gc.collect()
             assert T.s_instance_counter == 0
 
-      # order of moving and normal functions are reversed in 1, 2, for
-      # overload resolution testing
+        # order of moving and normal functions are reversed in 1, 2, for
+        # overload resolution testing
         moveit(cppjit.gbl.TestMoving1)
         moveit(cppjit.gbl.TestMoving2)
 
-      # implicit conversion and move
+        # implicit conversion and move
         assert cppjit.gbl.TestMoving1.s_instance_counter == 0
         assert cppjit.gbl.TestMoving2.s_instance_counter == 0
         cppjit.gbl.implicit_converion_move(cppjit.gbl.TestMoving1())
@@ -274,15 +312,15 @@ class TestCPP11FEATURES:
     def test08_initializer_list(self):
         """Initializer list construction"""
 
-        from cppjit.gbl import std, TestData, TestData2, WithInitList
+        from cppjit.gbl import TestData, TestData2, WithInitList, std
 
         v = std.vector[int]((1, 2, 3, 4))
         assert list(v) == [1, 2, 3, 4]
 
-        v = std.vector['double']((1, 2, 3, 4))
-        assert list(v) == [1., 2., 3., 4.]
+        v = std.vector["double"]((1, 2, 3, 4))
+        assert list(v) == [1.0, 2.0, 3.0, 4.0]
 
-        raises(TypeError, std.vector[int], [1., 2., 3., 4.])
+        raises(TypeError, std.vector[int], [1.0, 2.0, 3.0, 4.0])
 
         for cls in [std.vector, WithInitList]:
             for cls_arg in [TestData, TestData2]:
@@ -305,8 +343,8 @@ class TestCPP11FEATURES:
 
         ns = cppjit.gbl.InitializerListTest
 
-        for l in (['x'], ['x', 'y', 'z']):
-            assert ns.foo(l) == std.vector['std::string'](l)
+        for l in (["x"], ["x", "y", "z"]):
+            assert ns.foo(l) == std.vector["std::string"](l)
 
     def test09_lambda_calls(self):
         """Call (global) lambdas"""
@@ -316,7 +354,7 @@ class TestCPP11FEATURES:
         cppjit.cppdef("auto gMyLambda = [](int a) { return 40 + a; };")
 
         assert cppjit.gbl.gMyLambda
-        assert cppjit.gbl.gMyLambda(2)  == 42
+        assert cppjit.gbl.gMyLambda(2) == 42
         assert cppjit.gbl.gMyLambda(40) == 80
 
         cppjit.cppdef("auto gime_a_lambda1() { return []() { return 42; }; }")
@@ -324,12 +362,16 @@ class TestCPP11FEATURES:
         assert l1
         assert l1() == 42
 
-        cppjit.cppdef("auto gime_a_lambda2() { int a = 4; return [a](int b) { return 42+a+b; }; }")
+        cppjit.cppdef(
+            "auto gime_a_lambda2() { int a = 4; return [a](int b) { return 42+a+b; }; }"
+        )
         l2 = cppjit.gbl.gime_a_lambda2()
         assert l2
         assert l2(2) == 48
 
-        cppjit.cppdef("auto gime_a_lambda3(int a ) { return [a](int b) { return 42+a+b; }; }")
+        cppjit.cppdef(
+            "auto gime_a_lambda3(int a ) { return [a](int b) { return 42+a+b; }; }"
+        )
         l3 = cppjit.gbl.gime_a_lambda3(4)
         assert l3
         assert l3(2) == 48
@@ -356,7 +398,6 @@ class TestCPP11FEATURES:
     def test11_chrono(self):
         """Use of chrono and overloaded operator+"""
 
-        import cppjit
         from cppjit.gbl import std
 
         t = std.chrono.system_clock.now() - std.chrono.seconds(1)
@@ -367,7 +408,7 @@ class TestCPP11FEATURES:
         """Use of std::function with arguments in a namespace"""
 
         import cppjit
-        from cppjit.gbl import FunctionNS, FNTestStruct, FNCreateTestStructFunc
+        from cppjit.gbl import FNCreateTestStructFunc, FNTestStruct, FunctionNS
 
         t = FNTestStruct(42)
         f = FNCreateTestStructFunc()
@@ -377,13 +418,13 @@ class TestCPP11FEATURES:
         f = FunctionNS.FNCreateTestStructFunc()
         assert f(t) == 13
 
-      # and for good measure, inline
+        # and for good measure, inline
         cppjit.cppdef("""namespace FunctionNS2 {
         struct FNTestStruct { FNTestStruct(int i) : t(i) {} int t; };
         std::function<int(const FNTestStruct& t)> FNCreateTestStructFunc() { return [](const FNTestStruct& t) { return t.t; }; }
         }""")
 
-        from cppjit.gbl import FunctionNS2
+        from cppjit.gbl import FunctionNS2  # noqa: F401
 
         t = FunctionNS.FNTestStruct(27)
         f = FunctionNS.FNCreateTestStructFunc()
@@ -392,27 +433,34 @@ class TestCPP11FEATURES:
     def test13_stdhash(self):
         """Use of std::hash"""
 
-        import cppjit
         from cppjit.gbl import StructWithHash, StructWithoutHash
 
-        for i in range(3):   # to test effect of caching
+        for i in range(3):  # to test effect of caching
             swo = StructWithoutHash()
             assert hash(swo) == object.__hash__(swo)
             assert hash(swo) == object.__hash__(swo)
 
             sw = StructWithHash()
-            assert hash(sw)  == 17
-            assert hash(sw)  == 17
+            assert hash(sw) == 17
+            assert hash(sw) == 17
 
     @mark.xfail
     def test14_shared_ptr_passing(self):
         """Ability to pass normal pointers through shared_ptr by value"""
 
-        from cppjit.gbl import std, TestSmartPtr, DerivedTestSmartPtr
-        from cppjit.gbl import pass_shared_ptr
         import gc
 
-        for cls, val in [(lambda: TestSmartPtr(), 17), (lambda: DerivedTestSmartPtr(24), 100)]:
+        from cppjit.gbl import (  # noqa: F401
+            DerivedTestSmartPtr,
+            TestSmartPtr,
+            pass_shared_ptr,
+            std,
+        )
+
+        for cls, val in [
+            (lambda: TestSmartPtr(), 17),
+            (lambda: DerivedTestSmartPtr(24), 100),
+        ]:
             assert TestSmartPtr.s_counter == 0
 
             obj = cls()
@@ -424,7 +472,7 @@ class TestCPP11FEATURES:
             assert obj.__python_owns__
             assert TestSmartPtr.s_counter == 1
 
-            assert not not obj    # pass was by shared copy
+            assert not not obj  # pass was by shared copy
 
             del obj
             gc.collect()
@@ -446,15 +494,16 @@ class TestCPP11FEATURES:
         uptr_out = cppjit.gbl.UniqueTempl.returnptr["int"](cppjit.gbl.std.move(uptr_in))
         assert not not uptr_out
 
-        uptr_in = cppjit.gbl.std.make_unique['int']()
+        uptr_in = cppjit.gbl.std.make_unique["int"]()
         with raises(ValueError):  # not an RValue
             cppjit.gbl.UniqueTempl.returnptr[int](uptr_in)
 
-    @mark.xfail(IS_MAC, reason = "Fails on Mac platforms")
+    @mark.xfail(IS_MAC, reason="Fails on Mac platforms")
     def test16_unique_ptr_moves(self):
         """std::unique_ptr requires moves"""
 
         import cppjit
+
         cppjit.cppdef("""namespace unique_ptr_moves {
         template <typename T>
         std::unique_ptr<T> returnptr_value(std::unique_ptr<T> a) {
@@ -468,9 +517,12 @@ class TestCPP11FEATURES:
         up = cppjit.gbl.std.make_unique[int](42)
 
         ns = cppjit.gbl.unique_ptr_moves
-        up = ns.returnptr_value(up)                    ; assert up and up.get()[0] == 42
-        up = ns.returnptr_value(cppjit.gbl.std.move(up)); assert up and up.get()[0] == 42
-        up = ns.returnptr_move(cppjit.gbl.std.move(up)) ; assert up and up.get()[0] == 42
+        up = ns.returnptr_value(up)
+        assert up and up.get()[0] == 42
+        up = ns.returnptr_value(cppjit.gbl.std.move(up))
+        assert up and up.get()[0] == 42
+        up = ns.returnptr_move(cppjit.gbl.std.move(up))
+        assert up and up.get()[0] == 42
 
         with raises(TypeError):
             ns.returnptr_move(up)
@@ -494,8 +546,8 @@ class TestCPP11FEATURES:
             pass
 
         a = Inherit()
-      # Test whether this attribute was inherited
-        assert a.y == 66.
+        # Test whether this attribute was inherited
+        assert a.y == 66.0
 
     def test18_unique_ptr_identity(self):
         """std::unique_ptr identity preservation"""
@@ -537,7 +589,11 @@ class TestCPP11FEATURES:
         p2 = c.pget()
         assert p1 is p2
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM and IS_VALGRIND, reason="Valgrind issues on ARM")
+    @mark.xfail(
+        run=False,
+        condition=IS_LINUX_ARM and IS_VALGRIND,
+        reason="Valgrind issues on ARM",
+    )
     def test19_smartptr_from_callback(self):
         """Return a smart pointer from a callback"""
 
@@ -563,7 +619,7 @@ class TestCPP11FEATURES:
         ns = cppjit.gbl.SmartPtrCallback
 
         def pyfunc() -> std.shared_ptr[ns.Dummy]:
-             return ns.dummy_create()
+            return ns.dummy_create()
 
         assert ns.call_creator(pyfunc)
 
@@ -580,7 +636,7 @@ class TestCPP11FEATURES:
             obj = cf()
             assert type(obj) == gbl.PubDerivedTestSmartPtr
             assert obj.only_in_derived() == 27
-            assert obj.__smartptr__()      # smart-pointer semantics preserved
+            assert obj.__smartptr__()  # smart-pointer semantics preserved
 
         # an object that really is of the declared type stays that type
         obj = gbl.create_unique_ptr_instance()
@@ -597,8 +653,16 @@ class TestCPP11FEATURES:
         # still embeds a smart pointer to the *base* type, which does not convert
         # to a smart pointer to the derived type (no implicit down-conversion of
         # smart pointers in C++), so passing it to such a sink must be rejected
-        raises(TypeError, gbl.pass_unique_ptr_to_derived, gbl.create_unique_ptr_to_derived())
-        raises(TypeError, gbl.pass_shared_ptr_to_derived, gbl.create_shared_ptr_to_derived())
+        raises(
+            TypeError,
+            gbl.pass_unique_ptr_to_derived,
+            gbl.create_unique_ptr_to_derived(),
+        )
+        raises(
+            TypeError,
+            gbl.pass_shared_ptr_to_derived,
+            gbl.create_shared_ptr_to_derived(),
+        )
 
         # passing it where the matching base smart pointer is expected still works
         assert gbl.pass_shared_ptr(gbl.create_shared_ptr_to_derived()) == 17
@@ -607,9 +671,27 @@ class TestCPP11FEATURES:
         # derived class should resolve to the downcasted type overload,
         # no matter if the Python proxy is a regular proxy or wraps a smart pointer
         # (should hold for pointer, reference, and value types)
-        assert gbl.pass_ptr_overloaded(gbl.PubDerivedTestSmartPtr()) == "PubDerivedTestSmartPtr"
-        assert gbl.pass_ptr_overloaded(gbl.create_unique_ptr_to_derived()) == "PubDerivedTestSmartPtr"
-        assert gbl.pass_ref_overloaded(gbl.PubDerivedTestSmartPtr()) == "PubDerivedTestSmartPtr"
-        assert gbl.pass_ref_overloaded(gbl.create_unique_ptr_to_derived()) == "PubDerivedTestSmartPtr"
-        assert gbl.pass_val_overloaded(gbl.PubDerivedTestSmartPtr()) == "PubDerivedTestSmartPtr"
-        assert gbl.pass_val_overloaded(gbl.create_unique_ptr_to_derived()) == "PubDerivedTestSmartPtr"
+        assert (
+            gbl.pass_ptr_overloaded(gbl.PubDerivedTestSmartPtr())
+            == "PubDerivedTestSmartPtr"
+        )
+        assert (
+            gbl.pass_ptr_overloaded(gbl.create_unique_ptr_to_derived())
+            == "PubDerivedTestSmartPtr"
+        )
+        assert (
+            gbl.pass_ref_overloaded(gbl.PubDerivedTestSmartPtr())
+            == "PubDerivedTestSmartPtr"
+        )
+        assert (
+            gbl.pass_ref_overloaded(gbl.create_unique_ptr_to_derived())
+            == "PubDerivedTestSmartPtr"
+        )
+        assert (
+            gbl.pass_val_overloaded(gbl.PubDerivedTestSmartPtr())
+            == "PubDerivedTestSmartPtr"
+        )
+        assert (
+            gbl.pass_val_overloaded(gbl.create_unique_ptr_to_derived())
+            == "PubDerivedTestSmartPtr"
+        )

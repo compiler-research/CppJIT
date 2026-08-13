@@ -1,12 +1,14 @@
-import py
 import shutil
 import tempfile
-from pytest import raises, mark
-from support import setup_make, IS_MAC
+
+import py
+from pytest import mark, raises
+from support import IS_MAC, setup_make
 
 # reuse the example01
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/example01Dict"))
+
 
 def setup_module(mod):
     setup_make("example01")
@@ -32,14 +34,19 @@ class TestBASICAPI:
         x = 42
         assert cppjit.evaluate(str(x)) == x
 
-    @mark.xfail(IS_MAC, reason="unidentified IsDebugOutputEnabled issue on macos, also failing in test_fragile")
+    @mark.xfail(
+        IS_MAC,
+        reason="unidentified IsDebugOutputEnabled issue on macos, also failing in test_fragile",
+    )
     def test02_cppdef(self):
         import cppjit
+
         assert cppjit.cppdef("namespace test02_NS { int x = 42; }")
         assert cppjit.gbl.test02_NS.x == 42
 
     def test03_add_library_path(self):
         import cppjit
+
         with raises(OSError, match="No such directory"):
             cppjit.add_library_path("not/a/real/path")
 

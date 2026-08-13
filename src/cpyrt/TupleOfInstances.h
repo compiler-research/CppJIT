@@ -4,7 +4,6 @@
 // Bindings
 #include "Dimensions.h"
 
-
 namespace cppjit::cpyrt {
 
 /** Representation of C-style array of instances
@@ -17,20 +16,17 @@ namespace cppjit::cpyrt {
 extern PyTypeObject TupleOfInstances_Type;
 extern PyTypeObject InstanceArrayIter_Type;
 
-template<typename T>
-inline bool TupleOfInstances_Check(T* object)
-{
-    return object && PyObject_TypeCheck(object, &TupleOfInstances_Type);
+template <typename T> inline bool TupleOfInstances_Check(T* object) {
+  return object && PyObject_TypeCheck(object, &TupleOfInstances_Type);
 }
 
-template<typename T>
-inline bool TupleOfInstances_CheckExact(T* object)
-{
-    return object && Py_TYPE(object) == &TupleOfInstances_Type;
+template <typename T> inline bool TupleOfInstances_CheckExact(T* object) {
+  return object && Py_TYPE(object) == &TupleOfInstances_Type;
 }
 
-PyObject* TupleOfInstances_New(
-    cppjit::interop::TCppObject_t address, cppjit::interop::TCppScope_t klass, cdims_t dims);
+PyObject* TupleOfInstances_New(cppjit::interop::TCppObject_t address,
+                               cppjit::interop::TCppScope_t klass,
+                               cdims_t dims);
 
 } // namespace cppjit::cpyrt
 

@@ -4,20 +4,19 @@
 // Bindings
 #include "CPPMethod.h"
 
-
 namespace cppjit::cpyrt {
 
 class CPPClassMethod : public CPPMethod {
 public:
-    using CPPMethod::CPPMethod;
+  using CPPMethod::CPPMethod;
 
 public:
-    PyObject* GetTypeName() override;
+  PyObject* GetTypeName() override;
 
 public:
-    PyCallable* Clone() override { return new CPPClassMethod(*this); }
-    PyObject* Call(CPPInstance*& self,
-        cpyrt_PyArgs_t args, size_t nargsf, PyObject* kwds, CallContext* ctxt = nullptr) override;
+  PyCallable* Clone() override { return new CPPClassMethod(*this); }
+  PyObject* Call(CPPInstance*& self, cpyrt_PyArgs_t args, size_t nargsf,
+                 PyObject* kwds, CallContext* ctxt = nullptr) override;
 };
 
 } // namespace cppjit::cpyrt

@@ -27,9 +27,9 @@ namespace CppyyLegacy {
 #endif
 struct ExceptionContext_t {
 #ifdef NEED_SIGJMP
-    sigjmp_buf fBuf;
+  sigjmp_buf fBuf;
 #else
-    jmp_buf fBuf;
+  jmp_buf fBuf;
 #endif
 };
 #ifndef NO_CPPJIT_LEGACY_NAMESPACE
@@ -42,39 +42,43 @@ using cppjit_interopExceptionContext_t = ExceptionContext_t;
 
 // FIXME: This is a dummy, replace with cling equivalent of gException
 static cppjit_interopExceptionContext_t DummyException;
-static cppjit_interopExceptionContext_t *gException = &DummyException;
+static cppjit_interopExceptionContext_t* gException = &DummyException;
 
 #ifdef NEED_SIGJMP
-# define CLING_EXCEPTION_SETJMP(buf) sigsetjmp(buf,1)
+#define CLING_EXCEPTION_SETJMP(buf) sigsetjmp(buf, 1)
 #else
-# define CLING_EXCEPTION_SETJMP(buf) setjmp(buf)
+#define CLING_EXCEPTION_SETJMP(buf) setjmp(buf)
 #endif
 
-#define CLING_EXCEPTION_RETRY \
-    { \
-        static cppjit_interopExceptionContext_t R__curr, *R__old = gException; \
-        int R__code; \
-        gException = &R__curr; \
-        R__code = CLING_EXCEPTION_SETJMP(gException->fBuf); if (R__code) { }; {
+#define CLING_EXCEPTION_RETRY                                                  \
+  {                                                                            \
+    static cppjit_interopExceptionContext_t R__curr, *R__old = gException;     \
+    int R__code;                                                               \
+    gException = &R__curr;                                                     \
+    R__code = CLING_EXCEPTION_SETJMP(gException->fBuf);                        \
+    if (R__code) {                                                             \
+    };                                                                         \
+    {
 
-#define CLING_EXCEPTION_TRY \
-    { \
-        static cppjit_interopExceptionContext_t R__curr, *R__old = gException; \
-        int R__code; \
-        gException = &R__curr; \
-        if ((R__code = CLING_EXCEPTION_SETJMP(gException->fBuf)) == 0) {
+#define CLING_EXCEPTION_TRY                                                    \
+  {                                                                            \
+    static cppjit_interopExceptionContext_t R__curr, *R__old = gException;     \
+    int R__code;                                                               \
+    gException = &R__curr;                                                     \
+    if ((R__code = CLING_EXCEPTION_SETJMP(gException->fBuf)) == 0) {
 
-#define CLING_EXCEPTION_CATCH(n) \
-            gException = R__old; \
-        } else { \
-            int n = R__code; \
-            gException = R__old;
+#define CLING_EXCEPTION_CATCH(n)                                               \
+  gException = R__old;                                                         \
+  }                                                                            \
+  else {                                                                       \
+    int n = R__code;                                                           \
+    gException = R__old;
 
-#define CLING_EXCEPTION_ENDTRY \
-        } \
-        gException = R__old; \
-    }
+#define CLING_EXCEPTION_ENDTRY                                                 \
+  }                                                                            \
+  gException = R__old;                                                         \
+  }
 
-CPYRT_IMPORT cppjit_interopExceptionContext_t *gException;
+CPYRT_IMPORT cppjit_interopExceptionContext_t* gException;
 
 #endif

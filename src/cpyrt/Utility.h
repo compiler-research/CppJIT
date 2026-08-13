@@ -2,9 +2,9 @@
 #define CPYRT_UTILITY_H
 
 // Standard
-#include <unordered_map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "Python.h"
@@ -26,71 +26,85 @@ namespace Utility {
 
 // convenience functions for adding methods to classes
 bool AddToClass(PyObject* pyclass, const char* label, PyCFunction cfunc,
-    int flags = METH_VARARGS);
+                int flags = METH_VARARGS);
 bool AddToClass(PyObject* pyclass, const char* label, const char* func);
 bool AddToClass(PyObject* pyclass, const char* label, PyCallable* pyfunc);
 
 // helpers for dynamically constructing operators
 PyCallable* FindUnaryOperator(PyObject* pyclass, const char* op);
-PyCallable* FindBinaryOperator(PyObject* left, PyObject* right,
-    const char* op, cppjit::interop::TCppScope_t scope = cppjit::interop::TCppScope_t{});
-PyCallable* FindBinaryOperator(const std::string& lcname, const std::string& rcname,
-    const char* op, cppjit::interop::TCppScope_t scope = cppjit::interop::TCppScope_t{}, bool reverse = false);
+PyCallable* FindBinaryOperator(
+    PyObject* left, PyObject* right, const char* op,
+    cppjit::interop::TCppScope_t scope = cppjit::interop::TCppScope_t{});
+PyCallable* FindBinaryOperator(
+    const std::string& lcname, const std::string& rcname, const char* op,
+    cppjit::interop::TCppScope_t scope = cppjit::interop::TCppScope_t{},
+    bool reverse = false);
 
 // helper for template classes and methods
 enum ArgPreference { kNone, kPointer, kReference, kValue };
-std::string ConstructTemplateArgs(
-    PyObject* pyname, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
-std::vector<Cpp::TemplateArgInfo> GetTemplateArgsTypes(
-    PyObject* scope, PyObject* tpArgs, PyObject* args = nullptr, ArgPreference = kNone, int argoff = 0, int* pcnt = nullptr);
+std::string ConstructTemplateArgs(PyObject* pyname, PyObject* tpArgs,
+                                  PyObject* args = nullptr,
+                                  ArgPreference = kNone, int argoff = 0,
+                                  int* pcnt = nullptr);
+std::vector<Cpp::TemplateArgInfo>
+GetTemplateArgsTypes(PyObject* scope, PyObject* tpArgs,
+                     PyObject* args = nullptr, ArgPreference = kNone,
+                     int argoff = 0, int* pcnt = nullptr);
 
 std::string CT2CppNameS(PyObject* pytc, bool allow_voidp);
-inline PyObject* CT2CppName(PyObject* pytc, const char* cpd, bool allow_voidp)
-{
-    const std::string& name = CT2CppNameS(pytc, allow_voidp);
-    if (!name.empty()) {
-        if (name == "const char*") cpd = "";
-        return PyUnicode_FromString((std::string{name}+cpd).c_str());
-    }
-    return nullptr;
+inline PyObject* CT2CppName(PyObject* pytc, const char* cpd, bool allow_voidp) {
+  const std::string& name = CT2CppNameS(pytc, allow_voidp);
+  if (!name.empty()) {
+    if (name == "const char*")
+      cpd = "";
+    return PyUnicode_FromString((std::string{name} + cpd).c_str());
+  }
+  return nullptr;
 }
 
 // helper for generating callbacks
 void ConstructCallbackPreamble(const std::string& retType,
-    const std::vector<std::string>& argtypes, std::ostringstream& code);
-void ConstructCallbackReturn(const std::string& retType, int nArgs, std::ostringstream& code);
+                               const std::vector<std::string>& argtypes,
+                               std::ostringstream& code);
+void ConstructCallbackReturn(const std::string& retType, int nArgs,
+                             std::ostringstream& code);
 
 // helper for function pointer conversions
-PyObject* FuncPtr2StdFunction(const std::string& retType, const std::string& signature, void* address);
+PyObject* FuncPtr2StdFunction(const std::string& retType,
+                              const std::string& signature, void* address);
 
 // initialize proxy type objects
 bool InitProxy(PyObject* module, PyTypeObject* pytype, const char* name);
 
-std::unordered_map<std::string, char> const &TypecodeMap();
+std::unordered_map<std::string, char> const& TypecodeMap();
 
-// retrieve the memory buffer from pyobject, return buflength, tc (optional) is python
-// array.array type code, size is type size, buf will point to buffer, and if check is
-// true, some heuristics will be applied to check buffer compatibility with the type
-Py_ssize_t GetBuffer(PyObject* pyobject, char tc, int size, void*& buf, bool check = true);
+// retrieve the memory buffer from pyobject, return buflength, tc (optional) is
+// python array.array type code, size is type size, buf will point to buffer,
+// and if check is true, some heuristics will be applied to check buffer
+// compatibility with the type
+Py_ssize_t GetBuffer(PyObject* pyobject, char tc, int size, void*& buf,
+                     bool check = true);
 
 // data/operator mappings
-std::string MapOperatorName(const std::string& name, bool bTakesParames, bool* stubbed = nullptr);
+std::string MapOperatorName(const std::string& name, bool bTakesParames,
+                            bool* stubbed = nullptr);
 
 struct PyOperators {
-    PyOperators() : fEq(nullptr), fNe(nullptr), fLt(nullptr), fLe(nullptr), fGt(nullptr), fGe(nullptr),
-        fLAdd(nullptr), fRAdd(nullptr), fSub(nullptr), fLMul(nullptr), fRMul(nullptr), fDiv(nullptr),
-        fHash(nullptr) {}
-    ~PyOperators();
+  PyOperators()
+      : fEq(nullptr), fNe(nullptr), fLt(nullptr), fLe(nullptr), fGt(nullptr),
+        fGe(nullptr), fLAdd(nullptr), fRAdd(nullptr), fSub(nullptr),
+        fLMul(nullptr), fRMul(nullptr), fDiv(nullptr), fHash(nullptr) {}
+  ~PyOperators();
 
-    PyObject* fEq;
-    PyObject* fNe;
-    PyObject *fLt, *fLe;
-    PyObject *fGt, *fGe;
-    PyObject *fLAdd, *fRAdd;
-    PyObject* fSub;
-    PyObject *fLMul, *fRMul;
-    PyObject* fDiv;
-    PyObject* fHash;
+  PyObject* fEq;
+  PyObject* fNe;
+  PyObject *fLt, *fLe;
+  PyObject *fGt, *fGe;
+  PyObject *fLAdd, *fRAdd;
+  PyObject* fSub;
+  PyObject *fLMul, *fRMul;
+  PyObject* fDiv;
+  PyObject* fHash;
 };
 
 // meta information
@@ -102,23 +116,23 @@ PyObject* PyErr_Occurred_WithGIL();
 
 // helpers for collecting/maintaining python exception data
 struct PyError_t {
-   struct PyObjectDeleter {
-      void operator()(PyObject *obj) { Py_XDECREF(obj); }
-   };
+  struct PyObjectDeleter {
+    void operator()(PyObject* obj) { Py_XDECREF(obj); }
+  };
 #if PY_VERSION_HEX < 0x030c0000
-   std::unique_ptr<PyObject, PyObjectDeleter> fType;
-   std::unique_ptr<PyObject, PyObjectDeleter> fTrace;
+  std::unique_ptr<PyObject, PyObjectDeleter> fType;
+  std::unique_ptr<PyObject, PyObjectDeleter> fTrace;
 #endif
-   std::unique_ptr<PyObject, PyObjectDeleter> fValue;
-   bool fIsCpp = false;
+  std::unique_ptr<PyObject, PyObjectDeleter> fValue;
+  bool fIsCpp = false;
 };
 
 PyError_t FetchPyError();
-void RestorePyError(PyError_t &error);
+void RestorePyError(PyError_t& error);
 
 size_t FetchError(std::vector<PyError_t>&, bool is_cpp = false);
-void SetDetailedException(
-    std::vector<PyError_t>&& errors /* clears */, PyObject* topmsg /* steals ref */, PyObject* defexc);
+void SetDetailedException(std::vector<PyError_t>&& errors /* clears */,
+                          PyObject* topmsg /* steals ref */, PyObject* defexc);
 
 // setup Python API for callbacks
 bool IncludePython();

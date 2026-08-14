@@ -13,6 +13,8 @@ include(GNUInstallDirs)
 option(CPPJIT_ENABLE_CPPINTEROP_TESTS "enable CppInterOp tests" OFF)
 set(CPPINTEROP_GIT_REPOSITORY "https://github.com/compiler-research/CppInterOp.git" CACHE STRING "")
 set(CPPINTEROP_GIT_TAG "8d624c621a4b95e36ff73ac708c85a768287478f" CACHE STRING "")
+set(CPPINTEROP_SOURCE_DIR "" CACHE PATH
+    "Override default CppInterOp built by ExternalProject_Add, with a path to local CppInterOp source")
 
 set(Python_FIND_VIRTUALENV ONLY)
 find_package(Python COMPONENTS Interpreter Development)
@@ -64,10 +66,8 @@ if(Clang_FOUND)
     message(STATUS "Found Clang at ${Clang_DIR}")
 endif()
 
-# build CppInterOp, we should expose the option to use pre-installed CppInterOp for example using conda
-
-# CPPINTEROP_DIR should resolve to the final installed location at runtime.
-# ask for site-packages path; fall back to CMAKE_INSTALL_PREFIX for standalone builds.
+# CppInterOp is installed at the location cppjit ships at runtime: ask for the
+# site-packages path; fall back to CMAKE_INSTALL_PREFIX for standalone builds.
 execute_process(
     COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('platlib'))"
     OUTPUT_VARIABLE _python_platlib
@@ -93,10 +93,11 @@ set(INTEROP_SOURCES
 add_library(cppjit SHARED ${CPYRT_SOURCES} ${INTEROP_SOURCES})
 add_dependencies(cppjit CppInterOp)
 
-
+# The exact library file the wrapper dlopens and the include dir the
+# interpreter boot requires.
 target_compile_definitions(cppjit PRIVATE
-    CPPINTEROP_DIR="${CPPINTEROP_INSTALL_DIR}"
-    CMAKE_SHARED_LIBRARY_SUFFIX="${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    CPPINTEROP_LIBRARY="${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    CPPINTEROP_INCLUDE_DIR="${CPPINTEROP_INSTALL_DIR}/include"
 )
 
 target_include_directories(cppjit PRIVATE

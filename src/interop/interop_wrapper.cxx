@@ -134,9 +134,7 @@ class ApplicationStarter {
 public:
   ApplicationStarter() {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
-    if (!Cpp::LoadDispatchAPI(
-            CPPINTEROP_DIR
-            "/lib/libclangCppInterOp" CMAKE_SHARED_LIBRARY_SUFFIX)) {
+    if (!Cpp::LoadDispatchAPI(CPPINTEROP_LIBRARY)) {
       std::cerr << "[cppjit-backend] Failed to load CppInterOp" << std::endl;
       return;
     }
@@ -205,7 +203,7 @@ public:
     Cpp::AddIncludePath((ClingSrc + "/tools/cling/include").c_str());
     Cpp::AddIncludePath((ClingSrc + "/include").c_str());
     Cpp::AddIncludePath((ClingBuildDir + "/include").c_str());
-    Cpp::AddIncludePath((std::string(CPPINTEROP_DIR) + "/include").c_str());
+    Cpp::AddIncludePath(CPPINTEROP_INCLUDE_DIR);
     Cpp::LoadLibrary("libstdc++", /* lookup= */ true);
 
     // load frequently used headers

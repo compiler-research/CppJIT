@@ -1,5 +1,7 @@
-# Configures the CppInterOp ExternalProject. Default backend is clang-repl;
-# CPPJIT_USE_CLING builds CppInterOp against a provided cling build
+# Configures the CppInterOp ExternalProject, built either from the pinned git
+# tag (default) or from a local checkout (CPPINTEROP_SOURCE_DIR). Default
+# backend is clang-repl; CPPJIT_USE_CLING builds CppInterOp against a provided
+# cling build
 include_guard(GLOBAL)
 include(ExternalProject)
 
@@ -59,17 +61,36 @@ function(cppjit_add_cppinterop)
         list(APPEND _args -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER})
     endif()
 
-    ExternalProject_Add(CppInterOp
+    set(_source_args
         GIT_REPOSITORY ${CPPINTEROP_GIT_REPOSITORY}
         GIT_TAG        ${CPPINTEROP_GIT_TAG}
-        PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
-        CMAKE_ARGS     ${_args}
-        BUILD_BYPRODUCTS
-            "${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    )
+    set(_log_args
         LOG_DOWNLOAD   ON
         LOG_CONFIGURE  ON
         LOG_BUILD      ON
         LOG_INSTALL    ON
         LOG_OUTPUT_ON_FAILURE ON
+    )
+    if(CPPINTEROP_SOURCE_DIR)
+        message(STATUS "CppInterOp: building from local source at ${CPPINTEROP_SOURCE_DIR} "
+                       "over the currently supported version ${CPPINTEROP_GIT_TAG}")
+        # BUILD_ALWAYS recompiles uncommitted edits and refreshes the installed
+        # libclangCppInterOp on every build; the sub-build keeps this incremental.
+        set(_source_args
+            SOURCE_DIR   "${CPPINTEROP_SOURCE_DIR}"
+            BUILD_ALWAYS ON
+        )
+        # Stream sub-build output in the dev loop instead of hiding it in log files.
+        set(_log_args "")
+    endif()
+
+    ExternalProject_Add(CppInterOp
+        ${_source_args}
+        PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
+        CMAKE_ARGS     ${_args}
+        BUILD_BYPRODUCTS
+            "${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+        ${_log_args}
     )
 endfunction()

@@ -217,3 +217,12 @@
    fun:*TargetLowering*LowerCallTo*
    ...
 }
+{
+   Clang 22 concepts: uninitialised value in Sema::BuildExprRequirement (seen on aarch64)
+   Memcheck:Cond
+   fun:_ZN5clang4Sema20BuildExprRequirementEPNS_4ExprEbNS_14SourceLocationENS_8concepts15ExprRequirement21ReturnTypeRequirementE
+   fun:_ZN5clang13TreeTransformIN12_GLOBAL__N_120TemplateInstantiatorEE21TransformRequiresExprEPNS_12RequiresExprE
+   fun:_ZN12_GLOBAL__N_120TemplateInstantiator21TransformRequiresExprEPN5clang12RequiresExprE
+   fun:_ZN5clang4Sema19SubstConstraintExprEPNS_4ExprERKNS_30MultiLevelTemplateArgumentListE
+   fun:_ZN12_GLOBAL__N_129ConstraintSatisfactionChecker8EvaluateERKN5clang20NormalizedConstraintERKNS1_30MultiLevelTemplateArgumentListE
+}

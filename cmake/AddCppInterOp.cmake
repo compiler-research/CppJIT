@@ -5,6 +5,9 @@
 include_guard(GLOBAL)
 include(ExternalProject)
 
+# Update to CMAKE_CURRENT_FUNCTION_LIST_DIR when the minimum CMake is 3.17.
+set(_CPPJIT_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+
 # Developer toggle: Cling from either ROOT or standalone supplies LLVM_DIR/Clang_DIR
 option(CPPJIT_USE_CLING "Build CppInterOp against a prebuilt Cling C++ Interpreter (ROOT)" OFF)
 mark_as_advanced(CPPJIT_USE_CLING)
@@ -92,5 +95,15 @@ function(cppjit_add_cppinterop)
         BUILD_BYPRODUCTS
             "${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
         ${_log_args}
+    )
+
+    # Verify that the user-provided CppInterOp source override is legitimate.
+    ExternalProject_Add_Step(CppInterOp verify_project
+        COMMAND ${CMAKE_COMMAND}
+            -DCPPINTEROP_BINARY_DIR=<BINARY_DIR>
+            -P "${_CPPJIT_CMAKE_DIR}/VerifyCppInterOp.cmake"
+        DEPENDEES configure
+        DEPENDERS build
+        COMMENT "Verifying the configured source tree is CppInterOp"
     )
 endfunction()

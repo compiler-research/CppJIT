@@ -26,41 +26,62 @@ if(NOT Python_Development_FOUND)
     message(FATAL_ERROR "Python development headers not found")
 endif()
 
+# The LLVM range the pinned CppInterOp supports; update together with the tag.
+set(CPPJIT_LLVM_VERSION_MIN 20)
+set(CPPJIT_LLVM_VERSION_MAX 22)
+
 set(_llvm_hints "")
 
 if(DEFINED ENV{CONDA_PREFIX})
     list(APPEND _llvm_hints "$ENV{CONDA_PREFIX}/lib/cmake/llvm")
-    list(APPEND _llvm_hints "$ENV{CONDA_PREFIX}/lib/cmake/clang")
 endif()
 
-if(NOT DEFINED LLVM_DIR)
+if(DEFINED LLVM_DIR)
+    # An explicit LLVM_DIR is authoritative: fail instead of falling back to a
+    # different LLVM than the one requested. A failed find_package resets
+    # LLVM_DIR to -NOTFOUND, so keep the requested value for the message.
+    set(_llvm_dir_arg "${LLVM_DIR}")
+    find_package(LLVM CONFIG PATHS "${LLVM_DIR}" NO_DEFAULT_PATH)
+    if(NOT LLVM_FOUND)
+        message(FATAL_ERROR
+            "No LLVMConfig.cmake under LLVM_DIR (${_llvm_dir_arg}); expected "
+            "<install prefix or build tree>/lib/cmake/llvm")
+    endif()
+else()
     find_package(LLVM CONFIG QUIET HINTS ${_llvm_hints})
     if(NOT LLVM_FOUND)
         message(FATAL_ERROR
-            "llvm-config not found, please install LLVM 21 (llvmdev, clangdev) using your system package manager or conda.\n"
-            "As an alternative, you can pass -DLLVM_DIR=/path/to/llvm/lib/cmake/llvm to pip\n"
+            "No LLVM CMake package found. Install LLVM "
+            "${CPPJIT_LLVM_VERSION_MIN}-${CPPJIT_LLVM_VERSION_MAX} development packages "
+            "(apt: llvm-${CPPJIT_LLVM_VERSION_MAX}-dev libclang-${CPPJIT_LLVM_VERSION_MAX}-dev; "
+            "conda: llvmdev clangdev), or point cppjit at your own LLVM build with "
+            "-DLLVM_DIR=<prefix or build tree>/lib/cmake/llvm "
             "(pip: --config-settings=cmake.define.LLVM_DIR=...)")
     endif()
-else()
-    find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}")
-endif()
-
-# somewhat derive Clang_DIR
-if(NOT DEFINED Clang_DIR)
-    get_filename_component(_llvm_cmake_dir "${LLVM_DIR}" DIRECTORY)
-    if(EXISTS "${_llvm_cmake_dir}/clang/ClangConfig.cmake")
-        set(Clang_DIR "${_llvm_cmake_dir}/clang")
-    elseif(EXISTS "${LLVM_DIR}/../clang/ClangConfig.cmake")
-        set(Clang_DIR "${LLVM_DIR}/../clang")
-    endif()
-endif()
-if(DEFINED Clang_DIR)
-    find_package(Clang CONFIG HINTS "${Clang_DIR}")
 endif()
 
 message(STATUS "Found LLVM ${LLVM_VERSION} at ${LLVM_DIR}")
-if(LLVM_VERSION VERSION_LESS "20.0")
-    message(WARNING "LLVM ${LLVM_VERSION} detected. Minimum supported version is 21. Build may fail.")
+if(LLVM_VERSION_MAJOR LESS CPPJIT_LLVM_VERSION_MIN OR
+   LLVM_VERSION_MAJOR GREATER CPPJIT_LLVM_VERSION_MAX)
+    message(FATAL_ERROR
+        "LLVM ${LLVM_VERSION} is unsupported: the currently supported "
+        "CppInterOp version (${CPPINTEROP_GIT_TAG}) only supports LLVM "
+        "${CPPJIT_LLVM_VERSION_MIN}-${CPPJIT_LLVM_VERSION_MAX}")
+endif()
+
+if(DEFINED Clang_DIR)
+    # An explicit Clang_DIR is authoritative, like LLVM_DIR above.
+    set(_clang_dir_arg "${Clang_DIR}")
+    find_package(Clang CONFIG PATHS "${Clang_DIR}" NO_DEFAULT_PATH)
+    if(NOT Clang_FOUND)
+        message(FATAL_ERROR
+            "No ClangConfig.cmake under Clang_DIR (${_clang_dir_arg}); expected "
+            "<install prefix or build tree>/lib/cmake/clang")
+    endif()
+else()
+    # Clang's package sits beside LLVM's in every supported layout; search
+    # only there so an unrelated system clang cannot satisfy the lookup.
+    find_package(Clang CONFIG QUIET HINTS "${LLVM_DIR}/../clang" NO_DEFAULT_PATH)
 endif()
 if(Clang_FOUND)
     message(STATUS "Found Clang at ${Clang_DIR}")

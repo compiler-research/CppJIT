@@ -1,16 +1,14 @@
 # Runs between the CppInterOp ExternalProject's configure and build steps:
-# the sub-configure records its project() name in CMakeCache.txt; reject any
+# the sub-configure records its project() name in its cache; reject any
 # source tree that does not declare itself CppInterOp.
-file(STRINGS "${CPPINTEROP_BINARY_DIR}/CMakeCache.txt" _project_entry
-     REGEX "^CMAKE_PROJECT_NAME:STATIC=")
-if(NOT _project_entry)
+load_cache("${CPPINTEROP_BINARY_DIR}" READ_WITH_PREFIX _sub_ CMAKE_PROJECT_NAME)
+if(NOT DEFINED _sub_CMAKE_PROJECT_NAME)
     message(FATAL_ERROR
-        "No CMAKE_PROJECT_NAME recorded in ${CPPINTEROP_BINARY_DIR}/CMakeCache.txt "
+        "No CMAKE_PROJECT_NAME in ${CPPINTEROP_BINARY_DIR}/CMakeCache.txt "
         "— the CppInterOp sub-configure did not complete")
 endif()
-string(REGEX REPLACE "^CMAKE_PROJECT_NAME:STATIC=" "" _project_name "${_project_entry}")
-if(NOT _project_name STREQUAL "CppInterOp")
+if(NOT _sub_CMAKE_PROJECT_NAME STREQUAL "CppInterOp")
     message(FATAL_ERROR
-        "The provided source path override declares project '${_project_name}', "
+        "The provided source path override declares project '${_sub_CMAKE_PROJECT_NAME}', "
         "not CppInterOp")
 endif()

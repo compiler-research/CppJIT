@@ -9,7 +9,7 @@ CppJIT is the consolidated monorepo packaging of the compiler-research forks of 
     -  Installed via your favourite package manager (e.g. `conda install -c conda-forge "llvmdev=21" "clangdev=21"`)
     -  To use a source build of LLVM, pass the path to pip like `pip install . --config-settings=cmake.define.LLVM_DIR=/path/to/build/lib/cmake/llvm`
 - Python 3.12+ with development headers (e.g. `apt install python3.14 python3.14-dev`)
-- CMake 3.16+
+- CMake 3.20+
 
 ### Standard installation:
 

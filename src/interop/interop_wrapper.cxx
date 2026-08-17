@@ -123,14 +123,6 @@ public:
       Cpp::Process(s.str().c_str());
     }
 
-    // This would give us something like:
-    // /home/vvassilev/workspace/builds/scratch/cling-build/builddir/lib/clang/13.0.0
-    const char* ResourceDir = Cpp::GetResourceDir();
-    std::string ClingSrc = std::string(ResourceDir) + "/../../../../cling-src";
-    std::string ClingBuildDir = std::string(ResourceDir) + "/../../../";
-    Cpp::AddIncludePath((ClingSrc + "/tools/cling/include").c_str());
-    Cpp::AddIncludePath((ClingSrc + "/include").c_str());
-    Cpp::AddIncludePath((ClingBuildDir + "/include").c_str());
     Cpp::AddIncludePath(CPPINTEROP_INCLUDE_DIR);
     Cpp::LoadLibrary("libstdc++", /* lookup= */ true);
 

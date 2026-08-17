@@ -2,7 +2,7 @@ import sys
 
 import py
 from pytest import mark, raises, skip
-from support import IS_CLANG_REPL, IS_MAC, pylong, pyunicode, setup_make
+from support import IS_CLANG_REPL, IS_CPP23, IS_MAC, pylong, pyunicode, setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/datatypesDict"))
@@ -20,6 +20,12 @@ class TestDATATYPES:
         cls.datatypes = cppjit.load_reflection_info(cls.test_dct)
         cls.N = 5  # cppjit.gbl.N
 
+    @mark.xfail(
+        condition=IS_CPP23,
+        reason="since C++23 (P1467) the narrowing std::complex<double> to "
+        "complex<float> constructor is explicit, breaking the implicit "
+        "conversion of Python complex arguments",
+    )
     def test01_instance_data_read_access(self):
         """Read access to instance public data and verify values"""
 

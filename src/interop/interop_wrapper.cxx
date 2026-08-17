@@ -163,16 +163,6 @@ public:
                  "(bool)(c1 != c2); } }",
                  /*silent=*/false);
 
-    // Define gCling when we run with clang-repl.
-    // FIXME: We should get rid of all the uses of gCling as this seems to
-    // break encapsulation.
-    std::stringstream InterpPtrSS;
-    InterpPtrSS << "#ifndef __CLING__\n"
-                << "namespace cling { namespace runtime {\n"
-                << "void* gCling=(void*)" << Interp.data << ";\n }}\n"
-                << "#endif \n";
-    Cpp::Process(InterpPtrSS.str().c_str());
-
     // helper for multiple inheritance
     Cpp::Declare("namespace __cppjit_internal { struct Sep; }",
                  /*silent=*/false);

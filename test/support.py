@@ -94,4 +94,12 @@ IS_CLANG_DEBUG = (
     == 1
 )
 IS_CLING = not IS_CLANG_REPL
+IS_CPP23 = (
+    cppjit.evaluate("""#if __cplusplus >= 202302L
+                                            true
+                                            #else
+                                            false
+                                            #endif\n""")
+    == 1
+)
 IS_VALGRIND = True if os.getenv("IS_VALGRIND") else False

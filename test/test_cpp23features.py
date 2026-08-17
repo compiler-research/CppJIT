@@ -1,39 +1,23 @@
-import os
-import subprocess
-import sys
-
 from pytest import mark
+from support import IS_CPP23
 
-# C++23 isn't the stack's default and the interpreter is a process-wide
-# singleton pinned at the first `import cppjit`. So TestCPP23Driver re-runs the
-# whole class once in a child process that selects C++23 before import
-# (EXTRA_CLING_ARGS for cling, CPPINTEROP_EXTRA_INTERPRETER_ARGS for clang-repl);
-# all tests then share that one interpreter. To iterate locally, run the tests
-# directly in "child mode":
+# The interpreter is a process-wide singleton whose C++ standard is pinned at
+# the first `import cppjit`, so these tests only run when the suite itself is
+# under C++23 (the cxx-standard=23 CI cells). To run them locally (the env var
+# reaches CreateInterpreter for both clang-repl and cling):
 #
-#     CPPJIT_TEST_CPP23_CHILD=1 EXTRA_CLING_ARGS=-std=c++23 \
-#     CPPINTEROP_EXTRA_INTERPRETER_ARGS=-std=c++23 \
-#     pytest -v test_cpp23features.py
-
-_CPP23_CHILD = "CPPJIT_TEST_CPP23_CHILD"
-_IN_CHILD = bool(os.environ.get(_CPP23_CHILD))
+#     CPPINTEROP_EXTRA_INTERPRETER_ARGS=-std=c++23 pytest -v test_cpp23features.py
 
 
 @mark.skipif(
-    not _IN_CHILD,
-    reason="C++23 tests run in the child interpreter launched by TestCPP23Driver",
+    not IS_CPP23,
+    reason="C++23 tests need the interpreter to run under -std=c++23",
 )
 class TestCPP23FEATURES:
-    """C++23 features driven via cppjit.cppdef through the JIT (clang-repl/cling).
-
-    The class owns one C++23 interpreter (booted in setup_class); tests share
-    it via ``self.cppjit``.
-    """
+    """C++23 features driven via cppjit.cppdef through the JIT (clang-repl/cling)."""
 
     @classmethod
     def setup_class(cls):
-        # In the child process C++23 is already selected, so this one-time boot
-        # is the C++23 interpreter every test shares.
         import cppjit
 
         cls.cppjit = cppjit
@@ -442,33 +426,3 @@ class TestCPP23FEATURES:
         """)
 
         assert cppjit.gbl.Cpp23DeducingThis.drive_transform() == 42
-
-
-@mark.skipif(_IN_CHILD, reason="launcher runs only in the parent process")
-class TestCPP23Driver:
-    """Re-run TestCPP23FEATURES once in a child interpreter pinned to C++23."""
-
-    def test_run_under_cpp23(self):
-        env = dict(os.environ)
-        env[_CPP23_CHILD] = "1"
-        env["EXTRA_CLING_ARGS"] = "-std=c++23"  # cling
-        env["CPPINTEROP_EXTRA_INTERPRETER_ARGS"] = "-std=c++23"  # clang-repl
-        proc = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                "-q",
-                "-p",
-                "no:cacheprovider",
-                os.path.basename(__file__),
-            ],
-            cwd=os.path.dirname(os.path.abspath(__file__)),
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-        assert proc.returncode == 0, (
-            "C++23 child run failed (rc=%d)\n--- stdout ---\n%s\n--- stderr ---\n%s"
-            % (proc.returncode, proc.stdout, proc.stderr)
-        )

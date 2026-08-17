@@ -1,5 +1,14 @@
 from pytest import mark, skip
-from support import IS_LINUX_ARM, IS_MAC_ARM, IS_MAC_X86
+from support import IS_LINUX_ARM, IS_MAC_ARM, IS_MAC_X86, IS_VALGRIND
+
+# valgrind < 3.26 cannot decode the LDAPRB (FEAT_LRCPC) instructions the JIT
+# emits for the threaded tests and SIGILLs the whole process; see
+# https://bugs.kde.org/show_bug.cgi?id=476465
+pytestmark = mark.xfail(
+    condition=IS_VALGRIND and IS_LINUX_ARM,
+    run=False,
+    reason="valgrind < 3.26 SIGILLs on JIT-emitted LDAPRB (FEAT_LRCPC)",
+)
 
 
 class TestCONCURRENT:

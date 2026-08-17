@@ -1,6 +1,7 @@
 """CPython-specific touch-ups"""
 
 import ctypes
+import importlib.util
 
 from . import _stdcpp_fix  # noqa: F401
 
@@ -16,13 +17,17 @@ __all__ = [
     "_end_capture_stderr",
 ]
 
-# the merged libcppjit extension is the backend: importing it loads the
-# C++ runtime (no separate loader.load_cpp_backend() step, which would
-# initialize the interpreter twice)
-import libcppjit as _backend
+# preload the merged extension with ctypes and run LoadCppInterOp() first,
+# so the interpreter is ready before the extension module initializes
+_spec = importlib.util.find_spec("libcppjit")
+if _spec is None or not _spec.origin:
+    raise ImportError("cannot locate the libcppjit extension module")
+_w = ctypes.CDLL(_spec.origin, ctypes.RTLD_GLOBAL)
+if not _w.LoadCppInterOp():
+    raise RuntimeError("failed to load CppInterOp (LoadCppInterOp returned 0)")
+del _spec
 
-# explicitly expose APIs from libcppjit
-_w = ctypes.CDLL(_backend.__file__, ctypes.RTLD_GLOBAL)
+import libcppjit as _backend  # noqa: E402
 
 
 ### template support ---------------------------------------------------------

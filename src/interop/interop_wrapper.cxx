@@ -55,65 +55,11 @@ static std::set<std::string> g_builtins = {"bool",
                                            "long double",
                                            "void"};
 
-// to filter out ROOT names
-static std::set<std::string> gInitialNames;
-static std::set<std::string> gRootSOs;
-
 // configuration
 static bool gEnableFastPath = true;
 
 // global initialization -----------------------------------------------------
 namespace {
-
-// const int kMAXSIGNALS = 16;
-
-// names copied from TUnixSystem
-#ifdef WIN32
-const int SIGBUS = 0; // simple placeholders for ones that don't exist
-const int SIGSYS = 0;
-const int SIGPIPE = 0;
-const int SIGQUIT = 0;
-const int SIGWINCH = 0;
-const int SIGALRM = 0;
-const int SIGCHLD = 0;
-const int SIGURG = 0;
-const int SIGUSR1 = 0;
-const int SIGUSR2 = 0;
-#endif
-
-#if 0
-static struct Signalmap_t {
-   int               fCode;
-   const char       *fSigName;
-} gSignalMap[kMAXSIGNALS] = {       // the order of the signals should be identical
-   { SIGBUS,   "bus error" }, // to the one in TSysEvtHandler.h
-   { SIGSEGV,  "segmentation violation" },
-   { SIGSYS,    "bad argument to system call" },
-   { SIGPIPE,   "write on a pipe with no one to read it" },
-   { SIGILL,    "illegal instruction" },
-   { SIGABRT,   "abort" },
-   { SIGQUIT,   "quit" },
-   { SIGINT,    "interrupt" },
-   { SIGWINCH,  "window size change" },
-   { SIGALRM,   "alarm clock" },
-   { SIGCHLD,   "death of a child" },
-   { SIGURG,    "urgent data arrived on an I/O channel" },
-   { SIGFPE,    "floating point exception" },
-   { SIGTERM,   "termination signal" },
-   { SIGUSR1,   "user-defined signal 1" },
-   { SIGUSR2,   "user-defined signal 2" }
-};
-#endif
-
-static inline void push_tokens_from_string(char* s,
-                                           std::vector<const char*>& tokens) {
-  char* token = strtok(s, " ");
-
-  while (token) {
-    tokens.push_back(token);
-    token = strtok(NULL, " ");
-  }
-}
 
 static inline bool is_integral(std::string& s) {
   if (s == "false") {
@@ -143,29 +89,11 @@ public:
     if (auto existingInterp = Cpp::GetInterpreter()) {
       Interp = existingInterp;
     } else {
-#ifdef __arm64__
-#ifdef __APPLE__
-      // If on apple silicon don't use -march=native
-      std::vector<const char*> InterpArgs({"-std=c++17"});
-#else
-      std::vector<const char*> InterpArgs({"-std=c++17", "-march=native"});
-#endif
-#else
-      std::vector<const char*> InterpArgs({"-std=c++17", "-march=native"});
-#endif
-      char* InterpArgString = getenv("CPPINTEROP_EXTRA_INTERPRETER_ARGS");
-
-      if (InterpArgString)
-        push_tokens_from_string(InterpArgString, InterpArgs);
-
-#ifdef __arm64__
-#ifdef __APPLE__
+      // CppInterOp itself appends CPPINTEROP_EXTRA_INTERPRETER_ARGS inside
+      // CreateInterpreter, so nothing needs to be forwarded from here.
+#if defined(__arm64__) && defined(__APPLE__)
       // If on apple silicon don't use -march=native
       Interp = Cpp::CreateInterpreter({"-std=c++17"}, /*GpuArgs=*/{});
-#else
-      Interp = Cpp::CreateInterpreter({"-std=c++17", "-march=native"},
-                                      /*GpuArgs=*/{});
-#endif
 #else
       Interp = Cpp::CreateInterpreter({"-std=c++17", "-march=native"},
                                       /*GpuArgs=*/{});
@@ -213,7 +141,6 @@ public:
                        "#include <iostream>\n"
                        "#include <string.h>\n" // for strcpy
                        "#include <string>\n"
-                       //    "#include <DllImport.h>\n"     // defines R__EXTERN
                        "#include <vector>\n"
                        "#include <utility>\n"
                        "#include <memory>\n"
@@ -257,26 +184,6 @@ public:
     // helper for multiple inheritance
     Cpp::Declare("namespace __cppjit_internal { struct Sep; }",
                  /*silent=*/false);
-
-    // std::string libInterOp =
-    // I->getDynamicLibraryManager()->lookupLibrary("libcling"); void *interopDL
-    // = dlopen(libInterOp.c_str(), RTLD_LAZY); if (!interopDL) {
-    //     std::cerr << "libInterop could not be opened!\n";
-    //     exit(1);
-    // }
-
-    // start off with a reasonable size placeholder for wrappers
-    // gWrapperHolder.reserve(1024);
-
-    // create an exception handler to process signals
-    // gExceptionHandler = new TExceptionHandlerImp{};
-  }
-
-  ~ApplicationStarter() {
-    // Cpp::DeleteInterpreter(Interp);
-    //  for (auto wrap : gWrapperHolder)
-    //      delete wrap;
-    //  delete gExceptionHandler; gExceptionHandler = nullptr;
   }
 } _applicationStarter;
 
@@ -665,36 +572,6 @@ interop::TCppType_t interop::GetComplexType(const std::string& name) {
   std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
   return Cpp::GetComplexType(Cpp::GetType(name));
 }
-
-// //----------------------------------------------------------------------------
-// static std::string extract_namespace(const std::string& name)
-// {
-// // Find the namespace the named class lives in, take care of templates
-// // Note: this code also lives in cpyrt (TODO: refactor?)
-//     if (name.empty())
-//         return name;
-//
-//     int tpl_open = 0;
-//     for (std::string::size_type pos = name.size()-1; 0 < pos; --pos) {
-//         std::string::value_type c = name[pos];
-//
-//     // count '<' and '>' to be able to skip template contents
-//         if (c == '>')
-//             ++tpl_open;
-//         else if (c == '<')
-//             --tpl_open;
-//
-//     // collect name up to "::"
-//         else if (tpl_open == 0 && c == ':' && name[pos-1] == ':') {
-//         // found the extend of the scope ... done
-//             return name.substr(0, pos-1);
-//         }
-//     }
-//
-// // no namespace; assume outer scope
-//     return "";
-// }
-//
 
 std::string interop::ResolveEnum(TCppScope_t handle) {
   std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
@@ -1099,83 +976,6 @@ bool interop::IsDefaultConstructable(TCppScope_t scope) {
 }
 
 bool interop::IsVariable(TCppScope_t scope) { return Cpp::IsVariable(scope); }
-
-// // helpers for stripping scope names
-// static
-// std::string outer_with_template(const std::string& name)
-// {
-// // Cut down to the outer-most scope from <name>, taking proper care of
-// templates.
-//     int tpl_open = 0;
-//     for (std::string::size_type pos = 0; pos < name.size(); ++pos) {
-//         std::string::value_type c = name[pos];
-//
-//     // count '<' and '>' to be able to skip template contents
-//         if (c == '<')
-//             ++tpl_open;
-//         else if (c == '>')
-//             --tpl_open;
-//
-//     // collect name up to "::"
-//         else if (tpl_open == 0 && \
-//                  c == ':' && pos+1 < name.size() && name[pos+1] == ':') {
-//         // found the extend of the scope ... done
-//             return name.substr(0, pos-1);
-//         }
-//     }
-//
-// // whole name is apparently a single scope
-//     return name;
-// }
-//
-// static
-// std::string outer_no_template(const std::string& name)
-// {
-// // Cut down to the outer-most scope from <name>, drop templates
-//     std::string::size_type first_scope = name.find(':');
-//     if (first_scope == std::string::npos)
-//         return name.substr(0, name.find('<'));
-//     std::string::size_type first_templ = name.find('<');
-//     if (first_templ == std::string::npos)
-//         return name.substr(0, first_scope);
-//     return name.substr(0, std::min(first_templ, first_scope));
-// }
-//
-// #define FILL_COLL(type, filter) { \
-//     TIter itr{coll}; \
-//     type* obj = nullptr; \
-//     while ((obj = (type*)itr.Next())) { \
-//         const char* nm = obj->GetName(); \
-//         if (nm && nm[0] != '_' && !(obj->Property() & (filter))) { \
-//             if (gInitialNames.find(nm) == gInitialNames.end()) \
-//                 cppnames.insert(nm); \
-//     }}}
-//
-// static inline
-// void cond_add(interop::TCppScope_t scope, const std::string& ns_scope,
-//     std::set<std::string>& cppnames, const char* name, bool nofilter = false)
-// {
-//     if (!name || name[0] == '_' || strstr(name, ".h") != 0 || strncmp(name,
-//     "operator", 8) == 0)
-//         return;
-//
-//     if (scope == GLOBAL_HANDLE) {
-//         std::string to_add = outer_no_template(name);
-//         if (nofilter || gInitialNames.find(to_add) == gInitialNames.end())
-//             cppnames.insert(outer_no_template(name));
-//     } else if (scope == STD_HANDLE) {
-//         if (strncmp(name, "std::", 5) == 0) {
-//             name += 5;
-// #ifdef __APPLE__
-//             if (strncmp(name, "__1::", 5) == 0) name += 5;
-// #endif
-//         }
-//         cppnames.insert(outer_no_template(name));
-//     } else {
-//         if (strncmp(name, ns_scope.c_str(), ns_scope.size()) == 0)
-//             cppnames.insert(outer_with_template(name + ns_scope.size()));
-//     }
-// }
 
 void interop::GetAllCppNames(TCppScope_t scope,
                              std::set<std::string>& cppnames) {

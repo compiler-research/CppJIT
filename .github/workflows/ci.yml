@@ -19,12 +19,14 @@ jobs:
     strategy:
       fail-fast: false
       # Mirrors CppInterOp's cppyy PR cells: clang-repl on the same OS/arch/LLVM
-      # /valgrind combos at Python 3.14, plus a cling cell. Breadth (3.12/3.13,
-      # C++17, LLVM 20, arm) lives in nightly.
+      # /valgrind combos at Python 3.14, plus a cling cell and a C++23 cell
+      # (test_cpp23features runs only there). Breadth (3.12/3.13, C++17, LLVM
+      # 20, arm) lives in nightly.
       matrix:
         include:
           - { os: ubuntu-24.04,   llvm: '21', flavor: system, py: '3.14', cxx: '20', vg: true }
           - { os: ubuntu-24.04,   llvm: '22', flavor: '',     py: '3.14', cxx: '20' }
+          - { os: ubuntu-24.04,   llvm: '22', flavor: '',     py: '3.14', cxx: '23' }
           - { os: macos-26,       llvm: '21', flavor: system, py: '3.14', cxx: '20' }
           - { os: macos-26-intel, llvm: '21', flavor: system, py: '3.14', cxx: '20' }
           # cling backend, against the cached llvm-root (cling-llvm22) recipe cell.

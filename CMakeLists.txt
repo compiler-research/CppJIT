@@ -95,10 +95,11 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 if(_python_platlib)
-    set(CPPINTEROP_INSTALL_DIR "${_python_platlib}/cppjit_backend")
+    set(CPPINTEROP_INSTALL_PREFIX "${_python_platlib}")
 else()
-    set(CPPINTEROP_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/cppjit_backend")
+    set(CPPINTEROP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 endif()
+set(CPPINTEROP_INSTALL_DIR "${CPPINTEROP_INSTALL_PREFIX}/cppjit_backend")
 
 # Include cmake for CppInterOp config and build using ExternalProject.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddCppInterOp.cmake)
@@ -114,11 +115,12 @@ set(INTEROP_SOURCES
 add_library(cppjit SHARED ${CPYRT_SOURCES} ${INTEROP_SOURCES})
 add_dependencies(cppjit CppInterOp)
 
-# The exact library file the wrapper dlopens and the include dir the
-# interpreter boot requires.
+# The wrapper anchors these relative spellings at its own load location,
+# falling back to the install prefix (see cppinterop_paths()).
 target_compile_definitions(cppjit PRIVATE
-    CPPINTEROP_LIBRARY="${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    CPPINTEROP_INCLUDE_DIR="${CPPINTEROP_INSTALL_DIR}/include"
+    CPPINTEROP_INSTALL_PREFIX="${CPPINTEROP_INSTALL_PREFIX}"
+    CPPINTEROP_LIBRARY="cppjit_backend/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    CPPINTEROP_INCLUDE_DIR="cppjit_backend/include"
 )
 
 target_include_directories(cppjit PRIVATE

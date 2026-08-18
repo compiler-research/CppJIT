@@ -23,6 +23,7 @@ using namespace cppjit;
 #include <csignal>
 #include <cstdlib> // for getenv
 #include <cstring>
+#include <filesystem>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -74,13 +75,37 @@ static inline bool is_integral(std::string& s) {
                        }) == s.end();
 }
 
+struct InterOpPaths {
+  std::string Library;
+  std::string IncludeDir;
+};
+
+// One relative layout, two anchors: prefer CppInterOp next to our own load
+// location so wheels relocate; fall back to the build-time install prefix.
+static InterOpPaths cppinterop_paths() {
+  std::filesystem::path anchor = CPPINTEROP_INSTALL_PREFIX;
+#ifndef _WIN32
+  Dl_info info;
+  if (dladdr((void*)&cppinterop_paths, &info) && info.dli_fname) {
+    const std::filesystem::path here =
+        std::filesystem::path(info.dli_fname).parent_path();
+    std::error_code ec;
+    if (std::filesystem::exists(here / CPPINTEROP_LIBRARY, ec))
+      anchor = here;
+  }
+#endif
+  return {(anchor / CPPINTEROP_LIBRARY).string(),
+          (anchor / CPPINTEROP_INCLUDE_DIR).string()};
+}
+
 class ApplicationStarter {
   interop::TInterp_t Interp;
 
 public:
   ApplicationStarter() {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
-    if (!Cpp::LoadDispatchAPI(CPPINTEROP_LIBRARY)) {
+    const InterOpPaths Paths = cppinterop_paths();
+    if (!Cpp::LoadDispatchAPI(Paths.Library.c_str())) {
       std::cerr << "[cppjit-backend] Failed to load CppInterOp" << std::endl;
       return;
     }
@@ -123,7 +148,7 @@ public:
       Cpp::Process(s.str().c_str());
     }
 
-    Cpp::AddIncludePath(CPPINTEROP_INCLUDE_DIR);
+    Cpp::AddIncludePath(Paths.IncludeDir.c_str());
     Cpp::LoadLibrary("libstdc++", /* lookup= */ true);
 
     // load frequently used headers

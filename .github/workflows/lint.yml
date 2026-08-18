@@ -1,0 +1,49 @@
+name: Lint
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '**.h'
+      - '**.cxx'
+      - '**.py'
+      - 'pyproject.toml'
+      - '.github/workflows/lint.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # The whole tree is formatted, so check it whole: no diff-vs-base
+      # machinery, and drift cannot accumulate in untouched files.
+      - name: Check C++ formatting
+        run: |
+          sudo apt-get install -y clang-format-18
+          find src test/cpp -name '*.cxx' -o -name '*.h' \
+            | xargs clang-format-18 --dry-run -Werror
+
+  ruff:
+    name: ruff
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check python lint and formatting
+        run: |
+          pip install ruff==0.16.3
+          ruff check .
+          ruff format --check .

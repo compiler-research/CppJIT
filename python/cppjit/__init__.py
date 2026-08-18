@@ -51,6 +51,7 @@ __all__ = [
 ]
 
 import ctypes
+import importlib.util
 import os
 import sys
 import sysconfig
@@ -334,82 +335,30 @@ elif ispypy:
     if os.path.exists(apipath) and os.path.exists(os.path.join(apipath, "Python.h")):
         add_include_path(apipath)
 
-# add access to extra headers for dispatcher (cpyrt only (?))
+# add access to the cpyrt dispatcher API headers, which install next to the
+# extension module; anchoring on the extension resolves editable and regular
+# installs alike. CPPJIT_API_PATH overrides ("none" disables the lookup).
 if not ispypy:
-    try:
-        apipath_extra = os.environ["CPPJIT_API_PATH"]
+    apipath_extra = os.environ.get("CPPJIT_API_PATH")
+    if apipath_extra:
         if os.path.basename(apipath_extra) == "cpyrt":
             apipath_extra = os.path.dirname(apipath_extra)
-    except KeyError:
-        apipath_extra = None
+    else:
+        _spec = importlib.util.find_spec("libcppjit")
+        if _spec is not None and _spec.origin:
+            apipath_extra = os.path.join(
+                os.path.dirname(_spec.origin), "cppjit_backend", "include"
+            )
+        del _spec
 
-    if apipath_extra is None:
-        try:
-            import pkg_resources as pr
-
-            d = pr.get_distribution("cpyrt")
-            for line in d.get_metadata_lines("RECORD"):
-                if "API.h" in line:
-                    part = line[0 : line.find(",")]
-
-            ape = os.path.join(d.location, part)
-            if os.path.exists(ape):
-                apipath_extra = os.path.dirname(os.path.dirname(ape))
-
-            del part, d, pr
-        except Exception:
-            pass
-
-    if apipath_extra is None:
-        # for the monorepo: headers are at cppjit_backend/include/
-        _cppjit_inc = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "cppjit_backend", "include"
-        )
-        if os.path.exists(os.path.join(_cppjit_inc, "cpyrt")):
-            apipath_extra = _cppjit_inc
-        del _cppjit_inc
-
-    if apipath_extra is None:
-        ldversion = sysconfig.get_config_var("LDVERSION")
-        if not ldversion:
-            ldversion = sys.version[:3]
-
-        apipath_extra = os.path.join(
-            os.path.dirname(apipath), "site", "python" + ldversion
-        )
-        if not os.path.exists(os.path.join(apipath_extra, "cpyrt")):
-            import glob
-
-            import libcppjit
-
-            ape = os.path.dirname(libcppjit.__file__)
-            # a "normal" structure finds the include directory up to 3 levels up,
-            # ie. dropping lib/pythonx.y[md]/site-packages
-            for i in range(3):
-                if os.path.exists(os.path.join(ape, "include")):
-                    break
-                ape = os.path.dirname(ape)
-
-            ape = os.path.join(ape, "include")
-            if os.path.exists(os.path.join(ape, "cpyrt")):
-                apipath_extra = ape
-            else:
-                # add back pythonx.y or site/pythonx.y if present
-                for p in glob.glob(
-                    os.path.join(ape, "python" + sys.version[:3] + "*")
-                ) + glob.glob(os.path.join(ape, "*", "python" + sys.version[:3] + "*")):
-                    if os.path.exists(os.path.join(p, "cpyrt")):
-                        apipath_extra = p
-                        break
-
-    if apipath_extra.lower() != "none":
-        if not os.path.exists(os.path.join(apipath_extra, "cpyrt")):
+    if apipath_extra and apipath_extra.lower() != "none":
+        if os.path.isdir(os.path.join(apipath_extra, "cpyrt")):
+            add_include_path(apipath_extra)
+        else:
             warnings.warn(
                 "cpyrt API not found (tried: %s); set CPPJIT_API_PATH envar to the 'cpyrt' API directory to fix"
                 % apipath_extra
             )
-        else:
-            add_include_path(apipath_extra)
 
     del apipath_extra
 

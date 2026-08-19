@@ -58,19 +58,18 @@ import sysconfig
 import warnings
 
 try:
-    import __pypy__
+    import __pypy__  # noqa: F401
 
-    del __pypy__
-    ispypy = True
+    _ispypy = True
 except ImportError:
-    ispypy = False
+    _ispypy = False
 
 from . import _typemap
 from ._version import __version__ as __version__
 
 # import separately instead of in the above try/except block for easier to
 # understand tracebacks
-if ispypy:
+if _ispypy:
     raise ImportError("cppjit requires CPython; PyPy is not supported")
 from ._cpython_cppjit import *
 
@@ -152,7 +151,7 @@ def _standard_pythonizations(pyclass, name):
     return True
 
 
-if not ispypy:
+if not _ispypy:
     py.add_pythonization(_standard_pythonizations, "std")
 # TODO: PyPy still has the old-style pythonizations, which require the full
 # class name (not possible for std::tuple ...)
@@ -175,30 +174,32 @@ class py_make_smartptr(object):
         return self.ptrcls[self.cls](obj)  # C++ takes ownership
 
 
-class make_smartptr(object):
-    __slots__ = ["ptrcls", "maker"]
+def _install_smartptr_makers():
+    class make_smartptr(object):
+        __slots__ = ["ptrcls", "maker"]
 
-    def __init__(self, ptrcls, maker):
-        self.ptrcls = ptrcls
-        self.maker = maker
+        def __init__(self, ptrcls, maker):
+            self.ptrcls = ptrcls
+            self.maker = maker
 
-    def __call__(self, ptr):
-        return py_make_smartptr(type(ptr), self.ptrcls)(ptr)
+        def __call__(self, ptr):
+            return py_make_smartptr(type(ptr), self.ptrcls)(ptr)
 
-    def __getitem__(self, cls):
-        try:
-            if not cls.__module__ == int.__module__:
-                return py_make_smartptr(cls, self.ptrcls)
-        except AttributeError:
-            pass
-        if isinstance(cls, str) and cls not in ("int", "float"):
-            return py_make_smartptr(getattr(gbl, cls), self.ptrcls)
-        return self.maker[cls]
+        def __getitem__(self, cls):
+            try:
+                if not cls.__module__ == int.__module__:
+                    return py_make_smartptr(cls, self.ptrcls)
+            except AttributeError:
+                pass
+            if isinstance(cls, str) and cls not in ("int", "float"):
+                return py_make_smartptr(getattr(gbl, cls), self.ptrcls)
+            return self.maker[cls]
+
+    gbl.std.make_shared = make_smartptr(gbl.std.shared_ptr, gbl.std.make_shared)
+    gbl.std.make_unique = make_smartptr(gbl.std.unique_ptr, gbl.std.make_unique)
 
 
-gbl.std.make_shared = make_smartptr(gbl.std.shared_ptr, gbl.std.make_shared)
-gbl.std.make_unique = make_smartptr(gbl.std.unique_ptr, gbl.std.make_unique)
-del make_smartptr
+_install_smartptr_makers()
 
 
 # --- interface to Cling ------------------------------------------------------
@@ -323,64 +324,65 @@ def add_library_path(path):
     gbl.Cpp.AddSearchPath(path, True, False)
 
 
-# add access to Python C-API headers
-apipath = sysconfig.get_path(
-    "include", "posix_prefix" if os.name == "posix" else os.name
-)
-if os.path.exists(apipath):
-    add_include_path(apipath)
-elif ispypy:
-    # possibly structured without 'pythonx.y' in path
-    apipath = os.path.dirname(apipath)
-    if os.path.exists(apipath) and os.path.exists(os.path.join(apipath, "Python.h")):
+def _setup_include_paths():
+    # add access to Python C-API headers
+    apipath = sysconfig.get_path(
+        "include", "posix_prefix" if os.name == "posix" else os.name
+    )
+    if os.path.exists(apipath):
         add_include_path(apipath)
+    elif _ispypy:
+        # possibly structured without 'pythonx.y' in path
+        apipath = os.path.dirname(apipath)
+        if os.path.exists(apipath) and os.path.exists(
+            os.path.join(apipath, "Python.h")
+        ):
+            add_include_path(apipath)
 
-# add access to the cpyrt dispatcher API headers, which install next to the
-# extension module; anchoring on the extension resolves editable and regular
-# installs alike. CPPJIT_API_PATH overrides ("none" disables the lookup).
-if not ispypy:
-    apipath_extra = os.environ.get("CPPJIT_API_PATH")
-    if apipath_extra:
-        if os.path.basename(apipath_extra) == "cpyrt":
-            apipath_extra = os.path.dirname(apipath_extra)
-    else:
-        _spec = importlib.util.find_spec("libcppjit")
-        if _spec is not None and _spec.origin:
-            apipath_extra = os.path.join(
-                os.path.dirname(_spec.origin), "cppjit_backend", "include"
-            )
-        del _spec
-
-    if apipath_extra and apipath_extra.lower() != "none":
-        if os.path.isdir(os.path.join(apipath_extra, "cpyrt")):
-            add_include_path(apipath_extra)
+    # add access to the cpyrt dispatcher API headers, which install next to the
+    # extension module; anchoring on the extension resolves editable and regular
+    # installs alike. CPPJIT_API_PATH overrides ("none" disables the lookup).
+    if not _ispypy:
+        apipath_extra = os.environ.get("CPPJIT_API_PATH")
+        if apipath_extra:
+            if os.path.basename(apipath_extra) == "cpyrt":
+                apipath_extra = os.path.dirname(apipath_extra)
         else:
-            warnings.warn(
-                "cpyrt API not found (tried: %s); set CPPJIT_API_PATH envar to the 'cpyrt' API directory to fix"
-                % apipath_extra
-            )
+            spec = importlib.util.find_spec("libcppjit")
+            if spec is not None and spec.origin:
+                apipath_extra = os.path.join(
+                    os.path.dirname(spec.origin), "cppjit_backend", "include"
+                )
 
-    del apipath_extra
+        if apipath_extra and apipath_extra.lower() != "none":
+            if os.path.isdir(os.path.join(apipath_extra, "cpyrt")):
+                add_include_path(apipath_extra)
+            else:
+                warnings.warn(
+                    "cpyrt API not found (tried: %s); set CPPJIT_API_PATH envar to the 'cpyrt' API directory to fix"
+                    % apipath_extra
+                )
 
-if os.getenv("CONDA_PREFIX"):
-    # MacOS, Linux
-    include_path = os.path.join(os.getenv("CONDA_PREFIX"), "include")
+    if os.getenv("CONDA_PREFIX"):
+        # MacOS, Linux
+        include_path = os.path.join(os.getenv("CONDA_PREFIX"), "include")
+        if os.path.exists(include_path):
+            add_include_path(include_path)
+
+            # Windows
+        include_path = os.path.join(os.getenv("CONDA_PREFIX"), "Library", "include")
+        if os.path.exists(include_path):
+            add_include_path(include_path)
+
+    # assuming that we are in PREFIX/lib/python/site-packages/cppjit, add PREFIX/include to the search path
+    include_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), *(4 * [os.path.pardir] + ["include"]))
+    )
     if os.path.exists(include_path):
         add_include_path(include_path)
 
-        # Windows
-    include_path = os.path.join(os.getenv("CONDA_PREFIX"), "Library", "include")
-    if os.path.exists(include_path):
-        add_include_path(include_path)
 
-# assuming that we are in PREFIX/lib/python/site-packages/cppjit, add PREFIX/include to the search path
-include_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), *(4 * [os.path.pardir] + ["include"]))
-)
-if os.path.exists(include_path):
-    add_include_path(include_path)
-
-del include_path, apipath, ispypy
+_setup_include_paths()
 
 
 def add_autoload_map(fname):

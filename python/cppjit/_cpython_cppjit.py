@@ -17,15 +17,20 @@ __all__ = [
     "_end_capture_stderr",
 ]
 
-# preload the merged extension with ctypes and run LoadCppInterOp() first,
-# so the interpreter is ready before the extension module initializes
-_spec = importlib.util.find_spec("libcppjit")
-if _spec is None or not _spec.origin:
-    raise ImportError("cannot locate the libcppjit extension module")
-_w = ctypes.CDLL(_spec.origin, ctypes.RTLD_GLOBAL)
-if not _w.LoadCppInterOp():
-    raise RuntimeError("failed to load CppInterOp (LoadCppInterOp returned 0)")
-del _spec
+
+def _preload_backend_library():
+    # preload the merged extension with ctypes and run LoadCppInterOp() first,
+    # so the interpreter is ready before the extension module initializes
+    spec = importlib.util.find_spec("libcppjit")
+    if spec is None or not spec.origin:
+        raise ImportError("cannot locate the libcppjit extension module")
+    lib = ctypes.CDLL(spec.origin, ctypes.RTLD_GLOBAL)
+    if not lib.LoadCppInterOp():
+        raise RuntimeError("failed to load CppInterOp (LoadCppInterOp returned 0)")
+    return lib
+
+
+_w = _preload_backend_library()
 
 import libcppjit as _backend  # noqa: E402
 
@@ -145,7 +150,7 @@ Cpp = gbl.Cpp
 import os  # noqa: E402
 
 
-def add_default_paths():
+def _add_default_paths():
     if os.getenv("CONDA_PREFIX"):
         # MacOS, Linux
         lib_path = os.path.join(os.getenv("CONDA_PREFIX"), "lib")
@@ -176,8 +181,7 @@ def add_default_paths():
         pass
 
 
-add_default_paths()
-del add_default_paths
+_add_default_paths()
 
 
 # - exports -------------------------------------------------------------------

@@ -18,20 +18,14 @@ jobs:
     name: ${{ matrix.os }}/llvm${{ matrix.llvm }}/py${{ matrix.py }}/c++${{ matrix.cxx }}${{ matrix.vg && '/vg' || '' }}${{ matrix.flavor == 'cling' && '/cling' || '' }}
     strategy:
       fail-fast: false
-      # Mirrors CppInterOp's cppyy PR cells: clang-repl on the same OS/arch/LLVM
-      # /valgrind combos at Python 3.14, plus a cling cell and a C++23 cell
-      # (test_cpp23features runs only there). Breadth (3.12/3.13, C++17, LLVM
-      # 20, arm) lives in nightly.
+      # Iteration scaffold, not for merge: run the nightly arm valgrind
+      # cell (deterministic SIGILL, issue #9) plus one x86 valgrind cell
+      # on every push.
       matrix:
         include:
-          - { os: ubuntu-24.04,   llvm: '21', flavor: system, py: '3.14', cxx: '20', vg: true }
-          - { os: ubuntu-24.04,   llvm: '22', flavor: '',     py: '3.14', cxx: '20' }
-          - { os: ubuntu-24.04,   llvm: '22', flavor: '',     py: '3.14', cxx: '23' }
-          - { os: macos-26,       llvm: '21', flavor: system, py: '3.14', cxx: '20' }
-          - { os: macos-26-intel, llvm: '21', flavor: system, py: '3.14', cxx: '20' }
-          # cling backend, against the cached llvm-root (cling-llvm22) recipe cell.
-          - { os: ubuntu-24.04,   llvm: '22', flavor: cling,  flavor_version: cling-llvm22, py: '3.14', cxx: '20' }
-    uses: compiler-research/ci-workflows/.github/workflows/cppjit.yml@main
+          - { os: ubuntu-24.04-arm, llvm: '22', flavor: '',     py: '3.13', cxx: '20', vg: true }
+          - { os: ubuntu-24.04,     llvm: '21', flavor: system, py: '3.14', cxx: '20', vg: true }
+    uses: compiler-research/ci-workflows/.github/workflows/cppjit.yml@conda-valgrind
     with:
       # CppInterOp is pinned in CppJIT's cmake to a commit compatible
       # with the current forks.

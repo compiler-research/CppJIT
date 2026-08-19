@@ -98,6 +98,99 @@ static InterOpPaths cppinterop_paths() {
           (anchor / CPPINTEROP_INCLUDE_DIR).string()};
 }
 
+// The one place libclangCppInterOp is dlopen'd.
+static bool loadDispatchAPI(const InterOpPaths& Paths) {
+  if (!Cpp::LoadDispatchAPI(Paths.Library.c_str())) {
+    std::cerr << "[cppjit-backend] Failed to load CppInterOp" << std::endl;
+    return false;
+  }
+  return true;
+}
+
+// CppInterOp itself appends CPPINTEROP_EXTRA_INTERPRETER_ARGS inside
+// CreateInterpreter, so nothing needs to be forwarded from here.
+static interop::TInterp_t acquireOrCreateInterpreter() {
+  if (auto existingInterp = Cpp::GetInterpreter())
+    return existingInterp;
+
+#if defined(__arm64__) && defined(__APPLE__)
+  // If on apple silicon don't use -march=native
+  return Cpp::CreateInterpreter({"-std=c++17"}, /*GpuArgs=*/{});
+#else
+  return Cpp::CreateInterpreter({"-std=c++17", "-march=native"},
+                                /*GpuArgs=*/{});
+#endif
+}
+
+static void configureInterpreter(const InterOpPaths& Paths) {
+  std::set<std::string> bi{g_builtins};
+  for (const auto& name : bi) {
+    for (const char* a : {"*", "&", "*&", "[]", "*[]"})
+      g_builtins.insert(name + a);
+  }
+
+  if (getenv("CPPJIT_DISABLE_FASTPATH"))
+    gEnableFastPath = false;
+
+  // set opt level (default to 2 if not given; Cling itself defaults to 0)
+  int optLevel = 2;
+
+  if (getenv("CPPJIT_OPT_LEVEL"))
+    optLevel = atoi(getenv("CPPJIT_OPT_LEVEL"));
+
+  if (optLevel != 0) {
+    std::ostringstream s;
+    s << "#pragma cling optimize " << optLevel;
+    Cpp::Process(s.str().c_str());
+  }
+
+  Cpp::AddIncludePath(Paths.IncludeDir.c_str());
+  Cpp::LoadLibrary("libstdc++", /* lookup= */ true);
+}
+
+static void preloadHeaders() {
+  const char* code = "#include <algorithm>\n"
+                     "#include <numeric>\n"
+                     "#include <complex>\n"
+                     "#include <iostream>\n"
+                     "#include <string.h>\n" // for strcpy
+                     "#include <string>\n"
+                     "#include <vector>\n"
+                     "#include <utility>\n"
+                     "#include <memory>\n"
+                     "#include <functional>\n" // for the dispatcher code to
+                                               // use std::function
+                     "#include <map>\n"        // FIXME: Replace with modules
+                     "#include <sstream>\n"    // FIXME: Replace with modules
+                     "#include <array>\n"      // FIXME: Replace with modules
+                     "#include <list>\n"       // FIXME: Replace with modules
+                     "#include <deque>\n"      // FIXME: Replace with modules
+                     "#include <tuple>\n"      // FIXME: Replace with modules
+                     "#include <set>\n"        // FIXME: Replace with modules
+                     "#include <chrono>\n"     // FIXME: Replace with modules
+                     "#include <cmath>\n"      // FIXME: Replace with modules
+                     "#if __has_include(<optional>)\n"
+                     "#include <optional>\n"
+                     "#endif\n"
+                     "#include <CppInterOp/Dispatch.h>\n";
+  Cpp::Process(code);
+}
+
+static void defineRuntimeHelpers() {
+  Cpp::Declare("namespace __cppjit_internal { template<class C1, class C2>"
+               " bool is_equal(const C1& c1, const C2& c2) { return "
+               "(bool)(c1 == c2); } }",
+               /*silent=*/false);
+  Cpp::Declare("namespace __cppjit_internal { template<class C1, class C2>"
+               " bool is_not_equal(const C1& c1, const C2& c2) { return "
+               "(bool)(c1 != c2); } }",
+               /*silent=*/false);
+
+  // helper for multiple inheritance
+  Cpp::Declare("namespace __cppjit_internal { struct Sep; }",
+               /*silent=*/false);
+}
+
 } // unnamed namespace
 
 // Load CppInterOp and set up the interpreter. A dlopen during static
@@ -114,89 +207,13 @@ extern "C" int LoadCppInterOp() {
   std::call_once(Once, [] {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
     const InterOpPaths Paths = cppinterop_paths();
-    if (!Cpp::LoadDispatchAPI(Paths.Library.c_str())) {
-      std::cerr << "[cppjit-backend] Failed to load CppInterOp" << std::endl;
+    if (!loadDispatchAPI(Paths))
       return;
-    }
-    // Check if somebody already loaded CppInterOp and created an
-    // interpreter for us.
-    if (!Cpp::GetInterpreter()) {
-      // CppInterOp itself appends CPPINTEROP_EXTRA_INTERPRETER_ARGS inside
-      // CreateInterpreter, so nothing needs to be forwarded from here.
-#if defined(__arm64__) && defined(__APPLE__)
-      // If on apple silicon don't use -march=native
-      Cpp::CreateInterpreter({"-std=c++17"}, /*GpuArgs=*/{});
-#else
-      Cpp::CreateInterpreter({"-std=c++17", "-march=native"}, /*GpuArgs=*/{});
-#endif
-    }
 
-    // fill out the builtins
-    std::set<std::string> bi{g_builtins};
-    for (const auto& name : bi) {
-      for (const char* a : {"*", "&", "*&", "[]", "*[]"})
-        g_builtins.insert(name + a);
-    }
-
-    // disable fast path if requested
-    if (getenv("CPPJIT_DISABLE_FASTPATH"))
-      gEnableFastPath = false;
-
-    // set opt level (default to 2 if not given; Cling itself defaults to 0)
-    int optLevel = 2;
-
-    if (getenv("CPPJIT_OPT_LEVEL"))
-      optLevel = atoi(getenv("CPPJIT_OPT_LEVEL"));
-
-    if (optLevel != 0) {
-      std::ostringstream s;
-      s << "#pragma cling optimize " << optLevel;
-      Cpp::Process(s.str().c_str());
-    }
-
-    Cpp::AddIncludePath(Paths.IncludeDir.c_str());
-    Cpp::LoadLibrary("libstdc++", /* lookup= */ true);
-
-    // load frequently used headers
-    const char* code = "#include <algorithm>\n"
-                       "#include <numeric>\n"
-                       "#include <complex>\n"
-                       "#include <iostream>\n"
-                       "#include <string.h>\n" // for strcpy
-                       "#include <string>\n"
-                       "#include <vector>\n"
-                       "#include <utility>\n"
-                       "#include <memory>\n"
-                       "#include <functional>\n" // for the dispatcher code to
-                                                 // use std::function
-                       "#include <map>\n"        // FIXME: Replace with modules
-                       "#include <sstream>\n"    // FIXME: Replace with modules
-                       "#include <array>\n"      // FIXME: Replace with modules
-                       "#include <list>\n"       // FIXME: Replace with modules
-                       "#include <deque>\n"      // FIXME: Replace with modules
-                       "#include <tuple>\n"      // FIXME: Replace with modules
-                       "#include <set>\n"        // FIXME: Replace with modules
-                       "#include <chrono>\n"     // FIXME: Replace with modules
-                       "#include <cmath>\n"      // FIXME: Replace with modules
-                       "#if __has_include(<optional>)\n"
-                       "#include <optional>\n"
-                       "#endif\n"
-                       "#include <CppInterOp/Dispatch.h>\n";
-    Cpp::Process(code);
-
-    // create helpers for comparing thingies
-    Cpp::Declare("namespace __cppjit_internal { template<class C1, class C2>"
-                 " bool is_equal(const C1& c1, const C2& c2) { return "
-                 "(bool)(c1 == c2); } }",
-                 /*silent=*/false);
-    Cpp::Declare("namespace __cppjit_internal { template<class C1, class C2>"
-                 " bool is_not_equal(const C1& c1, const C2& c2) { return "
-                 "(bool)(c1 != c2); } }",
-                 /*silent=*/false);
-
-    // helper for multiple inheritance
-    Cpp::Declare("namespace __cppjit_internal { struct Sep; }",
-                 /*silent=*/false);
+    acquireOrCreateInterpreter();
+    configureInterpreter(Paths);
+    preloadHeaders();
+    defineRuntimeHelpers();
 
     Loaded = 1;
   });

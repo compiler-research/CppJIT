@@ -63,7 +63,7 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             const marker = '<!-- cppjit-nightly-drift -->';

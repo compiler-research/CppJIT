@@ -98,11 +98,20 @@ static InterOpPaths cppinterop_paths() {
           (anchor / CPPINTEROP_INCLUDE_DIR).string()};
 }
 
-class ApplicationStarter {
-  interop::TInterp_t Interp;
+} // unnamed namespace
 
-public:
-  ApplicationStarter() {
+// Load CppInterOp and set up the interpreter. A dlopen during static
+// initialization is unsafe, so _cpython_cppjit.py calls this explicitly
+// before the first libcppjit use. Thread-safe and idempotent; returns 1 on
+// success.
+extern "C" {
+RPY_EXPORTED int LoadCppInterOp();
+}
+
+extern "C" int LoadCppInterOp() {
+  static std::once_flag Once;
+  static int Loaded = 0;
+  std::call_once(Once, [] {
     std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
     const InterOpPaths Paths = cppinterop_paths();
     if (!Cpp::LoadDispatchAPI(Paths.Library.c_str())) {
@@ -111,17 +120,14 @@ public:
     }
     // Check if somebody already loaded CppInterOp and created an
     // interpreter for us.
-    if (auto existingInterp = Cpp::GetInterpreter()) {
-      Interp = existingInterp;
-    } else {
+    if (!Cpp::GetInterpreter()) {
       // CppInterOp itself appends CPPINTEROP_EXTRA_INTERPRETER_ARGS inside
       // CreateInterpreter, so nothing needs to be forwarded from here.
 #if defined(__arm64__) && defined(__APPLE__)
       // If on apple silicon don't use -march=native
-      Interp = Cpp::CreateInterpreter({"-std=c++17"}, /*GpuArgs=*/{});
+      Cpp::CreateInterpreter({"-std=c++17"}, /*GpuArgs=*/{});
 #else
-      Interp = Cpp::CreateInterpreter({"-std=c++17", "-march=native"},
-                                      /*GpuArgs=*/{});
+      Cpp::CreateInterpreter({"-std=c++17", "-march=native"}, /*GpuArgs=*/{});
 #endif
     }
 
@@ -191,10 +197,11 @@ public:
     // helper for multiple inheritance
     Cpp::Declare("namespace __cppjit_internal { struct Sep; }",
                  /*silent=*/false);
-  }
-} _applicationStarter;
 
-} // unnamed namespace
+    Loaded = 1;
+  });
+  return Loaded;
+}
 
 // local helpers -------------------------------------------------------------
 static inline char* cppstring_to_cstring(const std::string& cppstr) {

@@ -761,6 +761,24 @@ class TestFRAGILE:
         for ns, val in [(cppjit.gbl, 42), (cppjit.gbl.ClassEnumNS, 37)]:
             assert ns.EnumTemplate[ns.ClassEnumA.A]().foo() == val
 
+    def test32_overloaded_method_error_with_null_object(self):
+        """Check exception type and message when method invoked on instance without C++ object"""
+
+        import cppjit
+        from cppjit import gbl
+
+        cppjit.cppdef(r"""\
+        using fragile::D;
+        D *something = new D;
+        D *nothing = nullptr;
+        """)
+
+        assert gbl.something.check() == gbl.something.check(0, 1)
+        with raises(ReferenceError, match=r"^no C\+\+ object available$"):
+            gbl.nothing.check()  # raises error
+        with raises(ReferenceError, match=r"^no C\+\+ object available$"):
+            gbl.nothing.check(0, 1)  # raises error
+
 
 class TestSIGNALS:
     def setup_class(cls):

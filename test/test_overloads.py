@@ -411,3 +411,32 @@ class TestOVERLOADS:
         ptr = cppjit.gbl.MyClass()
 
         raises(TypeError, cppjit.gbl.changePtr, ptr)
+
+    def test16_voidp_does_not_outrank_conversion(self):
+        """Verify that a const void* overload does not shadow a converting one."""
+
+        import cppjit
+
+        cppjit.cppdef("""
+        namespace VoidPPriority {
+        struct Handle {
+            void* data;
+            Handle() : data(nullptr) {}
+            Handle(void* p) : data(p) {}
+        };
+        struct ConstHandle {
+            const void* data;
+            ConstHandle() : data(nullptr) {}
+            ConstHandle(const void* p) : data(p) {}   // declared first on purpose
+            ConstHandle(Handle h) : data(h.data) {}
+        };
+        Handle make_handle() { return Handle((void*)0xABCD1234); }
+        bool kept_value(ConstHandle c) { return c.data == (const void*)0xABCD1234; }
+        }""")
+
+        ns = cppjit.gbl.VoidPPriority
+
+        # taking ConstHandle(const void*) would pass the proxy's address instead
+        h = ns.make_handle()
+        assert ns.kept_value(h)
+        assert ns.kept_value(ns.make_handle())

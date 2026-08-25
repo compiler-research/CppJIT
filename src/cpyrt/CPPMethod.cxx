@@ -1058,7 +1058,8 @@ PyObject* cpyrt::CPPMethod::Call(CPPInstance*& self, cpyrt_PyArgs_t args,
 
   // validity check that should not fail
   if (!object) {
-    PyErr_SetString(PyExc_ReferenceError, "attempt to access a null-pointer");
+    PyErr_SetString(PyExc_ReferenceError, "no C++ object available");
+    ctxt->fFlags |= CallContext::kCppException;
     return nullptr;
   }
 

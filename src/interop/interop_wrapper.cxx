@@ -8,10 +8,14 @@
 #include "precommondefs.h" // This defines several system feature macros and should be included before any system header.
 
 // Bindings
-#include "cpp_cppjit.h"
+#include "cppjit_interop.h"
 
 using namespace cppjit;
 #include "callcontext.h"
+
+typedef cppjit::cpyrt::Parameter Parameter;
+
+static inline size_t CALL_NARGS(size_t nargs) { return nargs & ~DIRECT_CALL; }
 
 #ifndef _WIN32
 #include <dlfcn.h>
@@ -111,7 +115,7 @@ static InterOpPaths cppinterop_paths() {
 // The one place libclangCppInterOp is dlopen'd.
 static bool loadDispatchAPI(const InterOpPaths& Paths) {
   if (!Cpp::LoadDispatchAPI(Paths.Library.c_str())) {
-    std::cerr << "[cppjit-backend] Failed to load CppInterOp" << std::endl;
+    std::cerr << "[cppjit] Failed to load CppInterOp" << std::endl;
     return false;
   }
   return true;
@@ -859,8 +863,8 @@ static inline bool WrapperCall(interop::TCppMethod_t method, size_t nargs,
     InterOpMutex.unlock();
     bool runRelease = false;
     // const auto& fgen = /* is_direct ? faceptr.fDirect : */ faceptr;
-    if (nargs <= SMALL_ARGS_N) {
-      void* smallbuf[SMALL_ARGS_N];
+    if (nargs <= cpyrt::SMALL_ARGS_N) {
+      void* smallbuf[cpyrt::SMALL_ARGS_N];
       if (nargs)
         runRelease = copy_args(args, nargs, smallbuf);
       // CLING_CATCH_UNCAUGHT_

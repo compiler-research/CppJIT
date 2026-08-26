@@ -21,9 +21,9 @@ __all__ = [
 def _preload_backend_library():
     # preload the merged extension with ctypes and run LoadCppInterOp() first,
     # so the interpreter is ready before the extension module initializes
-    spec = importlib.util.find_spec("libcppjit")
+    spec = importlib.util.find_spec("cppjit.libcppjit")
     if spec is None or not spec.origin:
-        raise ImportError("cannot locate the libcppjit extension module")
+        raise ImportError("cannot locate the cppjit.libcppjit extension module")
     lib = ctypes.CDLL(spec.origin, ctypes.RTLD_GLOBAL)
     if not lib.LoadCppInterOp():
         raise RuntimeError("failed to load CppInterOp (LoadCppInterOp returned 0)")
@@ -32,7 +32,7 @@ def _preload_backend_library():
 
 _w = _preload_backend_library()
 
-import libcppjit as _backend  # noqa: E402
+from . import libcppjit as _backend  # noqa: E402
 
 
 ### template support ---------------------------------------------------------

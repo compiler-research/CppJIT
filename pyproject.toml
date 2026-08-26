@@ -22,7 +22,7 @@ maintainers = [
 
 [tool.scikit-build]
 wheel.install-dir = "."
-wheel.packages = ["python/cppjit", "python/cppjit_backend"]
+wheel.packages = ["python/cppjit"]
 cmake.build-type = "Release"
 
 [[tool.dynamic-metadata]]

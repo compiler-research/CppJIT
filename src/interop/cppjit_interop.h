@@ -1,5 +1,5 @@
-#ifndef CPYRT_CPPJIT_H
-#define CPYRT_CPPJIT_H
+#ifndef CPPJIT_INTEROP_H
+#define CPPJIT_INTEROP_H
 
 #include <CppInterOp/CppInterOpTypes.h>
 #include <CppInterOp/Dispatch.h>
@@ -35,15 +35,6 @@ typedef unsigned long long PY_ULONG_LONG;
 #ifndef PY_LONG_DOUBLE
 typedef long double PY_LONG_DOUBLE;
 #endif
-
-typedef cppjit::cpyrt::Parameter Parameter;
-
-// small number that allows use of stack for argument passing
-const int SMALL_ARGS_N = 8;
-
-// convention to pass flag for direct calls (similar to Python's vector calls)
-#define DIRECT_CALL ((size_t)1 << (8 * sizeof(size_t) - 1))
-static inline size_t CALL_NARGS(size_t nargs) { return nargs & ~DIRECT_CALL; }
 
 namespace cppjit::interop {
 typedef Cpp::DeclRef TCppScope_t;
@@ -402,4 +393,4 @@ RPY_EXPORTED
 void DumpScope(TCppScope_t scope);
 } // namespace cppjit::interop
 
-#endif // !CPYRT_CPPJIT_H
+#endif // !CPPJIT_INTEROP_H

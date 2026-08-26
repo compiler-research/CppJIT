@@ -348,10 +348,10 @@ def _setup_include_paths():
             if os.path.basename(apipath_extra) == "cpyrt":
                 apipath_extra = os.path.dirname(apipath_extra)
         else:
-            spec = importlib.util.find_spec("libcppjit")
+            spec = importlib.util.find_spec("cppjit.libcppjit")
             if spec is not None and spec.origin:
                 apipath_extra = os.path.join(
-                    os.path.dirname(spec.origin), "cppjit_backend", "include"
+                    os.path.dirname(spec.origin), "interop", "include"
                 )
 
         if apipath_extra and apipath_extra.lower() != "none":

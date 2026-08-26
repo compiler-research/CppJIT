@@ -101,7 +101,7 @@ if(_python_platlib)
 else()
     set(CPPINTEROP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 endif()
-set(CPPINTEROP_INSTALL_DIR "${CPPINTEROP_INSTALL_PREFIX}/cppjit_backend")
+set(CPPINTEROP_INSTALL_DIR "${CPPINTEROP_INSTALL_PREFIX}/cppjit/interop")
 
 # Include cmake for CppInterOp config and build using ExternalProject.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddCppInterOp.cmake)
@@ -121,11 +121,11 @@ add_dependencies(cppjit CppInterOp)
 # falling back to the install prefix (see cppinterop_paths()); the clang
 # major names the versioned compiler probed for the runtime resource dir.
 target_compile_definitions(cppjit PRIVATE
-    CPPINTEROP_INSTALL_PREFIX="${CPPINTEROP_INSTALL_PREFIX}"
-    CPPINTEROP_LIBRARY="cppjit_backend/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    CPPINTEROP_INCLUDE_DIR="cppjit_backend/include"
+    CPPINTEROP_INSTALL_PREFIX="${CPPINTEROP_INSTALL_PREFIX}/cppjit"
+    CPPINTEROP_LIBRARY="interop/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    CPPINTEROP_INCLUDE_DIR="interop/include"
     CPPJIT_CLANG_MAJOR="${LLVM_VERSION_MAJOR}"
-    CPPJIT_CLANG_INCLUDE_DIR="cppjit_backend/lib/clang/${LLVM_VERSION_MAJOR}"
+    CPPJIT_CLANG_INCLUDE_DIR="interop/lib/clang/${LLVM_VERSION_MAJOR}"
 )
 
 target_include_directories(cppjit PRIVATE
@@ -159,21 +159,21 @@ set_target_properties(cppjit PROPERTIES
     PREFIX "lib"
 )
 
-# libcppjit.so is installed at the site-packages root (import libcppjit)
+# the extension lives inside the package (import cppjit.libcppjit)
 install(TARGETS cppjit
-    LIBRARY DESTINATION .
+    LIBRARY DESTINATION cppjit
 )
 
 # install CppInterOp libraries and headers
 install(CODE "
     file(GLOB _interop_libs \"${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp*\")
     foreach(_lib \${_interop_libs})
-        file(INSTALL \${_lib} DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit_backend/lib)
+        file(INSTALL \${_lib} DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/interop/lib)
     endforeach()
 ")
 
 install(CODE "
-    file(INSTALL \"${CPPINTEROP_INSTALL_DIR}/include/\" DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit_backend/include)
+    file(INSTALL \"${CPPINTEROP_INSTALL_DIR}/include/\" DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/interop/include)
 ")
 
 # ship the builtin headers of the build clang, laid out as a headers-only
@@ -185,7 +185,7 @@ if(NOT EXISTS "${_clang_resource_dir}/include")
         "${LLVM_DIR} carries no clang resource directory")
 endif()
 install(DIRECTORY "${_clang_resource_dir}/include/"
-    DESTINATION "cppjit_backend/lib/clang/${LLVM_VERSION_MAJOR}/include"
+    DESTINATION "cppjit/interop/lib/clang/${LLVM_VERSION_MAJOR}/include"
 )
 
 # the public cpyrt API headers keep their installed cpyrt/ prefix
@@ -195,5 +195,5 @@ install(FILES
     src/cpyrt/DispatchPtr.h
     src/cpyrt/PyException.h
     src/cpyrt/Reflex.h
-    DESTINATION cppjit_backend/include/cpyrt
+    DESTINATION cppjit/interop/include/cpyrt
 )

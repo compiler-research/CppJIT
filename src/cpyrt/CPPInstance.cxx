@@ -270,18 +270,17 @@ static int op_nonzero(CPPInstance* self) {
 }
 
 //= cpyrt object explicit destruction =====================================
-static PyObject* op_destruct(CPPInstance* self) {
+static PyObject* op_destruct(PyObject* self, PyObject* /*args*/) {
   // User access to force deletion of the object. Needed in case of a true
   // garbage collector (like in PyPy), to allow the user control over when
   // the C++ destructor is called. This method requires that the C++ object
   // is owned (no-op otherwise).
-  op_dealloc_nofree(self);
+  op_dealloc_nofree((CPPInstance*)self);
   Py_RETURN_NONE;
 }
 
 //= cpyrt object dispatch support =========================================
-static PyObject* op_dispatch(PyObject* self, PyObject* args,
-                             PyObject* /* kdws */) {
+static PyObject* op_dispatch(PyObject* self, PyObject* args) {
   // User-side __dispatch__ method to allow selection of a specific overloaded
   // method. The actual selection is in the __overload__() method of
   // CPPOverload.
@@ -312,13 +311,14 @@ static PyObject* op_dispatch(PyObject* self, PyObject* args,
 }
 
 //= cpyrt smart pointer support ===========================================
-static PyObject* op_get_smartptr(CPPInstance* self) {
-  if (!self->IsSmart()) {
+static PyObject* op_get_smartptr(PyObject* self, PyObject* /*args*/) {
+  CPPInstance* inst = (CPPInstance*)self;
+  if (!inst->IsSmart()) {
     // TODO: more likely should raise
     Py_RETURN_NONE;
   }
 
-  return cpyrt::BindCppObjectNoCast(self->GetSmartObject(), SMART_TYPE(self),
+  return cpyrt::BindCppObjectNoCast(inst->GetSmartObject(), SMART_TYPE(inst),
                                     CPPInstance::kNoWrapConv);
 }
 
@@ -335,7 +335,8 @@ Py_ssize_t cpyrt::CPPInstance::ArrayLength() {
   return (Py_ssize_t)ARRAY_SIZE(this);
 }
 
-static PyObject* op_reshape(CPPInstance* self, PyObject* shape) {
+static PyObject* op_reshape(PyObject* self, PyObject* shape) {
+  CPPInstance* inst = (CPPInstance*)self;
   // Allow the user to fix up the actual (type-strided) size of the buffer.
   if (!PyTuple_Check(shape) || PyTuple_GET_SIZE(shape) != 1) {
     PyErr_SetString(PyExc_TypeError, "tuple object of size 1 expected");
@@ -348,7 +349,7 @@ static PyObject* op_reshape(CPPInstance* self, PyObject* shape) {
     return nullptr;
   }
 
-  self->CastToArray(sz);
+  inst->CastToArray(sz);
 
   Py_RETURN_NONE;
 }
@@ -417,26 +418,26 @@ PyCFunction& CPPInstance::ReduceMethod() {
   return reducer;
 }
 
-PyObject* op_reduce(PyObject* self, PyObject* args) {
+PyObject* op_reduce(PyObject* self, PyObject* /*args*/) {
   auto& reducer = CPPInstance::ReduceMethod();
   if (!reducer) {
     PyErr_SetString(PyExc_NotImplementedError, "");
     return nullptr;
   }
-  return reducer(self, args);
+  return reducer(self, nullptr);
 }
 
 //----------------------------------------------------------------------------
 static PyMethodDef op_methods[] = {
-    {(char*)"__destruct__", (PyCFunction)op_destruct, METH_NOARGS,
+    {(char*)"__destruct__", op_destruct, METH_NOARGS,
      (char*)"call the C++ destructor"},
-    {(char*)"__dispatch__", (PyCFunction)op_dispatch, METH_VARARGS,
+    {(char*)"__dispatch__", op_dispatch, METH_VARARGS,
      (char*)"dispatch to selected overload"},
-    {(char*)"__smartptr__", (PyCFunction)op_get_smartptr, METH_NOARGS,
+    {(char*)"__smartptr__", op_get_smartptr, METH_NOARGS,
      (char*)"get associated smart pointer, if any"},
-    {(char*)"__reduce__", (PyCFunction)op_reduce, METH_NOARGS,
+    {(char*)"__reduce__", op_reduce, METH_NOARGS,
      (char*)"reduce method for serialization"},
-    {(char*)"__reshape__", (PyCFunction)op_reshape, METH_O,
+    {(char*)"__reshape__", op_reshape, METH_O,
      (char*)"cast pointer to 1D array type"},
     {(char*)nullptr, nullptr, 0, nullptr}};
 

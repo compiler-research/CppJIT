@@ -22,7 +22,7 @@ dicts = $(addprefix cpp/,$(addsuffix Dict.so,$(dictnames)))
 all : $(dicts)
 
 PYTHON ?= python3
-cppflags= -Wall -Wextra -Werror -std=c++20 -O3 -fPIC -I$(shell $(PYTHON) -c 'import sysconfig as sc; print(sc.get_config_var("INCLUDEPY"))') -Wno-register
+cppflags= -std=c++17 -O3 -fPIC -I$(shell $(PYTHON) -c 'import sysconfig as sc; print(sc.get_config_var("INCLUDEPY"))') -Wno-register
 
 PLATFORM := $(shell uname -s)
 ifeq ($(PLATFORM),Darwin)

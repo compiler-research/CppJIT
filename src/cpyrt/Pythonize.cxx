@@ -209,7 +209,7 @@ PyObject* FollowGetAttr(PyObject* self, PyObject* name) {
 }
 
 //- pointer checking bool converter -------------------------------------------
-PyObject* NullCheckBool(PyObject* self) {
+PyObject* NullCheckBool(PyObject* self, PyObject* Py_UNUSED(args)) {
   if (!CPPInstance_Check(self)) {
     PyErr_SetString(PyExc_TypeError, "C++ object proxy expected");
     return nullptr;
@@ -438,7 +438,7 @@ static bool FillVector(PyObject* vecin, PyObject* args, ItemGetter* getter) {
   return fill_ok;
 }
 
-PyObject* VectorIAdd(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* VectorIAdd(PyObject* self, PyObject* args) {
   // Implement fast __iadd__ on std::vector (generic __iadd__ is in Python)
   ItemGetter* getter = GetGetter(args);
 
@@ -474,7 +474,7 @@ PyObject* VectorIAdd(PyObject* self, PyObject* args, PyObject* /* kwds */) {
   return nullptr; // error already set
 }
 
-PyObject* VectorInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* VectorInit(PyObject* self, PyObject* args) {
   // Specialized vector constructor to allow construction from containers;
   // allowing such construction from initializer_list instead would possible,
   // but can be error-prone. This use case is common enough for std::vector to
@@ -538,10 +538,10 @@ PyObject* VectorData(PyObject* self, PyObject*) {
 }
 
 //---------------------------------------------------------------------------
-PyObject* VectorArray(PyObject* self, PyObject* args, PyObject* kwargs) {
+PyObject* VectorArray(PyObject* self, PyObject* args) {
   PyObject* pydata = VectorData(self, nullptr);
   PyObject* arrcall = PyObject_GetAttr(pydata, PyStrings::gArray);
-  PyObject* newarr = PyObject_Call(arrcall, args, kwargs);
+  PyObject* newarr = PyObject_Call(arrcall, args, nullptr);
   Py_DECREF(arrcall);
   Py_DECREF(pydata);
   return newarr;
@@ -778,7 +778,7 @@ PyObject* VectorBoolSetItem(CPPInstance* self, PyObject* args) {
 }
 
 //- array behavior as primitives ----------------------------------------------
-PyObject* ArrayInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* ArrayInit(PyObject* self, PyObject* args) {
   // std::array is normally only constructed using aggregate initialization,
   // which is a concept that does not exist in python, so use this custom
   // constructor to to fill the array using setitem
@@ -867,7 +867,7 @@ static PyObject* MapFromPairs(PyObject* self, PyObject* pairs) {
   return result;
 }
 
-PyObject* MapInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* MapInit(PyObject* self, PyObject* args) {
   // Specialized map constructor to allow construction from mapping containers
   // and from tuples of pairs ("initializer_list style").
 
@@ -941,7 +941,7 @@ PyObject* STLContainsWithFind(PyObject* self, PyObject* obj) {
 }
 
 //- set behavior as primitives ------------------------------------------------
-PyObject* SetInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* SetInit(PyObject* self, PyObject* args) {
   // Specialized set constructor to allow construction from Python sets.
   if (PyTuple_GET_SIZE(args) == 1 && PySet_Check(PyTuple_GET_ITEM(args, 0))) {
     PyObject* pyset = PyTuple_GET_ITEM(args, 0);
@@ -993,9 +993,9 @@ static const ptrdiff_t PS_END_ADDR = 7;   // non-aligned address, so no clash
 static const ptrdiff_t PS_FLAG_ADDR = 11; // id.
 static const ptrdiff_t PS_COLL_ADDR = 13; // id.
 
-PyObject* STLIterNext(PyObject* self); // defined below; used by STLSequenceIter
+PyObject* STLIterNext(PyObject* self, PyObject* Py_UNUSED(args)); // defined below; used by STLSequenceIter
 
-PyObject* LLSequenceIter(PyObject* self) {
+PyObject* LLSequenceIter(PyObject* self, PyObject* Py_UNUSED(args)) {
   // Implement python's __iter__ for low level views used through STL-type
   // begin()/end()
   PyObject* iter = PyObject_CallMethodNoArgs(self, PyStrings::gBegin);
@@ -1022,7 +1022,21 @@ PyObject* LLSequenceIter(PyObject* self) {
   return nullptr;
 }
 
-PyObject* STLSequenceIter(PyObject* self) {
+static PyObject* my_iter(PyObject* self, PyObject* Py_UNUSED(args)) {
+    return PyObject_SelfIter(self);
+}
+
+static PyObject* STLIterNextAdapter(PyObject *self)
+{
+    return STLIterNext(self, nullptr);
+}
+
+static PyObject* LLSequenceIterAdapter(PyObject *self)
+{
+    return LLSequenceIter(self, nullptr);
+}
+  
+PyObject* STLSequenceIter(PyObject* self, PyObject* Py_UNUSED(args)) {
   // Implement python's __iter__ for std::iterator<>s
   PyObject* iter = PyObject_CallMethodNoArgs(self, PyStrings::gBegin);
   if (iter) {
@@ -1040,13 +1054,13 @@ PyObject* STLSequenceIter(PyObject* self) {
         PyTypeObject* itype = Py_TYPE(iter);
         if (!PyIter_Check(iter)) { // no tp_iternext, or the
                                    // _PyObject_NextNotImplemented sentinel
-          itype->tp_iternext = (iternextfunc)STLIterNext;
+          itype->tp_iternext = (iternextfunc)STLIterNextAdapter;
           Utility::AddToClass((PyObject*)itype, CPPJIT__next__,
-                              (PyCFunction)STLIterNext, METH_NOARGS);
+                              STLIterNext, METH_NOARGS);
           if (!itype->tp_iter) {
             itype->tp_iter = (getiterfunc)PyObject_SelfIter;
             Utility::AddToClass((PyObject*)itype, "__iter__",
-                                (PyCFunction)PyObject_SelfIter, METH_NOARGS);
+                                my_iter, METH_NOARGS);
           }
           PyType_Modified(itype);
         }
@@ -1073,9 +1087,14 @@ PyObject* STLSequenceIter(PyObject* self) {
   return iter;
 }
 
+static PyObject* STLSequenceIterAdapter(PyObject *self)
+{
+    return STLSequenceIter(self, nullptr);
+}
+  
 //- generic iterator support over a sequence with operator[] and size ---------
 //-----------------------------------------------------------------------------
-static PyObject* index_iter(PyObject* c) {
+static PyObject* index_iter(PyObject* c, PyObject* Py_UNUSED(args)) {
   indexiterobject* ii = PyObject_GC_New(indexiterobject, &IndexIter_Type);
   if (!ii)
     return nullptr;
@@ -1087,6 +1106,11 @@ static PyObject* index_iter(PyObject* c) {
 
   PyObject_GC_Track(ii);
   return (PyObject*)ii;
+}
+
+static PyObject* index_iterAdapter(PyObject *self)
+{
+    return index_iter(self, nullptr);
 }
 
 //- safe indexing for STL-like vector w/o iterator dictionaries ---------------
@@ -1145,7 +1169,7 @@ PyObject* PairUnpack(PyObject* self, PyObject* pyindex) {
 PyObject* ReturnTwo(CPPInstance*, PyObject*) { return PyInt_FromLong(2); }
 
 //- shared/unique_ptr behavior -----------------------------------------------
-PyObject* SmartPtrInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* SmartPtrInit(PyObject* self, PyObject* args) {
   // since the shared/unique pointer will take ownership, we need to relinquish
   // it
   PyObject* realInit = PyObject_GetAttr(self, PyStrings::gRealInit);
@@ -1198,7 +1222,7 @@ static inline PyObject* cpyrt_PyString_FromCppString(std::wstring_view s,
     return nullptr;                                                            \
   }                                                                            \
                                                                                \
-  PyObject* name##StringStr(PyObject* self) {                                  \
+  PyObject* name##StringStr(PyObject* self, PyObject* Py_UNUSED(args)) {       \
     PyObject* pyobj = name##StringGetData(self, false);                        \
     if (!pyobj) {                                                              \
       /* do a native conversion to make printing possible (debatable) */       \
@@ -1212,11 +1236,11 @@ static inline PyObject* cpyrt_PyString_FromCppString(std::wstring_view s,
     return pyobj;                                                              \
   }                                                                            \
                                                                                \
-  PyObject* name##StringBytes(PyObject* self) {                                \
+  PyObject* name##StringBytes(PyObject* self, PyObject* Py_UNUSED(args)) {     \
     return name##StringGetData(self, true);                                    \
   }                                                                            \
                                                                                \
-  PyObject* name##StringRepr(PyObject* self) {                                 \
+  PyObject* name##StringRepr(PyObject* self, PyObject* Py_UNUSED(args)) {      \
     PyObject* data = name##StringGetData(self, true);                          \
     if (data) {                                                                \
       PyObject* repr = PyObject_Repr(data);                                    \
@@ -1278,16 +1302,15 @@ static inline std::string* GetSTLString(CPPInstance* self) {
   return obj;
 }
 
-PyObject* STLStringDecode(CPPInstance* self, PyObject* args, PyObject* kwds) {
-  std::string* obj = GetSTLString(self);
+PyObject* STLStringDecode(PyObject* self, PyObject* args) {
+  CPPInstance* inst = (CPPInstance*)self;
+  std::string* obj = GetSTLString(inst);
   if (!obj)
     return nullptr;
 
-  char* keywords[] = {(char*)"encoding", (char*)"errors", (char*)nullptr};
   const char* encoding = nullptr;
   const char* errors = nullptr;
-  if (!PyArg_ParseTupleAndKeywords(args, kwds, const_cast<char*>("s|s"),
-                                   keywords, &encoding, &errors))
+  if (!PyArg_ParseTuple(args, "s|s", &encoding, &errors))
     return nullptr;
 
   return PyUnicode_Decode(obj->data(), obj->size(), encoding, errors);
@@ -1309,9 +1332,9 @@ PyObject* STLStringContains(CPPInstance* self, PyObject* pyobj) {
   Py_RETURN_FALSE;
 }
 
-PyObject* STLStringReplace(CPPInstance* self, PyObject* args,
-                           PyObject* /*kwds*/) {
-  std::string* obj = GetSTLString(self);
+PyObject* STLStringReplace(PyObject* self, PyObject* args) {
+  CPPInstance* inst = (CPPInstance*)self;
+  std::string* obj = GetSTLString(inst);
   if (!obj)
     return nullptr;
 
@@ -1330,7 +1353,7 @@ PyObject* STLStringReplace(CPPInstance* self, PyObject* args,
   }
 
   PyObject* cppreplace =
-      PyObject_GetAttrString((PyObject*)self, (char*)"__cpp_replace");
+      PyObject_GetAttrString((PyObject*)inst, (char*)"__cpp_replace");
   if (cppreplace) {
     PyObject* result = PyObject_Call(cppreplace, args, nullptr);
     Py_DECREF(cppreplace);
@@ -1343,14 +1366,14 @@ PyObject* STLStringReplace(CPPInstance* self, PyObject* args,
 }
 
 #define CPYRT_STRING_FINDMETHOD(name, cppname, pyname)                         \
-  PyObject* STLString##name(CPPInstance* self, PyObject* args,                 \
-                            PyObject* /*kwds*/) {                              \
-    std::string* obj = GetSTLString(self);                                     \
+  PyObject* STLString##name(PyObject* self, PyObject* args) {                  \
+    CPPInstance* inst = (CPPInstance*) self;                                   \
+    std::string* obj = GetSTLString(inst);                                     \
     if (!obj)                                                                  \
       return nullptr;                                                          \
                                                                                \
     PyObject* cppmeth =                                                        \
-        PyObject_GetAttrString((PyObject*)self, (char*)#cppname);              \
+        PyObject_GetAttrString((PyObject*)inst, (char*)#cppname);              \
     if (cppmeth) {                                                             \
       PyObject* result = PyObject_Call(cppmeth, args, nullptr);                \
       Py_DECREF(cppmeth);                                                      \
@@ -1392,7 +1415,7 @@ PyObject* STLStringGetAttr(CPPInstance* self, PyObject* attr_name) {
   return attr;
 }
 
-PyObject* UTF8Repr(PyObject* self) {
+PyObject* UTF8Repr(PyObject* self, PyObject* Py_UNUSED(args)) {
   // force C++ string types conversion to Python str per Python __repr__
   // requirements
   PyObject* res = PyObject_CallMethodNoArgs(self, PyStrings::gCppRepr);
@@ -1403,7 +1426,7 @@ PyObject* UTF8Repr(PyObject* self) {
   return str_res;
 }
 
-PyObject* UTF8Str(PyObject* self) {
+PyObject* UTF8Str(PyObject* self, PyObject* Py_UNUSED(args)) {
   // force C++ string types conversion to Python str per Python __str__
   // requirements
   PyObject* res = PyObject_CallMethodNoArgs(self, PyStrings::gCppStr);
@@ -1424,7 +1447,7 @@ Py_hash_t STLStringHash(PyObject* self) {
 }
 
 //- string_view behavior as primitive ----------------------------------------
-PyObject* StringViewInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
+PyObject* StringViewInit(PyObject* self, PyObject* args) {
   // if constructed from a Python unicode object, the constructor will convert
   // it to a temporary byte string, which is likely to go out of scope too soon;
   // so buffer it as needed
@@ -1464,7 +1487,7 @@ PyObject* StringViewInit(PyObject* self, PyObject* args, PyObject* /* kwds */) {
 }
 
 //- STL iterator behavior ----------------------------------------------------
-PyObject* STLIterNext(PyObject* self) {
+PyObject* STLIterNext(PyObject* self, PyObject* Py_UNUSED(args)) {
   // Python iterator protocol __next__ for STL forward iterators.
   bool mustIncrement = true;
   PyObject* last = nullptr;
@@ -1536,7 +1559,7 @@ PyObject* STLIterNext(PyObject* self) {
 COMPLEX_METH_GETSET(real, PyStrings::gCppReal)
 COMPLEX_METH_GETSET(imag, PyStrings::gCppImag)
 
-static PyObject* ComplexComplex(PyObject* self) {
+static PyObject* ComplexComplex(PyObject* self, PyObject* Py_UNUSED(args)) {
   PyObject* real = PyObject_CallMethodNoArgs(self, PyStrings::gCppReal);
   if (!real)
     return nullptr;
@@ -1556,7 +1579,7 @@ static PyObject* ComplexComplex(PyObject* self) {
   return PyComplex_FromDoubles(r, i);
 }
 
-static PyObject* ComplexRepr(PyObject* self) {
+static PyObject* ComplexRepr(PyObject* self, PyObject* Py_UNUSED(args)) {
   PyObject* real = PyObject_CallMethodNoArgs(self, PyStrings::gCppReal);
   if (!real)
     return nullptr;
@@ -1608,9 +1631,10 @@ static int ComplexDImagSet(CPPInstance* self, PyObject* value, void*) {
 PyGetSetDef ComplexDImag{(char*)"imag", (getter)ComplexDImagGet,
                          (setter)ComplexDImagSet, nullptr, nullptr};
 
-static PyObject* ComplexDComplex(CPPInstance* self) {
-  double r = ((std::complex<double>*)self->GetObject())->real();
-  double i = ((std::complex<double>*)self->GetObject())->imag();
+static PyObject* ComplexDComplex(PyObject* self, PyObject* Py_UNUSED(args)) {
+  CPPInstance* inst = (CPPInstance*)self;
+  double r = ((std::complex<double>*)inst->GetObject())->real();
+  double i = ((std::complex<double>*)inst->GetObject())->imag();
   return PyComplex_FromDoubles(r, i);
 }
 
@@ -1671,7 +1695,7 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
   // for pre-check of nullptr for boolean types
   if (HasAttrDirect(pyclass, PyStrings::gCppBool)) {
     const char* pybool_name = "__bool__";
-    Utility::AddToClass(pyclass, pybool_name, (PyCFunction)NullCheckBool,
+    Utility::AddToClass(pyclass, pybool_name, NullCheckBool,
                         METH_NOARGS);
   }
 
@@ -1708,8 +1732,8 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
 
         if (isIterator) {
           // install iterator protocol a la STL
-          ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)STLSequenceIter;
-          Utility::AddToClass(pyclass, "__iter__", (PyCFunction)STLSequenceIter,
+          ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)STLSequenceIterAdapter;
+          Utility::AddToClass(pyclass, "__iter__", STLSequenceIter,
                               METH_NOARGS);
         } else {
           // still okay if this is some pointer type of builtin persuasion
@@ -1718,9 +1742,9 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
           std::string resolved = interop::ResolveName(resname);
           if (resolved.back() == '*' &&
               interop::IsBuiltin(resolved.substr(0, resolved.size() - 1))) {
-            ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)LLSequenceIter;
+            ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)LLSequenceIterAdapter;
             Utility::AddToClass(pyclass, "__iter__",
-                                (PyCFunction)LLSequenceIter, METH_NOARGS);
+                                LLSequenceIter, METH_NOARGS);
           }
         }
       }
@@ -1733,8 +1757,8 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
       // if beyond size()) works in some cases but would mess up if operator[]
       // is meant to implement an associative container. So, this has to be
       // implemented as an iterator protocol.
-      ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)index_iter;
-      Utility::AddToClass(pyclass, "__iter__", (PyCFunction)index_iter,
+      ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)index_iterAdapter;
+      Utility::AddToClass(pyclass, "__iter__", index_iter,
                           METH_NOARGS);
     }
   }
@@ -1780,14 +1804,14 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
   if (HasAttrDirect(pyclass, PyStrings::gRepr, true)) {
     // guarantee that the result of __repr__ is a Python string
     Utility::AddToClass(pyclass, "__cpp_repr", "__repr__");
-    Utility::AddToClass(pyclass, "__repr__", (PyCFunction)UTF8Repr,
+    Utility::AddToClass(pyclass, "__repr__", UTF8Repr,
                         METH_NOARGS);
   }
 
   if (HasAttrDirect(pyclass, PyStrings::gStr, true)) {
     // guarantee that the result of __str__ is a Python string
     Utility::AddToClass(pyclass, "__cpp_str", "__str__");
-    Utility::AddToClass(pyclass, "__str__", (PyCFunction)UTF8Str, METH_NOARGS);
+    Utility::AddToClass(pyclass, "__str__", UTF8Str, METH_NOARGS);
   }
 
   if (interop::IsAggregate(((CPPClass*)pyclass)->fCppType) &&
@@ -1894,7 +1918,7 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
     } else {
       // constructor that takes python collections
       Utility::AddToClass(pyclass, "__real_init", "__init__");
-      Utility::AddToClass(pyclass, "__init__", (PyCFunction)VectorInit,
+      Utility::AddToClass(pyclass, "__init__", VectorInit,
                           METH_VARARGS | METH_KEYWORDS);
 
       // data with size
@@ -1903,8 +1927,8 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
       Utility::AddToClass(pyclass, "data", (PyCFunction)VectorData);
 
       // numpy array conversion
-      Utility::AddToClass(pyclass, "__array__", (PyCFunction)VectorArray,
-                          METH_VARARGS | METH_KEYWORDS /* unused */);
+      Utility::AddToClass(pyclass, "__array__", VectorArray,
+                          METH_VARARGS);
 
       // checked getitem
       if (HasAttrDirect(pyclass, PyStrings::gLen)) {
@@ -1917,7 +1941,7 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
       ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)vector_iter;
 
       // optimized __iadd__
-      Utility::AddToClass(pyclass, "__iadd__", (PyCFunction)VectorIAdd,
+      Utility::AddToClass(pyclass, "__iadd__", VectorIAdd,
                           METH_VARARGS | METH_KEYWORDS);
 
       // helpers for iteration
@@ -1946,7 +1970,7 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
   else if (IsTemplatedSTLClass(name, "array")) {
     // constructor that takes python associative collections
     Utility::AddToClass(pyclass, "__real_init", "__init__");
-    Utility::AddToClass(pyclass, "__init__", (PyCFunction)ArrayInit,
+    Utility::AddToClass(pyclass, "__init__", ArrayInit,
                         METH_VARARGS | METH_KEYWORDS);
   }
 
@@ -1954,7 +1978,7 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
            IsTemplatedSTLClass(name, "unordered_map")) {
     // constructor that takes python associative collections
     Utility::AddToClass(pyclass, "__real_init", "__init__");
-    Utility::AddToClass(pyclass, "__init__", (PyCFunction)MapInit,
+    Utility::AddToClass(pyclass, "__init__", MapInit,
                         METH_VARARGS | METH_KEYWORDS);
     // From C++20, std::map/unordered_map have a native contains() that the
     // generic contains->__contains__ mapping above will pick up. Strong-types
@@ -1969,7 +1993,7 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
   else if (IsTemplatedSTLClass(name, "set")) {
     // constructor that takes python associative collections
     Utility::AddToClass(pyclass, "__real_init", "__init__");
-    Utility::AddToClass(pyclass, "__init__", (PyCFunction)SetInit,
+    Utility::AddToClass(pyclass, "__init__", SetInit,
                         METH_VARARGS | METH_KEYWORDS);
     // From C++20, std::set has a native contains() that the generic
     // contains->__contains__ mapping above will pick up. Strong-types
@@ -1990,18 +2014,18 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
   if (IsTemplatedSTLClass(name, "shared_ptr") ||
       IsTemplatedSTLClass(name, "unique_ptr")) {
     Utility::AddToClass(pyclass, "__real_init", "__init__");
-    Utility::AddToClass(pyclass, "__init__", (PyCFunction)SmartPtrInit,
+    Utility::AddToClass(pyclass, "__init__", SmartPtrInit,
                         METH_VARARGS | METH_KEYWORDS);
   }
 
   else if (!((PyTypeObject*)pyclass)->tp_iter &&
            (name.find("iterator") != std::string::npos ||
             gIteratorTypes.find(name) != gIteratorTypes.end())) {
-    ((PyTypeObject*)pyclass)->tp_iternext = (iternextfunc)STLIterNext;
-    Utility::AddToClass(pyclass, CPPJIT__next__, (PyCFunction)STLIterNext,
+    ((PyTypeObject*)pyclass)->tp_iternext = (iternextfunc)STLIterNextAdapter;
+    Utility::AddToClass(pyclass, CPPJIT__next__, STLIterNext,
                         METH_NOARGS);
     ((PyTypeObject*)pyclass)->tp_iter = (getiterfunc)PyObject_SelfIter;
-    Utility::AddToClass(pyclass, "__iter__", (PyCFunction)PyObject_SelfIter,
+    Utility::AddToClass(pyclass, "__iter__", my_iter,
                         METH_NOARGS);
   }
 
@@ -2009,11 +2033,11 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
            name == "std::__1::basic_string<char>" || // libc++ inline namespace
            name == "std::string") { // typedef preserved by GetScopedFinalName
                                     // on libc++
-    Utility::AddToClass(pyclass, "__repr__", (PyCFunction)STLStringRepr,
+    Utility::AddToClass(pyclass, "__repr__", STLStringRepr,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__str__", (PyCFunction)STLStringStr,
+    Utility::AddToClass(pyclass, "__str__", STLStringStr,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__bytes__", (PyCFunction)STLStringBytes,
+    Utility::AddToClass(pyclass, "__bytes__", STLStringBytes,
                         METH_NOARGS);
     Utility::AddToClass(pyclass, "__cmp__", (PyCFunction)STLStringCompare,
                         METH_O);
@@ -2027,16 +2051,16 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
     // wrongly dropped it when built with -std=c++2c (__cplusplus == 202400L).
     Utility::AddToClass(pyclass, "__contains__", (PyCFunction)STLStringContains,
                         METH_O);
-    Utility::AddToClass(pyclass, "decode", (PyCFunction)STLStringDecode,
-                        METH_VARARGS | METH_KEYWORDS);
+    Utility::AddToClass(pyclass, "decode", STLStringDecode,
+                        METH_VARARGS);
     Utility::AddToClass(pyclass, "__cpp_find", "find");
-    Utility::AddToClass(pyclass, "find", (PyCFunction)STLStringFind,
+    Utility::AddToClass(pyclass, "find", STLStringFind,
                         METH_VARARGS | METH_KEYWORDS);
     Utility::AddToClass(pyclass, "__cpp_rfind", "rfind");
-    Utility::AddToClass(pyclass, "rfind", (PyCFunction)STLStringRFind,
+    Utility::AddToClass(pyclass, "rfind", STLStringRFind,
                         METH_VARARGS | METH_KEYWORDS);
     Utility::AddToClass(pyclass, "__cpp_replace", "replace");
-    Utility::AddToClass(pyclass, "replace", (PyCFunction)STLStringReplace,
+    Utility::AddToClass(pyclass, "replace", STLStringReplace,
                         METH_VARARGS | METH_KEYWORDS);
     Utility::AddToClass(pyclass, "__getattr__", (PyCFunction)STLStringGetAttr,
                         METH_O);
@@ -2051,9 +2075,9 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
            name == "std::string_view") {              // typedef preserved by
                                          // GetScopedFinalName on libc++
     Utility::AddToClass(pyclass, "__real_init", "__init__");
-    Utility::AddToClass(pyclass, "__init__", (PyCFunction)StringViewInit,
+    Utility::AddToClass(pyclass, "__init__", StringViewInit,
                         METH_VARARGS | METH_KEYWORDS);
-    Utility::AddToClass(pyclass, "__bytes__", (PyCFunction)STLViewStringBytes,
+    Utility::AddToClass(pyclass, "__bytes__", STLViewStringBytes,
                         METH_NOARGS);
     Utility::AddToClass(pyclass, "__cmp__", (PyCFunction)STLViewStringCompare,
                         METH_O);
@@ -2061,9 +2085,9 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
                         METH_O);
     Utility::AddToClass(pyclass, "__ne__", (PyCFunction)STLViewStringIsNotEqual,
                         METH_O);
-    Utility::AddToClass(pyclass, "__repr__", (PyCFunction)STLViewStringRepr,
+    Utility::AddToClass(pyclass, "__repr__", STLViewStringRepr,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__str__", (PyCFunction)STLViewStringStr,
+    Utility::AddToClass(pyclass, "__str__", STLViewStringStr,
                         METH_NOARGS);
   }
 
@@ -2072,11 +2096,11 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
            name == "std::__1::basic_string<wchar_t,std::__1::char_traits<wchar_"
                    "t>,std::__1::allocator<wchar_t> >" ||
            name == "std::wstring") {
-    Utility::AddToClass(pyclass, "__repr__", (PyCFunction)STLWStringRepr,
+    Utility::AddToClass(pyclass, "__repr__", STLWStringRepr,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__str__", (PyCFunction)STLWStringStr,
+    Utility::AddToClass(pyclass, "__str__", STLWStringStr,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__bytes__", (PyCFunction)STLWStringBytes,
+    Utility::AddToClass(pyclass, "__bytes__", STLWStringBytes,
                         METH_NOARGS);
     Utility::AddToClass(pyclass, "__cmp__", (PyCFunction)STLWStringCompare,
                         METH_O);
@@ -2095,9 +2119,9 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
     PyObject_SetAttrString(
         pyclass, "imag",
         PyDescr_NewGetSet((PyTypeObject*)pyclass, &ComplexDImag));
-    Utility::AddToClass(pyclass, "__complex__", (PyCFunction)ComplexDComplex,
+    Utility::AddToClass(pyclass, "__complex__", ComplexDComplex,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__repr__", (PyCFunction)ComplexRepr,
+    Utility::AddToClass(pyclass, "__repr__", ComplexRepr,
                         METH_NOARGS);
   }
 
@@ -2110,9 +2134,9 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
     PyObject_SetAttrString(
         pyclass, "imag",
         PyDescr_NewGetSet((PyTypeObject*)pyclass, &imagComplex));
-    Utility::AddToClass(pyclass, "__complex__", (PyCFunction)ComplexComplex,
+    Utility::AddToClass(pyclass, "__complex__", ComplexComplex,
                         METH_NOARGS);
-    Utility::AddToClass(pyclass, "__repr__", (PyCFunction)ComplexRepr,
+    Utility::AddToClass(pyclass, "__repr__", ComplexRepr,
                         METH_NOARGS);
   }
 

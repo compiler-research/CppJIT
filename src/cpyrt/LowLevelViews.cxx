@@ -76,26 +76,23 @@ static void ll_dealloc(cpyrt::LowLevelView* pyobj) {
 }
 
 //----------------------------------------------------------------------------
-#define CPYRT_LL_FLAG_GETSET(name, flag, doc)                                  \
-  static PyObject* ll_get##name(cpyrt::LowLevelView* pyobj) {                  \
-    return PyBool_FromLong((long)((intptr_t)pyobj->fBufInfo.internal & flag)); \
-  }                                                                            \
-                                                                               \
-  static int ll_set##name(cpyrt::LowLevelView* pyobj, PyObject* value,         \
-                          void*) {                                             \
-    long settrue = PyLong_AsLong(value);                                       \
-    if (settrue == -1 && PyErr_Occurred()) {                                   \
-      PyErr_SetString(PyExc_ValueError,                                        \
-                      #doc " should be either True or False");                 \
-      return -1;                                                               \
-    }                                                                          \
-                                                                               \
-    if ((bool)settrue)                                                         \
-      (intptr_t&)pyobj->fBufInfo.internal |= flag;                             \
-    else                                                                       \
-      (intptr_t&)pyobj->fBufInfo.internal &= ~flag;                            \
-                                                                               \
-    return 0;                                                                  \
+#define CPYRT_LL_FLAG_GETSET(name, flag, doc) \
+  static PyObject* ll_get##name(PyObject* pyobj, void*) { \
+    auto* view = (cpyrt::LowLevelView*)pyobj; \
+    return PyBool_FromLong((long)((intptr_t)view->fBufInfo.internal & flag)); \
+  } \
+  static int ll_set##name(PyObject* pyobj, PyObject* value, void*) { \
+    auto* view = (cpyrt::LowLevelView*)pyobj; \
+    long settrue = PyLong_AsLong(value); \
+    if (settrue == -1 && PyErr_Occurred()) { \
+      PyErr_SetString(PyExc_ValueError, #doc " should be either True or False"); \
+      return -1; \
+    } \
+    if ((bool)settrue) \
+      (intptr_t&)view->fBufInfo.internal |= flag; \
+    else \
+      (intptr_t&)view->fBufInfo.internal &= ~flag; \
+    return 0; \
   }
 
 // clang-format off
@@ -681,8 +678,9 @@ static PyBufferProcs ll_as_buffer = {
 };
 
 //---------------------------------------------------------------------------
-static PyObject* ll_shape(cpyrt::LowLevelView* self) {
-  Py_buffer& view = self->fBufInfo;
+static PyObject* ll_shape(PyObject* self, void*) {
+  cpyrt::LowLevelView* inst = (cpyrt::LowLevelView*)self;
+  Py_buffer& view = inst->fBufInfo;
 
   PyObject* shape = PyTuple_New(view.ndim);
   for (Py_ssize_t idim = 0; idim < view.ndim; ++idim)
@@ -692,8 +690,9 @@ static PyObject* ll_shape(cpyrt::LowLevelView* self) {
 }
 
 //---------------------------------------------------------------------------
-static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
-  // Allow the user to fix up the actual (type-strided) size of the buffer.
+static int ll_reshape(PyObject* self, PyObject* shape, void*) {
+  cpyrt::LowLevelView* inst = (cpyrt::LowLevelView*)self;
+  
   if (!PyTuple_Check(shape)) {
     if (shape) {
       PyObject* pystr = PyObject_Str(shape);
@@ -701,22 +700,22 @@ static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
         PyErr_Format(PyExc_TypeError, "tuple object expected, received %s",
                      cpyrt_PyText_AsStringChecked(pystr));
         Py_DECREF(pystr);
-        return nullptr;
+        return -1;
       }
     }
     PyErr_SetString(PyExc_TypeError, "tuple object expected");
-    return nullptr;
+    return -1;
   }
 
-  Py_buffer& view = self->fBufInfo;
+  Py_buffer& view = inst->fBufInfo;
 
   // verify size match
   Py_ssize_t oldsz = 0;
   for (Py_ssize_t idim = 0; idim < view.ndim; ++idim) {
     Py_ssize_t nlen = view.shape[idim];
     if (nlen == cpyrt::UNKNOWN_SIZE ||
-        nlen == INT_MAX / view.itemsize /* fake 'max' */) {
-      oldsz = -1; // meaning, unable to check size match
+        nlen == INT_MAX / view.itemsize) {
+      oldsz = -1;
       break;
     }
     oldsz += view.shape[idim];
@@ -732,11 +731,11 @@ static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
                    "cannot reshape array of size %ld into shape %s",
                    (long)oldsz, cpyrt_PyText_AsString(tas));
       Py_DECREF(tas);
-      return nullptr;
+      return -1;
     }
   }
 
-  // reshape
+  // reshape layout logic...
   size_t itemsize = view.strides[view.ndim - 1];
   if (view.ndim != PyTuple_GET_SIZE(shape)) {
     PyMem_Free(view.shape);
@@ -750,7 +749,7 @@ static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
   for (Py_ssize_t idim = 0; idim < PyTuple_GET_SIZE(shape); ++idim) {
     Py_ssize_t nlen = PyInt_AsSsize_t(PyTuple_GET_ITEM(shape, idim));
     if (nlen == -1 && PyErr_Occurred())
-      return nullptr;
+      return -1;
 
     if (idim == 0)
       view.len = nlen * view.itemsize;
@@ -758,14 +757,21 @@ static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
     view.shape[idim] = nlen;
   }
 
-  set_strides(view, itemsize, false /* by definition not fixed */);
+  set_strides(view, itemsize, false);
 
+  return 0; // Success
+}
+
+static PyObject* ll_reshape(PyObject* self, PyObject* shape) {
+  if (ll_reshape(self, shape, nullptr) < 0) {
+    return nullptr;
+  }
   Py_RETURN_NONE;
 }
 
 //---------------------------------------------------------------------------
-static PyObject* ll_array(cpyrt::LowLevelView* self, PyObject* args,
-                          PyObject* kwds) {
+static PyObject* ll_array(PyObject*  self, PyObject* args) {
+  cpyrt::LowLevelView* inst = (cpyrt::LowLevelView*)self;
   // Construct a numpy array from the lowlevelview (w/o copy if possible); this
   // uses the Python methods to avoid depending on numpy directly
 
@@ -775,17 +781,6 @@ static PyObject* ll_array(cpyrt::LowLevelView* self, PyObject* args,
     return nullptr;
 
   bool docopy = false;
-  if (kwds) {
-    PyObject* pycp = PyObject_GetItem(kwds, cpyrt::PyStrings::gCopy);
-    if (!pycp) {
-      PyErr_SetString(PyExc_TypeError,
-                      "__array__ only supports the \"copy\" keyword");
-      return nullptr;
-    }
-
-    docopy = PyObject_IsTrue(pycp);
-    Py_DECREF(pycp);
-  }
 
   if (!docopy) { // view requested
     // expect possible dtype from the arguments, otherwise take it from the type
@@ -793,7 +788,7 @@ static PyObject* ll_array(cpyrt::LowLevelView* self, PyObject* args,
     PyObject* dtype;
     if (!args || PyTuple_GET_SIZE(args) != 1) {
       PyObject* npdtype = PyObject_GetAttr(npmod, cpyrt::PyStrings::gDType);
-      PyObject* typecode = ll_typecode(self, nullptr);
+      PyObject* typecode = ll_typecode(inst, nullptr);
       dtype = PyObject_CallFunctionObjArgs(npdtype, typecode, nullptr);
       Py_DECREF(typecode);
       Py_DECREF(npdtype);
@@ -807,7 +802,7 @@ static PyObject* ll_array(cpyrt::LowLevelView* self, PyObject* args,
 
     PyObject* npfrombuf =
         PyObject_GetAttr(npmod, cpyrt::PyStrings::gFromBuffer);
-    PyObject* view = PyObject_CallFunctionObjArgs(npfrombuf, (PyObject*)self,
+    PyObject* view = PyObject_CallFunctionObjArgs(npfrombuf, (PyObject*)inst,
                                                   dtype, nullptr);
     Py_DECREF(dtype);
     Py_DECREF(npfrombuf);
@@ -817,7 +812,7 @@ static PyObject* ll_array(cpyrt::LowLevelView* self, PyObject* args,
   } else { // copy requested
     PyObject* npcopy = PyObject_GetAttr(npmod, cpyrt::PyStrings::gCopy);
     PyObject* newarr =
-        PyObject_CallFunctionObjArgs(npcopy, (PyObject*)self, nullptr);
+        PyObject_CallFunctionObjArgs(npcopy, (PyObject*)inst, nullptr);
     Py_DECREF(npcopy);
 
     return newarr;
@@ -828,9 +823,10 @@ static PyObject* ll_array(cpyrt::LowLevelView* self, PyObject* args,
 }
 
 //---------------------------------------------------------------------------
-static PyObject* ll_as_string(cpyrt::LowLevelView* self) {
+static PyObject* ll_as_string(PyObject* self, PyObject* /*args*/) {
+  cpyrt::LowLevelView* inst = (cpyrt::LowLevelView*)self;
   // Interpret memory as a null-terminated char string.
-  Py_buffer& view = self->fBufInfo;
+  Py_buffer& view = inst->fBufInfo;
 
   if (strcmp(view.format, "b") != 0 || view.ndim != 1) {
     PyErr_Format(
@@ -840,19 +836,19 @@ static PyObject* ll_as_string(cpyrt::LowLevelView* self) {
     return nullptr;
   }
 
-  char* buf = (char*)self->get_buf();
+  char* buf = (char*)inst->get_buf();
   size_t sz = strnlen(buf, (size_t)view.shape[0]);
   return cpyrt_PyText_FromStringAndSize(buf, sz);
 }
 
 //---------------------------------------------------------------------------
 static PyMethodDef ll_methods[] = {
-    {(char*)"reshape", (PyCFunction)ll_reshape, METH_O,
+    {(char*)"reshape", ll_reshape, METH_O,
      (char*)"change the shape (not layout) of the low level view"},
-    {(char*)"as_string", (PyCFunction)ll_as_string, METH_NOARGS,
+    {(char*)"as_string", ll_as_string, METH_NOARGS,
      (char*)"interpret memory as a null-terminated char string and return "
             "Python str"},
-    {(char*)"__array__", (PyCFunction)ll_array, METH_VARARGS | METH_KEYWORDS,
+    {(char*)"__array__", ll_array, METH_VARARGS,
      (char*)"return a numpy array from the low level view"},
     {(char*)nullptr, nullptr, 0, nullptr}};
 

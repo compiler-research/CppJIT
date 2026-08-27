@@ -26,7 +26,7 @@ cppflags= -std=c++17 -O3 -fPIC -I$(shell $(PYTHON) -c 'import sysconfig as sc; p
 
 PLATFORM := $(shell uname -s)
 ifeq ($(PLATFORM),Darwin)
-  cppflags+=-dynamiclib -single_module -undefined dynamic_lookup -Wno-delete-non-virtual-dtor
+  cppflags+=-dynamiclib -undefined dynamic_lookup -Wno-delete-non-virtual-dtor
 endif
 
 # a worker can load the library while another rebuilds it, so publish it whole

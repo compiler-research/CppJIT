@@ -1710,6 +1710,41 @@ bool cpyrt::StdSpanConverter::SetArg(PyObject* pyobject, Parameter& para,
 
 #endif // __cplusplus >= 202002L
 
+namespace {
+
+template <class type>
+bool ToArrayFromBuffer(PyObject* owner, void* address, PyObject* ctxt,
+                       const void* buf, Py_ssize_t buflen, cpyrt::dims_t& shape,
+                       bool isFixed) {
+  if (buflen == 0)
+    return false;
+
+  Py_ssize_t oldsz = 1;
+  for (Py_ssize_t idim = 0; idim < shape.ndim(); ++idim) {
+    if (shape[idim] == cpyrt::UNKNOWN_SIZE) {
+      oldsz = -1;
+      break;
+    }
+    oldsz *= shape[idim];
+  }
+  if (shape.ndim() != cpyrt::UNKNOWN_SIZE && 0 < oldsz && oldsz < buflen) {
+    PyErr_SetString(PyExc_ValueError, "buffer too large for value");
+    return false;
+  }
+
+  if (isFixed)
+    memcpy(*(type**)address, buf, (0 < buflen ? buflen : 1) * sizeof(type));
+  else {
+    *(type**)address = (type*)buf;
+    shape.ndim(1);
+    shape[0] = buflen;
+    SetLifeLine(ctxt, owner, (intptr_t)address);
+  }
+  return true;
+}
+
+} // namespace
+
 //----------------------------------------------------------------------------
 #define CPPJIT_IMPL_ARRAY_CONVERTER(name, ctype, type, code, suffix)           \
   cpyrt::name##ArrayConverter::name##ArrayConverter(cdims_t dims)              \
@@ -1915,6 +1950,17 @@ PyObject* cpyrt::CStringArrayConverter::FromMemory(void* address) {
   else if (fShape[0] == UNKNOWN_SIZE)
     return CreateLowLevelViewString((const char**)address, fShape);
   return CreateLowLevelViewString(*(const char***)address, fShape);
+}
+
+bool cpyrt::CStringArrayConverter::ToMemory(PyObject* value, void* address,
+                                            PyObject* ctxt) {
+  // Unlike the other array converters, this one also accepts a Python string.
+  Py_ssize_t len;
+  if (const char* cstr = cpyrt_PyText_AsStringAndSize(value, &len)) {
+    return ToArrayFromBuffer<char>(value, address, ctxt, cstr, len, fShape,
+                                   fIsFixed);
+  }
+  return SCharArrayConverter::ToMemory(value, address, ctxt);
 }
 
 //----------------------------------------------------------------------------

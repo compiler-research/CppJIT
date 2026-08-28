@@ -1159,3 +1159,22 @@ class TestMULTIDIMARRAYS:
         # a freshly constructed view has no dimensions to set
         v = cppjit._backend.LowLevelView()
         raises(TypeError, v.reshape, ())
+
+
+class TestCSTRINGARRAY:
+    def test01_cstring_array_from_str(self):
+        """A Python string can be assigned to a const char** data member"""
+
+        import cppjit
+
+        cppjit.cppdef("""\
+        namespace CStringArray {
+            struct S { const char** names = nullptr; };
+            const char* as_chars(S& s) { return (const char*)s.names; }
+        }""")
+
+        ns = cppjit.gbl.CStringArray
+        s = ns.S()
+
+        s.names = "abc"
+        assert ns.as_chars(s) == "abc"

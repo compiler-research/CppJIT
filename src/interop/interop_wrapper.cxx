@@ -1173,16 +1173,31 @@ ptrdiff_t interop::GetBaseOffset(TCppScope_t derived, TCppScope_t base,
 }
 
 // method/function reflection information ------------------------------------
+// A deleted overload is not callable, and leaving it in the set adds a
+// spurious conversion error to every failed-call report.
+static void
+remove_deleted_methods(std::vector<interop::TCppMethod_t>& methods) {
+  methods.erase(std::remove_if(methods.begin(), methods.end(),
+                               [](interop::TCppMethod_t m) {
+                                 return Cpp::IsFunctionDeleted(m);
+                               }),
+                methods.end());
+}
+
 void interop::GetClassMethods(TCppScope_t scope,
                               std::vector<interop::TCppMethod_t>& methods) {
   std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
   Cpp::GetClassMethods(scope, methods);
+  remove_deleted_methods(methods);
 }
 
 std::vector<interop::TCppMethod_t>
 interop::GetMethodsFromName(TCppScope_t scope, const std::string& name) {
   std::lock_guard<std::recursive_mutex> Lock(InterOpMutex);
-  return Cpp::GetFunctionsUsingName(scope, name);
+  std::vector<interop::TCppMethod_t> methods =
+      Cpp::GetFunctionsUsingName(scope, name);
+  remove_deleted_methods(methods);
+  return methods;
 }
 
 std::string interop::GetName(TCppScope_t method) {

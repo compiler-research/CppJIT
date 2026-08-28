@@ -4,6 +4,8 @@ __pycache__/
 
 # Built test dictionaries and extension modules
 *.so
+*.so.*.tmp
+*Dict.lock
 
 # Packaging
 build/

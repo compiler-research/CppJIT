@@ -281,7 +281,7 @@ static PyObject* op_destruct(CPPInstance* self) {
 
 //= cpyrt object dispatch support =========================================
 static PyObject* op_dispatch(PyObject* self, PyObject* args,
-                             PyObject* /* kdws */) {
+                             PyObject* /* kwds */) {
   // User-side __dispatch__ method to allow selection of a specific overloaded
   // method. The actual selection is in the __overload__() method of
   // CPPOverload.
@@ -554,8 +554,7 @@ static inline void* cast_actual(void* obj) {
     return address;
 
   interop::TCppScope_t klass = ((CPPClass*)Py_TYPE((PyObject*)obj))->fCppType;
-  interop::TCppScope_t clActual =
-      klass /* XXX: interop::GetActualClass(klass, address) */;
+  interop::TCppScope_t clActual = interop::GetActualClass(klass, address);
   if (clActual && clActual != klass) {
     intptr_t offset = interop::GetBaseOffset(
         clActual, klass, address, -1 /* down-cast */, true /* report errors */);
@@ -827,7 +826,7 @@ static PyObject* op_str(CPPInstance* self) {
         interop::TCppScope_t rnsID =
             interop::GetScope(TypeManip::extract_namespace(rcname));
         PyCallable* pyfunc =
-            Utility::FindBinaryOperator("std::ostream&", rcname, "<<", rnsID);
+            Utility::FindBinaryOperator("std::ostream", rcname, "<<", rnsID);
         if (!pyfunc)
           continue;
 

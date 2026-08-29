@@ -444,7 +444,7 @@ class TestCPP11FEATURES:
             assert hash(sw) == 17
             assert hash(sw) == 17
 
-    @mark.xfail
+    @mark.xfail(reason="plain pointer does not convert to a shared_ptr argument")
     def test14_shared_ptr_passing(self):
         """Ability to pass normal pointers through shared_ptr by value"""
 

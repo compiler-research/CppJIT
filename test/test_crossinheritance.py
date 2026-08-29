@@ -239,9 +239,7 @@ class TestCROSSINHERITANCE:
         assert CX.IBase4.call_get_value(c1) == 17
         assert CX.IBase4.call_get_value(c2) == 27
 
-    @mark.xfail(
-        condition=IS_LINUX_ARM, run=False, reason="Fails with ModuleNotFound error"
-    )
+    @mark.xfail(condition=IS_LINUX_ARM, reason="Fails with ModuleNotFoundError")
     def test07_templated_base(self):
         """Derive from a base class that is instantiated from a template"""
 
@@ -311,7 +309,7 @@ class TestCROSSINHERITANCE:
 
     @mark.xfail(
         condition=IS_MAC_ARM,
-        run=not IS_MAC_ARM,
+        run=False,
         reason="Crashes with exception not being caught on Apple Silicon",
     )
     def test09_interface_checking(self):
@@ -1681,7 +1679,7 @@ class TestCROSSINHERITANCE:
         c = C()
         assert c.func() == 3
 
-    @mark.xfail
+    @mark.xfail(reason="deriving from a ctor-less base does not raise TypeError")
     def test34_no_ctors_in_base(self):
         """Base classes with no constructors"""
 

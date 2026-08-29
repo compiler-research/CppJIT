@@ -643,7 +643,7 @@ class TestADVANCEDCPP:
             b.m_b.push_back(i)
             assert round(b.m_b[i], 5) == float(i)
 
-    @mark.xfail
+    @mark.xfail(reason="templated free function returns a string proxy, not str")
     def test16_template_global_functions(self):
         """Test template global function lookup and calls"""
 
@@ -717,7 +717,7 @@ class TestADVANCEDCPP:
         assert cppjit.gbl.overload_one_way().gime() == 1
         assert cppjit.gbl.overload_the_other_way().gime() == "aap"
 
-    @mark.xfail(run=not IS_VALGRIND)
+    @mark.xfail(condition=IS_VALGRIND, run=False, reason="hangs under valgrind")
     def test21_access_to_global_variables(self):
         """Access global_variables_and_pointers"""
 
@@ -779,7 +779,7 @@ class TestADVANCEDCPP:
             caught = True
         assert caught == True
 
-    @mark.xfail
+    @mark.xfail(reason="using-declared overloads expose the base class signature")
     def test23_using(self):
         """Accessibility of using declarations"""
 

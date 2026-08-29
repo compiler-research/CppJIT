@@ -30,7 +30,7 @@ class TestREGRESSION:
 
         pydoc.pager = stringpager
 
-    @mark.xfail
+    @mark.xfail(reason="pydoc rendering of KDcrawIface fails")
     def test01_kdcraw(self):
         """Doc strings for KDcrawIface (used to crash)."""
 

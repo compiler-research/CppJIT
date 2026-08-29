@@ -313,7 +313,7 @@ class TestSTLVECTOR:
             assert v.size() == self.N
             assert len(v) == self.N
 
-    @mark.xfail(condition=IS_MAC, run=not IS_MAC, reason="Crashes on OSX")
+    @mark.xfail(condition=IS_MAC, run=False, reason="Crashes on OSX")
     def test02_user_type_vector_type(self):
         """Test access to an std::vector<just_a_class>"""
 
@@ -491,9 +491,7 @@ class TestSTLVECTOR:
             ve[0] = cppjit.gbl.VecTestEnumNS.EVal2
             assert ve[0] == 42
 
-    @mark.xfail(
-        condition=IS_MAC, run=not (IS_MAC_ARM or IS_MAC_X86), reason="Fails on OS X"
-    )
+    @mark.xfail(condition=IS_MAC, run=False, reason="Fails on OS X")
     def test09_vector_of_string(self):
         """Adverse effect of implicit conversion on vector<string>"""
 
@@ -631,11 +629,7 @@ class TestSTLVECTOR:
             i += 1
         assert i == len(result)
 
-    @mark.xfail(
-        condition=IS_MAC and IS_CLING,
-        run=not (IS_MAC and IS_CLING),
-        reason="Fails on OSX-Cling",
-    )
+    @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Fails on OSX-Cling")
     def test14_vector_of_vector_of_(self):
         """Nested vectors"""
 
@@ -991,7 +985,7 @@ class TestSTLSTRING:
         assert repr(std.string("ab\0c")) == repr(b"ab\0c")
         assert str(std.string("ab\0c")) == str("ab\0c")
 
-    @mark.xfail(condition=IS_MAC, run=False, reason="Fails on OS X")
+    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test04_array_of_strings(self):
         """Access to global arrays of strings"""
 

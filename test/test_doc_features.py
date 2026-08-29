@@ -583,9 +583,7 @@ namespace Zoo {
         assert isinstance(i, Integer1)
 
     @mark.xfail(
-        condition=IS_MAC and IS_CLING,
-        run=not IS_MAC and IS_CLANG_REPL,
-        reason="Crashes on OS X Cling",
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OS X Cling"
     )
     def test03_STL_containers(self):
         """Instantiate STL containers with new class"""
@@ -893,9 +891,7 @@ class TestADVERTISED:
         cppjit.gbl.free(vp)
 
     @mark.xfail(
-        condition=IS_MAC and IS_CLING,
-        run=not IS_MAC and IS_CLANG_REPL,
-        reason="Crashes on OS X Cling",
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OS X Cling"
     )
     def test04_ptr_ptr_python_owns(self):
         """Example of ptr-ptr use where python owns"""
@@ -1187,7 +1183,7 @@ class TestTALKEXAMPLES:
         m = PyMyClass(1)
         assert CC.callb(m, 2) == 5
 
-    @mark.xfail(condition=IS_MAC_ARM, run=not IS_MAC_ARM, reason="Crashes on OS X arm")
+    @mark.xfail(condition=IS_MAC_ARM, run=False, reason="Crashes on OS X arm")
     def test_cross_and_templates(self):
         """Template instantiation with cross-inheritance example"""
 

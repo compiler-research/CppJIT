@@ -1459,7 +1459,7 @@ class TestTEMPLATED_TYPEDEFS:
 
         cls.templates = cppjit.load_reflection_info(cls.test_dct)
 
-    @mark.xfail
+    @mark.xfail(reason="using-typedef resolution drops non-type template args")
     def test01_using(self):
         """Test presence and validity of using typedefs"""
 

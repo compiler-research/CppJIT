@@ -33,6 +33,7 @@ input = "python/cppjit/_version.py"
 [tool.pytest.ini_options]
 testpaths = ["test"]
 pythonpath = ["test"]
+xfail_strict = true
 
 [tool.ruff]
 show-fixes = true

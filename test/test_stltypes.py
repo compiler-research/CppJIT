@@ -450,9 +450,7 @@ class TestSTLVECTOR:
         assert v2[-1] == v[-2]
         assert v2[self.N - 4] == v[-2]
 
-    @mark.xfail(
-        run=False, condition=(IS_MAC and IS_CLING), reason="Crashes on OSX Cling"
-    )
+    @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OSX Cling")
     def test07_vector_bool(self):
         """Usability of std::vector<bool> which can be a specialization"""
 
@@ -471,7 +469,7 @@ class TestSTLVECTOR:
         assert len(vb[4:8]) == 4
         assert list(vb[4:8]) == [False] * 3 + [True]
 
-    @mark.xfail(run=False, condition=IS_MAC and IS_CLING, reason="Crashes on OSX-Cling")
+    @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OSX-Cling")
     def test08_vector_enum(self):
         """Usability of std::vector<> of some enums"""
 
@@ -494,7 +492,7 @@ class TestSTLVECTOR:
             assert ve[0] == 42
 
     @mark.xfail(
-        run=not (IS_MAC_ARM or IS_MAC_X86), condition=IS_MAC, reason="Fails on OS X"
+        condition=IS_MAC, run=not (IS_MAC_ARM or IS_MAC_X86), reason="Fails on OS X"
     )
     def test09_vector_of_string(self):
         """Adverse effect of implicit conversion on vector<string>"""
@@ -596,8 +594,8 @@ class TestSTLVECTOR:
             assert hasattr(val, "__lifeline")
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLANG_REPL,
+        run=False,
         reason="Fails with Valgrind with Clang-Repl ARM",
     )
     def test13_vector_smartptr_iteration(self):
@@ -634,8 +632,8 @@ class TestSTLVECTOR:
         assert i == len(result)
 
     @mark.xfail(
+        condition=IS_MAC and IS_CLING,
         run=not (IS_MAC and IS_CLING),
-        condition=(IS_MAC and IS_CLING),
         reason="Fails on OSX-Cling",
     )
     def test14_vector_of_vector_of_(self):
@@ -1075,7 +1073,7 @@ class TestSTLSTRING:
         assert str(uas.get_string_cc(bval)) == "ℕ"
 
     @mark.xfail(
-        run=not IS_CLING, condition=IS_MAC or IS_CLING, reason="Fails on OS X and Cling"
+        condition=IS_MAC or IS_CLING, run=not IS_CLING, reason="Fails on OS X and Cling"
     )
     def test06_stlstring_bytes_and_text(self):
         """Mixing of bytes and str"""
@@ -1326,7 +1324,7 @@ class TestSTLLIST:
             assert a == i
             i += 1
 
-    @mark.xfail(run=False, condition=IS_MAC and IS_CLING, reason="Crashes on OSX-Cling")
+    @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OSX-Cling")
     def test05_list_cpp17_style(self):
         """C++17 style initialization of std::list"""
 
@@ -1895,8 +1893,8 @@ class TestSTLSTRING_VIEW:
         assert "Lorem ipsum dolor sit amet" in str(text)
 
     @mark.xfail(
-        run=not IS_MAC,
         condition=IS_MAC or IS_CLING,
+        run=not IS_MAC,
         reason="Crashes on OSX, fails with cling",
     )
     def test03_string_view_pythonize(self):
@@ -1944,7 +1942,7 @@ class TestSTLDEQUE:
         del x
 
     @mark.xfail(
-        run=False, condition=IS_MAC and IS_CLING, reason="Crashes on OS X Cling"
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OS X Cling"
     )
     def test02_deque_cpp17_style(self):
         """C++17 style initialization of std::deque"""
@@ -2024,7 +2022,7 @@ class TestSTLSET:
             s = cppjit.gbl.std.set[int](set(["aap", "noot", "mies"]))
 
     @mark.xfail(
-        run=False, condition=IS_MAC and IS_CLING, reason="Crashes with OSX-Cling"
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes with OSX-Cling"
     )
     def test04_set_cpp17_style(self):
         """C++17 style initialization of std::set"""
@@ -2259,7 +2257,7 @@ class TestSTLEXCEPTION:
         except cppjit.gbl.YourError as e:
             assert e.what() == "Oops"
 
-    @mark.xfail(condition=(IS_MAC_ARM or IS_MAC_X86), reason="Fails with OS X")
+    @mark.xfail(condition=IS_MAC_ARM or IS_MAC_X86, reason="Fails with OS X")
     def test03_memory(self):
         """Memory handling of C++ c// helper for exception base class testing"""
 
@@ -2308,7 +2306,7 @@ class TestSTLEXCEPTION:
         gc.collect()
         assert cppjit.gbl.GetMyErrorCount() == 0
 
-    @mark.xfail(run=False, condition=IS_MAC_ARM, reason="Seg Faults on OSX-ARM")
+    @mark.xfail(condition=IS_MAC_ARM, run=False, reason="Seg Faults on OSX-ARM")
     def test04_from_cpp(self):
         """Catch C++ exceptiosn from C++"""
 

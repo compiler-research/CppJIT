@@ -1409,7 +1409,7 @@ class TestDATATYPES:
         run(self, cppjit.gbl.sum_uc_data, buf, total)
         run(self, cppjit.gbl.sum_byte_data, buf, total)
 
-    @mark.xfail(run=False, condition=IS_MAC, reason="Crashes on OSX")
+    @mark.xfail(condition=IS_MAC, run=False, reason="Crashes on OSX")
     def test26_function_pointers(self):
         """Function pointer passing"""
 
@@ -1474,7 +1474,7 @@ class TestDATATYPES:
         ns = cppjit.gbl.FuncPtrReturn
         assert ns.foo()() == "Hello, World!"
 
-    @mark.xfail(run=False, condition=IS_MAC, reason="Crashes")
+    @mark.xfail(condition=IS_MAC, run=False, reason="Crashes")
     def test27_callable_passing(self):
         """Passing callables through function pointers"""
 
@@ -1553,7 +1553,7 @@ class TestDATATYPES:
         gc.collect()
         raises(TypeError, c, 3, 3)  # lambda gone out of scope
 
-    @mark.xfail(run=False, condition=IS_MAC, reason="Crashes on MacOS")
+    @mark.xfail(condition=IS_MAC, run=False, reason="Crashes on MacOS")
     def test28_callable_through_function_passing(self):
         """Passing callables through std::function"""
 

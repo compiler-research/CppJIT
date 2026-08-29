@@ -220,7 +220,7 @@ class TestREGRESSION:
 
         assert sys.getrefcount(x) == old_refcnt
 
-    @mark.xfail(run=False, condition=IS_MAC and IS_CLING, reason="Crahes on OSX-Cling")
+    @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Crahes on OSX-Cling")
     def test08_typedef_identity(self):
         """Nested typedefs should retain identity"""
 
@@ -262,7 +262,7 @@ class TestREGRESSION:
         cppjit.cppdef(code)
         cppjit.gbl.some_foo_calling_python()
 
-    @mark.xfail(run=False, condition=IS_CLING, reason="Crashes on Cling")
+    @mark.xfail(condition=IS_CLING, run=False, reason="Crashes on Cling")
     def test10_enum_in_global_space(self):
         """Enum declared in search.h did not appear in global space"""
 
@@ -824,8 +824,8 @@ class TestREGRESSION:
         assert not null
 
     @mark.xfail(
-        run=False,
         condition=(IS_CLING and IS_MAC) or IS_MAC_ARM,
+        run=False,
         reason="Dispatcher fix #53 introduces canonical types with std:: namespace that introduces OS X exceptions similar to test_stltypes",
     )
     def test29_callback_pointer_values(self):
@@ -1056,7 +1056,7 @@ class TestREGRESSION:
         str(v)
 
     @mark.xfail(
-        run=IS_CLANG_REPL, condition=IS_MAC or IS_CLING, reason="Crashes on Cling"
+        condition=IS_MAC or IS_CLING, run=IS_CLANG_REPL, reason="Crashes on Cling"
     )
     def test35_filesytem(self):
         """Static path object used to crash on destruction"""
@@ -1132,7 +1132,7 @@ class TestREGRESSION:
             assert cppjit.addressof(res) == cppjit.addressof(arr)
 
     @mark.xfail(
-        run=False, condition=(IS_MAC and IS_CLING), reason="Crashes on OS X Cling"
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OS X Cling"
     )
     def test38_char16_arrays(self):
         """Access to fixed-size char16 arrays as data members"""
@@ -1270,7 +1270,7 @@ class TestREGRESSION:
         assert type(list(vec2)[0]) == Base2
         assert len([d for d in vec3 if isinstance(d, Derived3)]) == 1
 
-    @mark.xfail(run=False, condition=not IS_CLANG_REPL, reason="Crashes with Cling")
+    @mark.xfail(condition=not IS_CLANG_REPL, run=False, reason="Crashes with Cling")
     def test40_explicit_initializer_list(self):
         """Construct and pass an explicit initializer list"""
 
@@ -1439,8 +1439,8 @@ class TestREGRESSION:
         assert cppjit.gbl.cppjit.interop.ResolveName("cmy_custom_type_t") == "const int"
 
     @mark.xfail(
-        run=False,
         condition=IS_MAC_ARM,
+        run=False,
         reason="Crashes with exception not being caught on Apple Silicon",
     )
     def test46_exception_narrowing(self):

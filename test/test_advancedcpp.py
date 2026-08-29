@@ -752,8 +752,8 @@ class TestADVANCEDCPP:
         assert len(cppjit.gbl.gtestv2) == 1
 
     @mark.xfail(
-        run=False,
         condition=IS_MAC_ARM,
+        run=False,
         reason="Crashes with exception not being caught on Apple Silicon",
     )
     def test22_exceptions(self):

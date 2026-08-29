@@ -15,7 +15,7 @@ def setup_module(mod):
 
 
 class TestBASICAPI:
-    @mark.xfail(IS_MAC, reason="evaluate is broken on macos")
+    @mark.xfail(condition=IS_MAC, reason="evaluate is broken on macos")
     def test01_evaluate(self):
         import cppjit
 
@@ -35,7 +35,7 @@ class TestBASICAPI:
         assert cppjit.evaluate(str(x)) == x
 
     @mark.xfail(
-        IS_MAC,
+        condition=IS_MAC,
         reason="unidentified IsDebugOutputEnabled issue on macos, also failing in test_fragile",
     )
     def test02_cppdef(self):

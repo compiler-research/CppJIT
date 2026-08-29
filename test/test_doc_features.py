@@ -268,7 +268,7 @@ namespace Namespace {
 
         pass
 
-    @mark.xfail(run=False, condition=IS_MAC, reason="Seg Fault")
+    @mark.xfail(condition=IS_MAC, run=False, reason="Seg Fault")
     def test_functions(self):
 
         from cppjit.gbl import Namespace, call_int_int_function, global_function
@@ -435,7 +435,7 @@ namespace Namespace {
         assert call_abstract_method(pc) == "Hello, Python World! (4)"
 
     @mark.xfail(
-        condition=((IS_MAC) and IS_CLANG_REPL), reason="Fails on OSX with Clang-REPL"
+        condition=(IS_MAC) and IS_CLANG_REPL, reason="Fails on OSX with Clang-REPL"
     )
     def test_multi_x_inheritance(self):
         """Multiple cross-inheritance"""
@@ -455,8 +455,8 @@ namespace Namespace {
         assert cppjit.gbl.call_abstract_method2(pc) == "second message"
 
     @mark.xfail(
-        run=False,
         condition=IS_MAC_ARM,
+        run=False,
         reason="Crashes with exception not being caught on Apple Silicon",
     )
     def test_exceptions(self):
@@ -583,8 +583,8 @@ namespace Zoo {
         assert isinstance(i, Integer1)
 
     @mark.xfail(
-        run=(not IS_MAC and IS_CLANG_REPL),
         condition=IS_MAC and IS_CLING,
+        run=not IS_MAC and IS_CLANG_REPL,
         reason="Crashes on OS X Cling",
     )
     def test03_STL_containers(self):
@@ -893,8 +893,8 @@ class TestADVERTISED:
         cppjit.gbl.free(vp)
 
     @mark.xfail(
-        run=(not IS_MAC and IS_CLANG_REPL),
         condition=IS_MAC and IS_CLING,
+        run=not IS_MAC and IS_CLANG_REPL,
         reason="Crashes on OS X Cling",
     )
     def test04_ptr_ptr_python_owns(self):
@@ -1049,7 +1049,7 @@ class TestADVERTISED:
         assert len(n.p) == 3
 
     @mark.xfail(
-        condition=(IS_CLANG_REPL and IS_MAC),
+        condition=IS_CLANG_REPL and IS_MAC,
         run=False,
         reason="Crashes with ClangRepl with 'toString not implemented'",
     )
@@ -1167,7 +1167,7 @@ class TestTALKEXAMPLES:
         assert len(v) == 10
         assert [m.fData for m in v] == list(range(10))
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
+    @mark.xfail(condition=IS_LINUX_ARM, run=False, reason="Crashes pytest on Linux ARM")
     def test_cross_inheritance(self):
         """Cross-inheritance example"""
 
@@ -1187,7 +1187,7 @@ class TestTALKEXAMPLES:
         m = PyMyClass(1)
         assert CC.callb(m, 2) == 5
 
-    @mark.xfail(run=not IS_MAC_ARM, condition=IS_MAC_ARM, reason="Crashes on OS X arm")
+    @mark.xfail(condition=IS_MAC_ARM, run=not IS_MAC_ARM, reason="Crashes on OS X arm")
     def test_cross_and_templates(self):
         """Template instantiation with cross-inheritance example"""
 
@@ -1207,7 +1207,7 @@ class TestTALKEXAMPLES:
 
         assert v.back().add(17) == 4 + 42 + 2 * 17
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
+    @mark.xfail(condition=IS_LINUX_ARM, run=False, reason="Crashes pytest on Linux ARM")
     def test_fallbacks(self):
         """Template instantation switches based on value sizes"""
 
@@ -1226,7 +1226,7 @@ class TestTALKEXAMPLES:
         assert CC.passT(2**64 - 1) == 2**64 - 1
         assert "unsigned long long" in CC.passT.__doc__
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
+    @mark.xfail(condition=IS_LINUX_ARM, run=False, reason="Crashes pytest on Linux ARM")
     def test_callbacks(self):
         """Function callback example"""
 
@@ -1254,8 +1254,8 @@ class TestTALKEXAMPLES:
         assert CC.callFun(lambda i: 6 * i, 4) == 24
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM,
+        run=False,
         reason="Crashes on Valgrind-ARM",
     )
     def test_templated_callback(self):

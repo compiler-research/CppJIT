@@ -165,8 +165,8 @@ class TestClassPYTHONIZATION:
         assert mine.say_hi() == "Hi!"
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLANG_REPL,
+        run=False,
         reason="Crashes on Valgind Clang-Repl-ARM",
     )
     def test05_converters(self):
@@ -195,8 +195,8 @@ class TestClassPYTHONIZATION:
         pz.renew_mine()
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLANG_REPL,
+        run=False,
         reason="Fails with Valgrind with Clang-Repl ARM",
     )
     def test06_executors(self):

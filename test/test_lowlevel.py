@@ -61,13 +61,14 @@ class TestLOWLEVEL:
         """Memory allocation and free-ing"""
 
         import cppjit
+        from cppjit import ll
 
         # regular C malloc/free
         mem = cppjit.gbl.malloc(16)
         cppjit.gbl.free(mem)
 
         # typed styles
-        mem = cppjit.ll.malloc[int](self.N)
+        mem = ll.malloc[int](self.N)
         assert len(mem) == self.N
         assert not mem.__cpp_array__
         for i in range(self.N):

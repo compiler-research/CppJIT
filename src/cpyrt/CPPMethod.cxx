@@ -34,6 +34,7 @@ extern PyObject* gBusException;
 extern PyObject* gSegvException;
 extern PyObject* gIllException;
 extern PyObject* gAbrtException;
+extern bool gUseAllocAnalyzer;
 } // namespace cppjit::cpyrt
 
 //- public helper ------------------------------------------------------------
@@ -752,6 +753,19 @@ PyObject* cpyrt::CPPMethod::GetArgDefault(int iarg, bool silent) {
 
 bool cpyrt::CPPMethod::IsConst() { return interop::IsConstMethod(GetMethod()); }
 
+//----------------------------------------------------------------------------
+interop::AllocType cpyrt::CPPMethod::GetAllocBehaviour() {
+  if (fAllocType.has_value())
+    return *fAllocType;
+  interop::AllocType attrResult = interop::IsAllocator(GetMethod());
+  if (attrResult == interop::AllocType::Unknown && gUseAllocAnalyzer) {
+    interop::AllocType analyzeResult = interop::GetAllocType(GetMethod());
+    fAllocType = analyzeResult;
+    return analyzeResult;
+  }
+  fAllocType = attrResult;
+  return attrResult;
+}
 //----------------------------------------------------------------------------
 PyObject* cpyrt::CPPMethod::GetScopeProxy() {
   // Get or build the scope of this method.

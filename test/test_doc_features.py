@@ -142,10 +142,6 @@ int call_int_int_function(int (*f)(int, int), int i1, int i2) {
     return f(i1, i2);
 }
 
-template<class A, class B, class C = A>
-C multiply(A a, B b) {
-    return static_cast<C>(a * b);
-}
 
 //-----
 namespace Namespace {
@@ -714,6 +710,14 @@ namespace Zoo {
 
         import cppjit
 
+        cppjit.cppdef("""
+
+template<class A, class B, class C = A>
+C multiply(A a, B b) {
+return static_cast<C>(a * b);
+}
+
+""")
         mul = cppjit.gbl.multiply
 
         assert "multiply" in cppjit.gbl.__dict__

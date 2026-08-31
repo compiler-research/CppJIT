@@ -3186,7 +3186,9 @@ bool cpyrt::InitializerListConverter::SetArg(PyObject* pyobject,
       PyObject* item = PySequence_GetItem(pyobject, i);
       bool convert_ok = false;
       if (item) {
-        Converter* converter = CreateConverter(fValueTypeName);
+        if (i >= fConverters.size())
+          fConverters.emplace_back(CreateConverter(fValueTypeName));
+        Converter* converter = fConverters[i];
         if (!converter) {
           if (CPPInstance_Check(item)) {
             // by convention, use byte copy
@@ -3208,10 +3210,8 @@ bool cpyrt::InitializerListConverter::SetArg(PyObject* pyobject,
                                  .c_str());
             entries += 1;
           }
-          if (memloc) {
+          if (memloc)
             convert_ok = converter->ToMemory(item, memloc);
-          }
-          fConverters.emplace_back(converter);
         }
 
         Py_DECREF(item);

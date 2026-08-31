@@ -282,3 +282,21 @@ class TestLEAKCHECK:
         ns.leak_list = wrapped_list_by_value
 
         self.check_func(ns, "leak_list")
+
+    def test09_initializer_list_argument(self):
+        """Leak check of passing a list as an std::initializer_list argument"""
+
+        import cppjit
+
+        cppjit.cppdef("""\
+        namespace LeakCheck {
+            int sum_il(std::initializer_list<int> l) {
+                int s = 0;
+                for (auto i : l) s += i;
+                return s;
+            }
+        }""")
+
+        ns = cppjit.gbl.LeakCheck
+
+        self.check_func(ns, "sum_il", [1, 2, 3])

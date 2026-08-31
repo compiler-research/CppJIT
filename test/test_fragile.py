@@ -943,7 +943,7 @@ class TestSTDNOTINGLOBAL:
         import cppjit
 
         cppjit.cppdef("""\
-        #if __cplusplus >= 202002
+        #if __cplusplus >= 202002 && __has_include(<span>)
         #include <span>
         std::span<int> my_test_span1;
         #endif

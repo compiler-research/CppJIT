@@ -1254,8 +1254,8 @@ std::string interop::GetMethodArgDefault(TCppMethod_t method,
 }
 
 interop::TCppIndex_t
-interop::CompareMethodArgType(TCppMethod_t /*method*/, TCppIndex_t iarg,
-                              const std::string& req_type) {
+interop::CompareMethodArgType(TCppMethod_t /*method*/, TCppIndex_t /*iarg*/,
+                              const std::string& /*req_type*/) {
   // if (method) {
   //     TFunction* f = m2f(method);
   //     TMethodArg* arg = (TMethodArg

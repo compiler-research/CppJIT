@@ -2338,6 +2338,11 @@ def has_cpp_20():
 class TestSTLSPAN:
     import cppjit
 
+    def setup_class(cls):
+        import cppjit
+
+        cppjit.include("span")
+
     def test01_span_iterators(self):
         """
         Test that std::span::begin() and std::span::end() can be used.

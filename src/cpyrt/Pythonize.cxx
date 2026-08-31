@@ -1898,7 +1898,8 @@ bool cpyrt::Pythonize(PyObject* pyclass, interop::TCppScope_t scope) {
                           METH_VARARGS | METH_KEYWORDS);
 
       // data with size
-      Utility::AddToClass(pyclass, "__real_data", "data");
+      if (!Utility::AddToClass(pyclass, "__real_data", "data"))
+        PyErr_Clear(); // no 'data' method to alias
       Utility::AddToClass(pyclass, "data", (PyCFunction)VectorData);
 
       // numpy array conversion

@@ -513,7 +513,6 @@ class TestFRAGILE:
         assert "ESysConstants" not in dd
         assert "kDoRed" not in dd
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test20_capture_output(self):
         """Capture cerr into a string"""
 

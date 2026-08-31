@@ -708,7 +708,6 @@ class TestADVANCEDCPP:
         assert a.__eq__(a) == False
         assert b.__eq__(b) == False
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test20_overload_order_with_proper_return(self):
         """Test return type against proper overload w/ const and covariance"""
 

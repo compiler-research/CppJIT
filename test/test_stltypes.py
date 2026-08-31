@@ -768,7 +768,6 @@ class TestSTLVECTOR:
 
         assert cppsum == pysum
 
-    @mark.xfail(condition=IS_CLING, reason="Fails on Cling")
     def test20_vector_cstring(self):
         """Usage of a vector of const char*"""
 
@@ -985,7 +984,6 @@ class TestSTLSTRING:
         assert repr(std.string("ab\0c")) == repr(b"ab\0c")
         assert str(std.string("ab\0c")) == str("ab\0c")
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test04_array_of_strings(self):
         """Access to global arrays of strings"""
 
@@ -1066,9 +1064,7 @@ class TestSTLSTRING:
         assert str(uas.get_string_cr(bval)) == "ℕ"
         assert str(uas.get_string_cc(bval)) == "ℕ"
 
-    @mark.xfail(
-        condition=IS_MAC or IS_CLING, run=not IS_CLING, reason="Fails on OS X and Cling"
-    )
+    @mark.xfail(condition=IS_CLING, run=False, reason="Fails on Cling")
     def test06_stlstring_bytes_and_text(self):
         """Mixing of bytes and str"""
 
@@ -1886,11 +1882,7 @@ class TestSTLSTRING_VIEW:
 
         assert "Lorem ipsum dolor sit amet" in str(text)
 
-    @mark.xfail(
-        condition=IS_MAC or IS_CLING,
-        run=not IS_MAC,
-        reason="Crashes on OSX, fails with cling",
-    )
+    @mark.xfail(condition=IS_MAC, run=False, reason="Crashes on OSX")
     def test03_string_view_pythonize(self):
         """Pythonization of std::string_view"""
 

@@ -687,7 +687,6 @@ class TestDATATYPES:
 
         c.__destruct__()
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test08_global_builtin_type(self):
         """Test access to a global builtin type"""
 
@@ -1632,7 +1631,6 @@ class TestDATATYPES:
         gc.collect()
         raises(TypeError, c, 3, 3)  # lambda gone out of scope
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test29_std_function_life_lines(self):
         """Life lines to std::function data members"""
 
@@ -1914,7 +1912,6 @@ class TestDATATYPES:
         assert c.s_strp == "noot"
         assert sn == "noot"  # set through pointer
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test35_restrict(self):
         """Strip __restrict keyword from use"""
 

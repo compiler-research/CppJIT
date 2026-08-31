@@ -472,7 +472,6 @@ class TestTEMPLATES:
         b.b_T["int"](1, 1.0, "a")
         assert get_tn(ns).find("int(some_variadic::B::*)(int&&,double&&,std::") == 0
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test17_empty_body(self):
         """Use of templated function with empty body"""
 

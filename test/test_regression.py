@@ -383,7 +383,6 @@ class TestREGRESSION:
         f = sds.Foo()
         assert f.bar.x == 5
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test15_vector_vs_initializer_list(self):
         """Prefer vector in template and initializer_list in formal arguments"""
 
@@ -556,7 +555,6 @@ class TestREGRESSION:
 
         assert obj.getter() == "c"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test21_temporaries_and_vector(self):
         """Extend a life line to references into a vector if needed"""
 
@@ -569,7 +567,6 @@ class TestREGRESSION:
         l = [e for e in cppjit.gbl.get_some_temporary_vector()]
         assert l == ["x", "y", "z"]
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test22_initializer_list_and_temporary(self):
         """Conversion rules when selecting intializer_list v.s. temporary"""
 
@@ -1055,9 +1052,7 @@ class TestREGRESSION:
         v = cppjit.gbl.std.vector[int]()
         str(v)
 
-    @mark.xfail(
-        condition=IS_MAC or IS_CLING, run=IS_CLANG_REPL, reason="Crashes on Cling"
-    )
+    @mark.xfail(condition=IS_CLING, run=False, reason="Crashes on Cling")
     def test35_filesytem(self):
         """Static path object used to crash on destruction"""
 
@@ -1194,7 +1189,6 @@ class TestREGRESSION:
             assert ai.name[:5] == "hello"
         cppjit.ll.array_delete(aa)
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test39_vector_of_pointers_conversion(self):
         """vector<T*>'s const T*& used to be T**, now T*"""
 

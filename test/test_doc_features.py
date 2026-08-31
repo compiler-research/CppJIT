@@ -434,9 +434,6 @@ namespace Namespace {
         pc = PyConcrete4()
         assert call_abstract_method(pc) == "Hello, Python World! (4)"
 
-    @mark.xfail(
-        condition=(IS_MAC) and IS_CLANG_REPL, reason="Fails on OSX with Clang-REPL"
-    )
     def test_multi_x_inheritance(self):
         """Multiple cross-inheritance"""
 
@@ -672,7 +669,6 @@ namespace Math {
         assert Zoo.identify_animal(mouse) == "the animal is a mouse"
         assert Zoo.identify_animal(lion) == "the animal is a lion"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test08_shared_ptr(self):
         """Shared pointer transparency"""
 
@@ -1324,7 +1320,6 @@ class TestTALKEXAMPLES:
         with raises(CC.MyException):
             CC.throw_error()
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test_unicode(self):
         """Unicode non-UTF-8 example"""
 

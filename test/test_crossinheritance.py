@@ -262,7 +262,7 @@ class TestCROSSINHERITANCE:
         p1 = TPyDerived1()
         assert p1.get_value() == 13
 
-    @mark.xfail(condition=IS_MAC, run=not IS_MAC_ARM, reason="Fails on OS X")
+    @mark.xfail(condition=IS_MAC_ARM, run=False, reason="Fails on macOS arm")
     def test08_error_handling(self):
         """Python errors should propagate through wrapper"""
 
@@ -630,7 +630,6 @@ class TestCROSSINHERITANCE:
         assert not not new_obj
         assert new_obj.whoami() == "PyDerived4"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test16_cctor_access_controlled(self):
         """Python derived class of C++ class with access controlled cctor"""
 
@@ -673,7 +672,6 @@ class TestCROSSINHERITANCE:
             obj = PyDerived()
             assert ns.callit(obj) == "PyDerived"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test17_deep_hierarchy(self):
         """Test a deep Python hierarchy with pure virtual functions"""
 
@@ -720,7 +718,6 @@ class TestCROSSINHERITANCE:
         assert obj.whoami() == "PyDerived4"
         assert ns.callit(obj) == "PyDerived4"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test18_abstract_hierarchy(self):
         """Hierarchy with abstract classes"""
 
@@ -1093,7 +1090,6 @@ class TestCROSSINHERITANCE:
         assert a.return_const().m_value == "abcdef"
         assert ns.callit(a).m_value == "abcdef"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test24_non_copyable(self):
         """Inheriting from a non-copyable base class"""
 
@@ -1798,7 +1794,6 @@ class TestCROSSINHERITANCE:
         del o1
         assert Derived.was_py_deleted == True
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test37_deep_tree(self):
         """Find overridable methods deep in the tree"""
 
@@ -1871,7 +1866,6 @@ class TestCROSSINHERITANCE:
         assert pysub.f3() == "Python: PySub::f3()"
         assert ns.call_fs(pysub) == pysub.f1() + pysub.f2() + pysub.f3()
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test38_protected_data(self):
         """Multiple cross inheritance with protected data"""
 

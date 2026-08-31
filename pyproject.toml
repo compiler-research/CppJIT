@@ -6,7 +6,7 @@ build-backend = "scikit_build_core.build"
 name = "cppjit"
 dynamic = ["version"]
 description = "CppJIT: fast and automatic Python-C++ interoperability"
-license = {text = "LBNL BSD"}
+license = "BSD-3-Clause-LBNL"
 requires-python = ">=3.12"
 authors = [
     {name = "Aaron Jomy"},
@@ -21,6 +21,7 @@ maintainers = [
 ]
 
 [tool.scikit-build]
+minimum-version = "build-system.requires"
 wheel.install-dir = "."
 wheel.packages = ["python/cppjit"]
 cmake.build-type = "Release"
@@ -29,6 +30,26 @@ cmake.build-type = "Release"
 provider = "scikit_build_core.metadata.regex"
 field = "version"
 input = "python/cppjit/_version.py"
+
+[tool.cibuildwheel]
+build = ["cp312-*", "cp313-*", "cp314-*"]
+skip = ["*-musllinux*"]
+build-verbosity = 1
+test-sources = ["test", "requirements.txt", ".github/wheel_smoke.py"]
+test-command = "python .github/wheel_smoke.py"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "manylinux_2_28"
+# /opt/llvm is staged on the runner by wheels.yml.
+container-engine = { name = "docker", create-args = ["--volume=/opt/llvm:/opt/llvm"] }
+environment = { CMAKE_ARGS = "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm -DClang_DIR=/opt/llvm/lib/cmake/clang" }
+
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+before-test = "brew install eigen boost"
+test-command = "python -m pip install -r requirements.txt && python .github/wheel_smoke.py && cd test && make -j$(sysctl -n hw.ncpu) PYTHON=python && CPPINTEROP_EXTRA_INTERPRETER_ARGS=-std=c++20 python -m pytest -ra"
+environment = { CMAKE_ARGS = "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm -DClang_DIR=/opt/llvm/lib/cmake/clang", MACOSX_DEPLOYMENT_TARGET = "14.0" }
 
 [tool.pytest.ini_options]
 testpaths = ["test"]

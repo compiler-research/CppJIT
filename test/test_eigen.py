@@ -5,6 +5,8 @@ from pytest import mark
 inc_paths = [
     os.path.join(os.path.sep, "usr", "include"),
     os.path.join(os.path.sep, "usr", "local", "include"),
+    os.path.join(os.path.sep, "opt", "homebrew", "include"),  # Homebrew on arm64
+    os.path.join(os.path.sep, "opt", "local", "include"),  # MacPorts
 ]
 
 eigen_path = None

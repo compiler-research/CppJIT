@@ -3,12 +3,30 @@ import os
 from pytest import mark, raises, skip
 from support import IS_MAC_ARM, IS_MAC_X86
 
-noboost = False
-if not (
+# /usr/include and /usr/local/include are on the compiler's default search
+# path; the Homebrew (arm64) and MacPorts prefixes are not, so a hit there
+# is remembered and added explicitly before the first include.
+boost_extra_inc = None
+noboost = not (
     os.path.exists(os.path.join(os.path.sep, "usr", "include", "boost"))
     or os.path.exists(os.path.join(os.path.sep, "usr", "local", "include", "boost"))
-):
-    noboost = True
+)
+if noboost:
+    for p in (
+        os.path.join(os.path.sep, "opt", "homebrew", "include"),
+        os.path.join(os.path.sep, "opt", "local", "include"),
+    ):
+        if os.path.exists(os.path.join(p, "boost")):
+            boost_extra_inc = p
+            noboost = False
+            break
+
+
+def add_boost_include_path():
+    if boost_extra_inc is not None:
+        import cppjit
+
+        cppjit.add_include_path(boost_extra_inc)
 
 
 @mark.skipif(noboost == True, reason="boost not found")
@@ -16,6 +34,7 @@ class TestBOOSTANY:
     def setup_class(cls):
         import cppjit
 
+        add_boost_include_path()
         cppjit.include("boost/any.hpp")
 
     @mark.skipif((IS_MAC_ARM or IS_MAC_X86), reason="Fails to include boost on OS X")
@@ -76,6 +95,7 @@ class TestBOOSTOPERATORS:
     def setup_class(cls):
         import cppjit
 
+        add_boost_include_path()
         cppjit.include("boost/operators.hpp")
 
     def test01_ordered(self):
@@ -101,6 +121,7 @@ class TestBOOSTVARIANT:
     def setup_class(cls):
         import cppjit
 
+        add_boost_include_path()
         cppjit.include("boost/variant/variant.hpp")
         cppjit.include("boost/variant/get.hpp")
 
@@ -147,6 +168,7 @@ class TestBOOSTERASURE:
     def setup_class(cls):
         import cppjit
 
+        add_boost_include_path()
         cppjit.include("boost/type_erasure/any.hpp")
         cppjit.include("boost/type_erasure/member.hpp")
         cppjit.include("boost/mpl/vector.hpp")

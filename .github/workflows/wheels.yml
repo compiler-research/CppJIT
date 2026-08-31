@@ -1,0 +1,114 @@
+name: Wheels
+
+# Build the wheels (cibuildwheel; config in pyproject.toml) and the sdist
+# as artifacts. setup-recipe stages the llvm-wheel toolchain at /opt/llvm;
+# linux mounts it into the build container, the same manylinux_2_28 image
+# the toolchain was built on.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/wheels.yml'
+      - '.github/wheel_smoke.py'
+      - 'pyproject.toml'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'src/interop/**'
+      - 'python/cppjit/_cpython_cppjit.py'
+  push:
+    tags: ['v*']
+  schedule:
+    - cron: '30 4 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wheels-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  wheels:
+    name: wheels ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, label: manylinux-x86_64, arch: x86_64 }
+          - { os: macos-26,     label: macosx-arm64,     arch: arm64 }
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # ref pins the recipe content the cache key is computed from.
+      - uses: compiler-research/ci-workflows/actions/setup-recipe@main
+        id: llvm
+        with:
+          recipe: llvm-wheel
+          version: '21.1.8'
+          os: ${{ matrix.os }}
+          arch: ${{ matrix.arch }}
+          ref: b760e4c171961786b7b20e2cc514302df5373eef
+
+      - name: Stage the toolchain at /opt/llvm
+        env:
+          RECIPE_PATH: ${{ steps.llvm.outputs.path }}
+        run: sudo mv "$RECIPE_PATH" /opt/llvm
+
+      - uses: pypa/cibuildwheel@v4.2.0
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.label }}
+          path: wheelhouse/*.whl
+
+  sdist:
+    name: sdist
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
+  # Run the full suite on a plain runner, outside the manylinux
+  # container the wheel was built in.
+  test-wheel:
+    name: test wheel (full suite)
+    needs: wheels
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheels-manylinux-x86_64
+          path: wheelhouse
+
+      - name: Install the test suite's native deps
+        # test_eigen/test_boost need them; the CI cells install the same pair.
+        run: sudo apt-get -q update && sudo apt-get -y install libeigen3-dev libboost-dev
+
+      - name: Install the wheel and the test requirements
+        run: python -m pip install wheelhouse/cppjit-*cp312*.whl -r requirements.txt
+
+      - name: Smoke the wheel outside pytest
+        run: python -X faulthandler .github/wheel_smoke.py
+
+      - name: Run the test suite against the installed wheel
+        env:
+          CPPINTEROP_EXTRA_INTERPRETER_ARGS: -std=c++20
+        run: |
+          cd test
+          make -j$(nproc) PYTHON=python
+          python -m pytest -ra

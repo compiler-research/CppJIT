@@ -22,7 +22,9 @@ function(cppjit_add_cppinterop)
         -DLLVM_DIR=${LLVM_DIR}
         -DCPPINTEROP_ENABLE_TESTING=${CPPJIT_ENABLE_CPPINTEROP_TESTS}
         -DBUILD_SHARED_LIBS=ON
-        -DCMAKE_INSTALL_PREFIX=${CPPINTEROP_INSTALL_DIR}
+        # The wheel ships a single unversioned library file.
+        -DCPPINTEROP_SHARED_LIBRARY_VERSIONING=OFF
+        -DCMAKE_INSTALL_PREFIX=${CPPINTEROP_STAGE_DIR}
         -DCMAKE_INSTALL_LIBDIR=lib
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_CXX_STANDARD=17
@@ -85,12 +87,16 @@ function(cppjit_add_cppinterop)
         set(_log_args "")
     endif()
 
+    # Install only the library and headers, not CppInterOp's full install tree.
     ExternalProject_Add(CppInterOp
         ${_source_args}
         PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
         CMAKE_ARGS     ${_args}
+        # -stripped keeps .dynsym, so the dlsym-based dispatch still resolves.
+        INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>
+                        --target install-clangCppInterOp-stripped install-cppinterop-headers
         BUILD_BYPRODUCTS
-            "${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
+            "${CPPINTEROP_STAGE_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
         ${_log_args}
     )
 

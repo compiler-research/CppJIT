@@ -12,7 +12,7 @@ include(GNUInstallDirs)
 # Perhaps this should permanently be OFF and users can build their own CppInterOp if they want to run the tests?
 option(CPPJIT_ENABLE_CPPINTEROP_TESTS "enable CppInterOp tests" OFF)
 set(CPPINTEROP_GIT_REPOSITORY "https://github.com/compiler-research/CppInterOp.git" CACHE STRING "")
-set(CPPINTEROP_GIT_TAG "8d624c621a4b95e36ff73ac708c85a768287478f" CACHE STRING "")
+set(CPPINTEROP_GIT_TAG "9802d61921ad5688ae42e4e628d754fc1192244d" CACHE STRING "")
 set(CPPINTEROP_SOURCE_DIR "" CACHE PATH
     "Override default CppInterOp built by ExternalProject_Add, with a path to local CppInterOp source")
 
@@ -101,7 +101,10 @@ if(_python_platlib)
 else()
     set(CPPINTEROP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 endif()
-set(CPPINTEROP_INSTALL_DIR "${CPPINTEROP_INSTALL_PREFIX}/cppjit/interop")
+
+# CppInterOp installs here; cppjit's own rules ship a subset, so the wheel
+# owns every installed file.
+set(CPPINTEROP_STAGE_DIR "${CMAKE_BINARY_DIR}/cppinterop-stage")
 
 # Include cmake for CppInterOp config and build using ExternalProject.
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/AddCppInterOp.cmake)
@@ -134,7 +137,7 @@ target_include_directories(cppjit PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cpyrt
     ${CMAKE_CURRENT_SOURCE_DIR}/src/interop
-    ${CPPINTEROP_INSTALL_DIR}/include
+    ${CPPINTEROP_STAGE_DIR}/include
     ${Python_INCLUDE_DIRS}
 )
 
@@ -164,17 +167,12 @@ install(TARGETS cppjit
     LIBRARY DESTINATION cppjit
 )
 
-# install CppInterOp libraries and headers
-install(CODE "
-    file(GLOB _interop_libs \"${CPPINTEROP_INSTALL_DIR}/lib/libclangCppInterOp*\")
-    foreach(_lib \${_interop_libs})
-        file(INSTALL \${_lib} DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/interop/lib)
-    endforeach()
-")
-
-install(CODE "
-    file(INSTALL \"${CPPINTEROP_INSTALL_DIR}/include/\" DESTINATION \${CMAKE_INSTALL_PREFIX}/cppjit/interop/include)
-")
+install(DIRECTORY "${CPPINTEROP_STAGE_DIR}/lib/"
+    DESTINATION cppjit/interop/lib
+)
+install(DIRECTORY "${CPPINTEROP_STAGE_DIR}/include/"
+    DESTINATION cppjit/interop/include
+)
 
 # ship the builtin headers of the build clang, laid out as a headers-only
 # resource dir: only include/ ships

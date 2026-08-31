@@ -274,10 +274,14 @@ static PyObject* pt_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds) {
           // also signals that this is a cross-inheritance class)
           PyObject* bname = cpyrt_PyText_FromString(
               interop::GetBaseName(result->fCppType, 0).c_str());
-          if (PyObject_SetAttrString((PyObject*)result, "__cpp_cross__",
-                                     bname) == -1)
+          if (!bname)
             PyErr_Clear();
-          Py_DECREF(bname);
+          else {
+            if (PyObject_SetAttrString((PyObject*)result, "__cpp_cross__",
+                                       bname) == -1)
+              PyErr_Clear();
+            Py_DECREF(bname);
+          }
         }
       } else if (sz == (Py_ssize_t)-1)
         PyErr_Clear();
@@ -571,8 +575,13 @@ static int meta_setattro(PyObject* pyclass, PyObject* pyname, PyObject* pyval) {
   if (((CPPScope*)pyclass)->fFlags & CPPScope::kIsNamespace &&
       !cpyrt::CPPDataMember_Check(pyval) && !cpyrt::CPPScope_Check(pyval)) {
     std::string name = cpyrt_PyText_AsString(pyname);
-    if (interop::GetNamed(name, ((CPPScope*)pyclass)->fCppType))
-      meta_getattro(pyclass, pyname); // triggers creation
+    if (interop::GetNamed(name, ((CPPScope*)pyclass)->fCppType)) {
+      PyObject* attr = meta_getattro(pyclass, pyname); // triggers creation
+      if (!attr)
+        PyErr_Clear();
+      else
+        Py_DECREF(attr);
+    }
   }
 
   return PyType_Type.tp_setattro(pyclass, pyname, pyval);

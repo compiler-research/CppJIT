@@ -1302,6 +1302,58 @@ class TestDATATYPES:
             for i in range(self.N):
                 assert arr[i] == l[i]
 
+        # a fixed-size array accepts only its own shape, and stays intact
+        arr = c.m_int_array
+        assert arr.shape == (self.N,)
+        arr.reshape((self.N,))
+        arr.shape = (self.N,)
+        assert arr.shape == (self.N,)
+        assert list(arr) == list(c.m_int_array)
+
+        # (2, 3) was accepted when sizes were compared as sums (2 + 3 == N)
+        raises(ValueError, arr.reshape, (2, 3))
+        raises(ValueError, arr.reshape, (self.N + 1,))
+        raises(ValueError, arr.reshape, (-1,))
+        assert arr.shape == (self.N,)
+        assert list(arr) == list(c.m_int_array)
+
+        # shapes that do not describe an array (-1 means "unknown" and is fine)
+        arr = c.get_int_array()
+        raises(ValueError, arr.reshape, ())
+        raises(ValueError, arr.reshape, (-2,))
+        raises(ValueError, arr.reshape, (sys.maxsize,))
+        raises(TypeError, arr.reshape, (1.5, 2))
+
+        # sizing to (0,) does not fix the size of an unknown view, others do
+        arr = c.get_int_array()
+        arr.reshape((-1,))
+        assert arr.shape[0] > 0
+        assert len(arr) == arr.shape[0]
+        arr.reshape((0,))
+        assert len(arr) == 0
+        assert list(arr) == []
+        arr.shape = (self.N,)
+        assert arr.shape == (self.N,)
+        assert len(list(arr)) == self.N
+        with raises(ValueError):
+            arr.shape = (2 * self.N,)
+        with raises(TypeError):
+            del arr.shape
+        assert arr.shape == (self.N,)
+
+        # a flexible array member is of unknown size whatever its type; sizing
+        # it counts bytes in element strides, not the (overridden) itemsize
+        cppjit.cppdef("""\
+        namespace ReshapeFlex {
+        struct Names { int n; const char* names[]; };
+        }""")
+
+        names = cppjit.gbl.ReshapeFlex.Names()
+        arr = names.names
+        arr.reshape((3,))
+        assert arr.shape == (3,)
+        assert memoryview(arr).nbytes == 3 * memoryview(arr).strides[0]
+
     def test24_voidp(self):
         """Test usage of void* data"""
 

@@ -35,6 +35,12 @@ static inline void set_strides(Py_buffer& view, size_t itemsize, bool isfix) {
   }
 }
 
+// The creators mark an outermost dimension of unknown extent with this cap
+// rather than with UNKNOWN_SIZE, keeping byte lengths and loops non-negative.
+static inline Py_ssize_t fake_max(size_t elemsize) {
+  return INT_MAX / (Py_ssize_t)elemsize;
+}
+
 //= cpyrt low level view construction/destruction =========================
 static cpyrt::LowLevelView* ll_new(PyTypeObject* subtype, PyObject*,
                                    PyObject*) {
@@ -685,15 +691,44 @@ static PyObject* ll_shape(cpyrt::LowLevelView* self) {
   Py_buffer& view = self->fBufInfo;
 
   PyObject* shape = PyTuple_New(view.ndim);
-  for (Py_ssize_t idim = 0; idim < view.ndim; ++idim)
-    PyTuple_SET_ITEM(shape, idim, PyInt_FromSsize_t(view.shape[idim]));
+  if (!shape)
+    return nullptr;
+  for (Py_ssize_t idim = 0; idim < view.ndim; ++idim) {
+    PyObject* pydim = PyInt_FromSsize_t(view.shape[idim]);
+    if (!pydim) {
+      Py_DECREF(shape);
+      return nullptr;
+    }
+    PyTuple_SET_ITEM(shape, idim, pydim);
+  }
 
   return shape;
 }
 
 //---------------------------------------------------------------------------
+static PyObject* ll_reshape_error(cpyrt::LowLevelView* self, PyObject* shape,
+                                  const char* why) {
+  PyObject* current = ll_shape(self);
+  if (!current)
+    return nullptr;
+  PyErr_Format(PyExc_ValueError,
+               "cannot reshape array of shape %S into shape %S: %s", current,
+               shape, why);
+  Py_DECREF(current);
+  return nullptr;
+}
+
+//---------------------------------------------------------------------------
 static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
-  // Allow the user to fix up the actual (type-strided) size of the buffer.
+  // Fill in the dimensions of the buffer that are not known from its type.
+  //
+  // A view is created with the rank and layout of its C++ type: a flat block
+  // for a rank-1 or fixed-size array, an array of row pointers otherwise. The
+  // strides and the converter projecting sub-views are derived from that and
+  // cannot be re-derived from a shape alone, so the rank of a view never
+  // changes and a dimension, once known, stays what it is. What reshaping can
+  // do is provide the extent of a dimension that the type leaves open, such as
+  // the size of an array behind a pointer.
   if (!PyTuple_Check(shape)) {
     if (shape) {
       PyObject* pystr = PyObject_Str(shape);
@@ -709,58 +744,74 @@ static PyObject* ll_reshape(cpyrt::LowLevelView* self, PyObject* shape) {
   }
 
   Py_buffer& view = self->fBufInfo;
-
-  // verify size match
-  Py_ssize_t oldsz = 0;
-  for (Py_ssize_t idim = 0; idim < view.ndim; ++idim) {
-    Py_ssize_t nlen = view.shape[idim];
-    if (nlen == cpyrt::UNKNOWN_SIZE ||
-        nlen == INT_MAX / view.itemsize /* fake 'max' */) {
-      oldsz = -1; // meaning, unable to check size match
-      break;
-    }
-    oldsz += view.shape[idim];
+  if (view.ndim < 1 || !view.shape || !view.strides) {
+    PyErr_SetString(PyExc_TypeError,
+                    "this low level view has no dimensions to set");
+    return nullptr;
   }
 
-  if (0 < oldsz) {
-    Py_ssize_t newsz = 0;
-    for (Py_ssize_t idim = 0; idim < PyTuple_GET_SIZE(shape); ++idim)
-      newsz += PyInt_AsSsize_t(PyTuple_GET_ITEM(shape, idim));
-    if (oldsz != newsz) {
-      PyObject* tas = PyObject_Str(shape);
-      PyErr_Format(PyExc_ValueError,
-                   "cannot reshape array of size %ld into shape %s",
-                   (long)oldsz, cpyrt_PyText_AsString(tas));
-      Py_DECREF(tas);
-      return nullptr;
-    }
-  }
+  // An unknown outermost dimension holds the fake max for the element size
+  // (the innermost stride), any other unknown dimension UNKNOWN_SIZE. An
+  // empty dimension of a non-fixed view may also be filled in: it came from
+  // a pointer, with nothing behind it yet that a size could contradict.
+  bool isfix = (intptr_t)view.internal & cpyrt::LowLevelView::kIsFixed;
+  Py_ssize_t elemsize = view.strides[view.ndim - 1];
+  Py_ssize_t fakemax = fake_max(elemsize);
+  Py_ssize_t unit0 = view.ndim == 1 ? elemsize : view.itemsize;
 
-  // reshape
-  size_t itemsize = view.strides[view.ndim - 1];
-  if (view.ndim != PyTuple_GET_SIZE(shape)) {
-    PyMem_Free(view.shape);
-    PyMem_Free(view.strides);
-
-    view.ndim = (int)PyTuple_GET_SIZE(shape);
-    view.shape = (Py_ssize_t*)PyMem_Malloc(view.ndim * sizeof(Py_ssize_t));
-    view.strides = (Py_ssize_t*)PyMem_Malloc(view.ndim * sizeof(Py_ssize_t));
-  }
-
-  for (Py_ssize_t idim = 0; idim < PyTuple_GET_SIZE(shape); ++idim) {
+  Py_ssize_t ndim = PyTuple_GET_SIZE(shape);
+  cpyrt::dims_t dims(ndim);
+  for (Py_ssize_t idim = 0; idim < ndim; ++idim) {
     Py_ssize_t nlen = PyInt_AsSsize_t(PyTuple_GET_ITEM(shape, idim));
     if (nlen == -1 && PyErr_Occurred())
       return nullptr;
-
-    if (idim == 0)
-      view.len = nlen * view.itemsize;
-
-    view.shape[idim] = nlen;
+    if (nlen < cpyrt::UNKNOWN_SIZE) {
+      PyErr_SetString(PyExc_ValueError, "negative dimensions are not allowed");
+      return nullptr;
+    }
+    if (nlen == cpyrt::UNKNOWN_SIZE) // store as the creators would
+      nlen = idim == 0 ? fakemax : cpyrt::UNKNOWN_SIZE;
+    else if (PY_SSIZE_T_MAX / (idim == 0 ? unit0 : elemsize) < nlen)
+      return ll_reshape_error(self, shape, "the shape is too large");
+    dims[idim] = nlen;
   }
 
-  set_strides(view, itemsize, false /* by definition not fixed */);
+  if (ndim != view.ndim)
+    return ll_reshape_error(
+        self, shape,
+        "the number of dimensions of a low level view is fixed by its type");
+
+  for (Py_ssize_t idim = 0; idim < ndim; ++idim) {
+    Py_ssize_t cur = view.shape[idim];
+    bool unknown = cur == cpyrt::UNKNOWN_SIZE ||
+                   (idim == 0 && cur == fakemax) || (cur == 0 && !isfix);
+    if (!unknown && dims[idim] != cur)
+      return ll_reshape_error(self, shape,
+                              "only dimensions of unknown size can be set");
+  }
+
+  for (Py_ssize_t idim = 0; idim < ndim; ++idim)
+    view.shape[idim] = dims[idim];
+
+  // the byte length counts the outermost dimension as the creators set it;
+  // the strides depend only on the layout and stay as they were laid down
+  view.len = dims[0] * unit0;
 
   Py_RETURN_NONE;
+}
+
+//---------------------------------------------------------------------------
+static int ll_setshape(cpyrt::LowLevelView* self, PyObject* value, void*) {
+  if (!value) {
+    PyErr_SetString(PyExc_TypeError, "cannot delete the shape of a view");
+    return -1;
+  }
+
+  PyObject* result = ll_reshape(self, value);
+  if (!result)
+    return -1;
+  Py_DECREF(result);
+  return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -864,7 +915,7 @@ static PyGetSetDef ll_getset[] = {
      (char*)"If true, this array was allocated with C++\'s new[]", nullptr},
     {(char*)"format", (getter)ll_typecode, nullptr, nullptr, nullptr},
     {(char*)"typecode", (getter)ll_typecode, nullptr, nullptr, nullptr},
-    {(char*)"shape", (getter)ll_shape, (setter)ll_reshape, nullptr, nullptr},
+    {(char*)"shape", (getter)ll_shape, (setter)ll_setshape, nullptr, nullptr},
     {(char*)nullptr, nullptr, nullptr, nullptr, nullptr}};
 
 namespace cppjit::cpyrt {
@@ -1038,9 +1089,9 @@ CreateLowLevelViewT(T* address, cpyrt::cdims_t shape,
                     Py_ssize_t itemsize = -1) {
   using namespace cppjit::cpyrt;
   Py_ssize_t nx =
-      (shape.ndim() != UNKNOWN_SIZE) ? shape[0] : INT_MAX / sizeof(T);
+      (shape.ndim() != UNKNOWN_SIZE) ? shape[0] : fake_max(sizeof(T));
   if (nx == UNKNOWN_SIZE)
-    nx = INT_MAX / sizeof(T);
+    nx = fake_max(sizeof(T));
   PyObject* args = PyTuple_New(0);
   LowLevelView* llp = (LowLevelView*)LowLevelView_Type.tp_new(
       &LowLevelView_Type, args, nullptr);

@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/wheels.yml'
       - '.github/wheel_smoke.py'
+      - '.github/wheel_contents_check.py'
       - 'pyproject.toml'
       - 'CMakeLists.txt'
       - 'cmake/**'
@@ -41,6 +42,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # ref pins the recipe content the cache key is computed from.
       - uses: compiler-research/ci-workflows/actions/setup-recipe@main
@@ -59,23 +62,36 @@ jobs:
 
       - uses: pypa/cibuildwheel@v4.2.0
 
+      - name: Assert the build left the checkout clean
+        run: git diff --exit-code
+
+      - name: Check the wheels against the content allowlist
+        run: python3 .github/wheel_contents_check.py wheelhouse/*.whl
+
       - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.label }}
           path: wheelhouse/*.whl
+          if-no-files-found: error
 
   sdist:
     name: sdist
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - run: pipx run build --sdist
+
+      - name: Check the sdist metadata
+        run: pipx run twine check dist/*.tar.gz
 
       - uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: dist/*.tar.gz
+          if-no-files-found: error
 
   # Run the full suite on a plain runner, outside the manylinux
   # container the wheel was built in.
@@ -85,6 +101,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-python@v7
         with:
@@ -106,6 +124,57 @@ jobs:
         run: python -X faulthandler .github/wheel_smoke.py
 
       - name: Run the test suite against the installed wheel
+        env:
+          CPPINTEROP_EXTRA_INTERPRETER_ARGS: -std=c++20
+        run: |
+          cd test
+          make -j$(nproc) PYTHON=python
+          python -m pytest -ra
+
+  # Build from the sdist and run the full suite against the install.
+  test-sdist:
+    name: test sdist (build + full suite)
+    needs: sdist
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - uses: compiler-research/ci-workflows/actions/setup-recipe@main
+        id: llvm
+        with:
+          recipe: llvm-wheel
+          version: '21.1.8'
+          os: ubuntu-24.04
+          arch: x86_64
+          ref: b760e4c171961786b7b20e2cc514302df5373eef
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: dist
+
+      - name: Install the test suite's native deps
+        run: sudo apt-get -q update && sudo apt-get -y install libeigen3-dev libboost-dev
+
+      - name: Build and install from the sdist with the test requirements
+        env:
+          RECIPE_PATH: ${{ steps.llvm.outputs.path }}
+        run: >
+          python -m pip install dist/cppjit-*.tar.gz -v
+          --config-settings=cmake.define.LLVM_DIR="$RECIPE_PATH/lib/cmake/llvm"
+          --config-settings=cmake.define.Clang_DIR="$RECIPE_PATH/lib/cmake/clang"
+          -r requirements.txt
+
+      - name: Smoke the install outside pytest
+        run: python -X faulthandler .github/wheel_smoke.py
+
+      - name: Run the test suite against the sdist install
         env:
           CPPINTEROP_EXTRA_INTERPRETER_ARGS: -std=c++20
         run: |

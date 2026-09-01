@@ -172,8 +172,8 @@ class TestLOWLEVEL:
         assert f[0] == -5.0
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND or IS_CLING,
+        run=False,
         reason="Valgrind detects memory leak with invalid delete[] operator, crashes on Cling",
     )
     def test06_ctypes_as_ref_and_ptr(self):
@@ -502,7 +502,7 @@ class TestLOWLEVEL:
         x = np.array([True], dtype=bool)
         assert cppjit.gbl.convert_bool(x)
 
-    @mark.xfail(run=False, condition=IS_MAC, reason="Crashes on OSX")
+    @mark.xfail(condition=IS_MAC, run=False, reason="Crashes on OSX")
     def test10_array_of_const_char_star(self):
         """Test passting of const char*[]"""
 

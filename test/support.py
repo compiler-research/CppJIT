@@ -6,6 +6,11 @@ import sys
 
 import py
 
+try:
+    import fcntl
+except ImportError:  # Windows: no concurrent make workflow to serialize
+    fcntl = None
+
 currpath = py.path.local(__file__).dirpath()
 
 
@@ -13,13 +18,21 @@ def setup_make(targetname):
     if os.getenv("CPPJIT_TEST_SKIP_MAKE", False):
         return
 
-    popen = subprocess.Popen(
-        ["make", targetname + "Dict.so"],
-        cwd=str(currpath),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    stdout, _ = popen.communicate()
+    # several files share a dictionary, so workers race make for it; the lock
+    # is per target to keep unrelated builds parallel
+    lockf = open(str(currpath.join("cpp", targetname + "Dict.lock")), "a")
+    try:
+        if fcntl is not None:
+            fcntl.flock(lockf, fcntl.LOCK_EX)
+        popen = subprocess.Popen(
+            ["make", targetname + "Dict.so"],
+            cwd=str(currpath),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        stdout, _ = popen.communicate()
+    finally:
+        lockf.close()
     if popen.returncode:
         raise OSError("'make' failed:\n%s" % (stdout,))
 

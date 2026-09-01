@@ -26,7 +26,7 @@ class TestCPP11FEATURES:
 
         cls.cpp11features = cppjit.load_reflection_info(cls.test_dct)
 
-    @mark.xfail(run=False, condition=IS_LINUX_ARM, reason="Crashes pytest on Linux ARM")
+    @mark.xfail(condition=IS_LINUX_ARM, run=False, reason="Crashes pytest on Linux ARM")
     def test01_smart_ptr(self):
         """Usage and access of std::shared/unique_ptr<>"""
 
@@ -60,8 +60,8 @@ class TestCPP11FEATURES:
             assert TestSmartPtr.s_counter == 0
 
     @mark.xfail(
-        run=False,
         condition=IS_LINUX_ARM and IS_VALGRIND,
+        run=False,
         reason="Valgrind issues on ARM",
     )
     def test02_smart_ptr_construction(self):
@@ -92,7 +92,7 @@ class TestCPP11FEATURES:
             gc.collect()
             assert TestSmartPtr.s_counter == 0
 
-    @mark.xfail(run=False, condition=IS_LINUX and IS_VALGRIND, reason="Valgrind issue")
+    @mark.xfail(condition=IS_LINUX and IS_VALGRIND, run=False, reason="Valgrind issue")
     def test03_smart_ptr_memory_handling(self):
         """Test shared/unique pointer memory ownership"""
 
@@ -124,7 +124,7 @@ class TestCPP11FEATURES:
             gc.collect()
             assert TestSmartPtr.s_counter == 0
 
-    @mark.xfail(run=False, condition=IS_VALGRIND, reason="Crashes on Valgrind")
+    @mark.xfail(condition=IS_VALGRIND, run=False, reason="Crashes on Valgrind")
     def test04_shared_ptr_passing(self):
         """Ability to pass shared_ptr<Derived> through shared_ptr<Base>"""
 
@@ -444,7 +444,7 @@ class TestCPP11FEATURES:
             assert hash(sw) == 17
             assert hash(sw) == 17
 
-    @mark.xfail
+    @mark.xfail(reason="plain pointer does not convert to a shared_ptr argument")
     def test14_shared_ptr_passing(self):
         """Ability to pass normal pointers through shared_ptr by value"""
 
@@ -498,7 +498,7 @@ class TestCPP11FEATURES:
         with raises(ValueError):  # not an RValue
             cppjit.gbl.UniqueTempl.returnptr[int](uptr_in)
 
-    @mark.xfail(IS_MAC, reason="Fails on Mac platforms")
+    @mark.xfail(condition=IS_MAC, reason="Fails on Mac platforms")
     def test16_unique_ptr_moves(self):
         """std::unique_ptr requires moves"""
 
@@ -590,8 +590,8 @@ class TestCPP11FEATURES:
         assert p1 is p2
 
     @mark.xfail(
-        run=False,
         condition=IS_LINUX_ARM and IS_VALGRIND,
+        run=False,
         reason="Valgrind issues on ARM",
     )
     def test19_smartptr_from_callback(self):

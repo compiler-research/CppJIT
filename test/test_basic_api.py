@@ -2,8 +2,8 @@ import shutil
 import tempfile
 
 import py
-from pytest import mark, raises
-from support import IS_MAC, setup_make
+from pytest import raises
+from support import setup_make
 
 # reuse the example01
 currpath = py.path.local(__file__).dirpath()
@@ -15,7 +15,6 @@ def setup_module(mod):
 
 
 class TestBASICAPI:
-    @mark.xfail(IS_MAC, reason="evaluate is broken on macos")
     def test01_evaluate(self):
         import cppjit
 
@@ -34,10 +33,6 @@ class TestBASICAPI:
         x = 42
         assert cppjit.evaluate(str(x)) == x
 
-    @mark.xfail(
-        IS_MAC,
-        reason="unidentified IsDebugOutputEnabled issue on macos, also failing in test_fragile",
-    )
     def test02_cppdef(self):
         import cppjit
 

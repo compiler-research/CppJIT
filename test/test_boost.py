@@ -50,7 +50,7 @@ class TestBOOSTANY:
 
         assert std.list[any]
 
-    @mark.xfail(run=False)
+    @mark.xfail(run=False, reason="boost::any casting crashes")
     def test02_any_usage(self):
         """boost::any assignment and casting"""
 
@@ -125,7 +125,7 @@ class TestBOOSTVARIANT:
         cppjit.include("boost/variant/variant.hpp")
         cppjit.include("boost/variant/get.hpp")
 
-    @mark.xfail(run=False)
+    @mark.xfail(run=False, reason="boost::variant access crashes")
     def test01_variant_usage(self):
         """boost::variant usage"""
 

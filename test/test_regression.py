@@ -30,7 +30,7 @@ class TestREGRESSION:
 
         pydoc.pager = stringpager
 
-    @mark.xfail
+    @mark.xfail(reason="pydoc rendering of KDcrawIface fails")
     def test01_kdcraw(self):
         """Doc strings for KDcrawIface (used to crash)."""
 
@@ -220,7 +220,7 @@ class TestREGRESSION:
 
         assert sys.getrefcount(x) == old_refcnt
 
-    @mark.xfail(run=False, condition=IS_MAC and IS_CLING, reason="Crahes on OSX-Cling")
+    @mark.xfail(condition=IS_MAC and IS_CLING, run=False, reason="Crahes on OSX-Cling")
     def test08_typedef_identity(self):
         """Nested typedefs should retain identity"""
 
@@ -262,7 +262,7 @@ class TestREGRESSION:
         cppjit.cppdef(code)
         cppjit.gbl.some_foo_calling_python()
 
-    @mark.xfail(run=False, condition=IS_CLING, reason="Crashes on Cling")
+    @mark.xfail(condition=IS_CLING, run=False, reason="Crashes on Cling")
     def test10_enum_in_global_space(self):
         """Enum declared in search.h did not appear in global space"""
 
@@ -383,7 +383,6 @@ class TestREGRESSION:
         f = sds.Foo()
         assert f.bar.x == 5
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test15_vector_vs_initializer_list(self):
         """Prefer vector in template and initializer_list in formal arguments"""
 
@@ -556,7 +555,6 @@ class TestREGRESSION:
 
         assert obj.getter() == "c"
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test21_temporaries_and_vector(self):
         """Extend a life line to references into a vector if needed"""
 
@@ -569,7 +567,6 @@ class TestREGRESSION:
         l = [e for e in cppjit.gbl.get_some_temporary_vector()]
         assert l == ["x", "y", "z"]
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test22_initializer_list_and_temporary(self):
         """Conversion rules when selecting intializer_list v.s. temporary"""
 
@@ -824,8 +821,8 @@ class TestREGRESSION:
         assert not null
 
     @mark.xfail(
-        run=False,
         condition=(IS_CLING and IS_MAC) or IS_MAC_ARM,
+        run=False,
         reason="Dispatcher fix #53 introduces canonical types with std:: namespace that introduces OS X exceptions similar to test_stltypes",
     )
     def test29_callback_pointer_values(self):
@@ -1055,9 +1052,7 @@ class TestREGRESSION:
         v = cppjit.gbl.std.vector[int]()
         str(v)
 
-    @mark.xfail(
-        run=IS_CLANG_REPL, condition=IS_MAC or IS_CLING, reason="Crashes on Cling"
-    )
+    @mark.xfail(condition=IS_CLING, run=False, reason="Crashes on Cling")
     def test35_filesytem(self):
         """Static path object used to crash on destruction"""
 
@@ -1132,7 +1127,7 @@ class TestREGRESSION:
             assert cppjit.addressof(res) == cppjit.addressof(arr)
 
     @mark.xfail(
-        run=False, condition=(IS_MAC and IS_CLING), reason="Crashes on OS X Cling"
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OS X Cling"
     )
     def test38_char16_arrays(self):
         """Access to fixed-size char16 arrays as data members"""
@@ -1194,7 +1189,6 @@ class TestREGRESSION:
             assert ai.name[:5] == "hello"
         cppjit.ll.array_delete(aa)
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test39_vector_of_pointers_conversion(self):
         """vector<T*>'s const T*& used to be T**, now T*"""
 
@@ -1270,7 +1264,7 @@ class TestREGRESSION:
         assert type(list(vec2)[0]) == Base2
         assert len([d for d in vec3 if isinstance(d, Derived3)]) == 1
 
-    @mark.xfail(run=False, condition=not IS_CLANG_REPL, reason="Crashes with Cling")
+    @mark.xfail(condition=not IS_CLANG_REPL, run=False, reason="Crashes with Cling")
     def test40_explicit_initializer_list(self):
         """Construct and pass an explicit initializer list"""
 
@@ -1439,8 +1433,8 @@ class TestREGRESSION:
         assert cppjit.gbl.cppjit.interop.ResolveName("cmy_custom_type_t") == "const int"
 
     @mark.xfail(
-        run=False,
         condition=IS_MAC_ARM,
+        run=False,
         reason="Crashes with exception not being caught on Apple Silicon",
     )
     def test46_exception_narrowing(self):

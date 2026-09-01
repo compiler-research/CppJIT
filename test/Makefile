@@ -29,8 +29,9 @@ ifeq ($(PLATFORM),Darwin)
   cppflags+=-dynamiclib -single_module -undefined dynamic_lookup -Wno-delete-non-virtual-dtor
 endif
 
-cpp/%Dict.so: cpp/%.cxx
-	$(CXX) $(cppflags) -shared -o $@ $^
+# a worker can load the library while another rebuilds it, so publish it whole
+cpp/%Dict.so: cpp/%.cxx cpp/%.h
+	$(CXX) $(cppflags) -shared -o $@.$$$$.tmp $< && mv -f $@.$$$$.tmp $@
 
 # convenience: `make datatypesDict.so` builds cpp/datatypesDict.so
 %Dict.so: cpp/%Dict.so ;
@@ -41,4 +42,4 @@ test:
 	pytest test_*.py
 
 clean:
-	-rm -f $(dicts)
+	-rm -f $(dicts) cpp/*.tmp cpp/*.lock

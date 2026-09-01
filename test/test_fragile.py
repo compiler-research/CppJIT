@@ -21,6 +21,19 @@ def setup_module(mod):
     setup_make("fragile")
 
 
+def has_asan_interface():
+    import cppjit
+
+    return (
+        cppjit.evaluate("""#if __has_include(<sanitizer/asan_interface.h>)
+                        true
+                        #else
+                        false
+                        #endif\n""")
+        == 1
+    )
+
+
 class TestFRAGILE:
     def setup_class(cls):
         cls.test_dct = test_dct
@@ -500,7 +513,6 @@ class TestFRAGILE:
         assert "ESysConstants" not in dd
         assert "kDoRed" not in dd
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test20_capture_output(self):
         """Capture cerr into a string"""
 
@@ -592,7 +604,10 @@ class TestFRAGILE:
         cppjit.set_debug(False)
         assert cppjit.gbl.Cpp.IsDebugOutputEnabled() == False
 
-    @mark.xfail(condition=IS_LINUX, reason="Fails on Ubuntu")
+    @mark.xfail(
+        condition=IS_LINUX and not has_asan_interface(),
+        reason="sanitizer/asan_interface.h not available",
+    )
     def test24_asan(self):
         """Check availability of ASAN with gcc"""
 
@@ -603,7 +618,7 @@ class TestFRAGILE:
 
         cppjit.include("sanitizer/asan_interface.h")
 
-    @mark.xfail
+    @mark.xfail(reason="cppdef of invalid code does not raise SyntaxError")
     def test25_cppdef_error_reporting(self):
         """Check error reporting of cppjit.cppdef"""
 

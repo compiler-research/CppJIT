@@ -54,6 +54,7 @@ environment = { CMAKE_ARGS = "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm -DClang_DIR=/o
 [tool.pytest.ini_options]
 testpaths = ["test"]
 pythonpath = ["test"]
+xfail_strict = true
 
 [tool.ruff]
 show-fixes = true

@@ -295,7 +295,7 @@ class TestTEMPLATES:
         assert round(RTTest2[int](1, 3.1).m_double - 4.1, 8) == 0.0
         assert round(RTTest2[int]().m_double + 1.0, 8) == 0.0
 
-    @mark.xfail(run=False, condition=IS_CLING, reason="Crashes on Cling")
+    @mark.xfail(condition=IS_CLING, run=False, reason="Crashes on Cling")
     def test12_template_aliases(self):
         """Access to templates made available with 'using'"""
 
@@ -472,7 +472,6 @@ class TestTEMPLATES:
         b.b_T["int"](1, 1.0, "a")
         assert get_tn(ns).find("int(some_variadic::B::*)(int&&,double&&,std::") == 0
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OSX")
     def test17_empty_body(self):
         """Use of templated function with empty body"""
 
@@ -617,8 +616,8 @@ class TestTEMPLATES:
         v[0] = 1  # used to throw TypeError
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM and IS_CLING,
+        run=False,
         reason="Crashes on Valgind Cling-ARM",
     )
     def test24_stdfunction_templated_arguments(self):
@@ -648,8 +647,8 @@ class TestTEMPLATES:
         assert cppjit.gbl.std.function["double(std::vector<double>)"]
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM,
+        run=False,
         reason="Crashes on Valgrind-ARM",
     )
     def test25_stdfunction_ref_and_ptr_args(self):
@@ -838,8 +837,8 @@ class TestTEMPLATES:
         assert ns.FS("i", ns.ST.TI.I32, ns.FS.R.EQ, 10)
 
     @mark.xfail(
-        run=False,
         condition=IS_VALGRIND and IS_LINUX_ARM,
+        run=False,
         reason="Crashes on Valgrind-ARM",
     )
     def test29_function_ptr_as_template_arg(self):
@@ -952,7 +951,7 @@ class TestTEMPLATES:
 
         ns.Templated()  # used to crash
 
-    @mark.xfail(run=False, condition=IS_CLING, reason="Crashed with Cling")
+    @mark.xfail(condition=IS_CLING, run=False, reason="Crashed with Cling")
     def test31_ltlt_in_template_name(self):
         """Verify lookup of template names with << in the name"""
 
@@ -1198,7 +1197,7 @@ class TestTEMPLATES:
                         getattr(run_n, t)
 
     @mark.xfail(
-        run=False, condition=IS_MAC and IS_CLING, reason="Crashes on OS X + Cling"
+        condition=IS_MAC and IS_CLING, run=False, reason="Crashes on OS X + Cling"
     )
     def test33_using_template_argument(self):
         """`using` type as template argument"""
@@ -1459,7 +1458,7 @@ class TestTEMPLATED_TYPEDEFS:
 
         cls.templates = cppjit.load_reflection_info(cls.test_dct)
 
-    @mark.xfail
+    @mark.xfail(reason="using-typedef resolution drops non-type template args")
     def test01_using(self):
         """Test presence and validity of using typedefs"""
 

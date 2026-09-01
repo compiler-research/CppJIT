@@ -1,6 +1,5 @@
 import py
-from pytest import mark
-from support import IS_MAC, setup_make
+from support import setup_make
 
 currpath = py.path.local(__file__).dirpath()
 test_dct = str(currpath.join("cpp/std_streamsDict"))
@@ -34,7 +33,6 @@ class TestSTDStreams:
 
         assert cppjit.gbl.std.cout is not None
 
-    @mark.xfail(condition=IS_MAC, reason="Fails on OS X")
     def test03_consistent_naming_if_char_traits(self):
         """Naming consistency if char_traits"""
 

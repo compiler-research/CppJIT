@@ -491,7 +491,7 @@ class TestNUMBA:
         assert c.value == y + k
 
     @mark.xfail(
-        run=False, condition=IS_LINUX_ARM, reason="Crash in llvmlite on Linux ARM"
+        condition=IS_LINUX_ARM, run=False, reason="Crash in llvmlite on Linux ARM"
     )
     def test12_std_vector_pass_by_ref(self):
         """Numba-JITing of a method that performs scalar addition to a std::vector initialised through pointers"""

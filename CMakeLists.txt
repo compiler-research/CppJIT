@@ -142,7 +142,7 @@ target_include_directories(cppjit PRIVATE
 )
 
 target_compile_options(cppjit PRIVATE
-    -Wall -Wextra -Wno-strict-aliasing -Wno-register -Werror
+    -Wall -Wextra -Wno-strict-aliasing -Wno-register
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX)

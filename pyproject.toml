@@ -25,6 +25,7 @@ minimum-version = "build-system.requires"
 wheel.install-dir = "."
 wheel.packages = ["python/cppjit"]
 cmake.build-type = "Release"
+sdist.exclude = [".github", ".gitignore", ".clang-format"]
 
 [[tool.dynamic-metadata]]
 provider = "scikit_build_core.metadata.regex"
@@ -32,23 +33,28 @@ field = "version"
 input = "python/cppjit/_version.py"
 
 [tool.cibuildwheel]
+# cp314t needs a free-threading audit first; cp315 joins at its release.
 build = ["cp312-*", "cp313-*", "cp314-*"]
 skip = ["*-musllinux*"]
 build-verbosity = 1
+audit-requires = ["twine"]
+audit-command = "twine check {wheel}"
 test-sources = ["test", "requirements.txt", ".github/wheel_smoke.py"]
 test-command = "python .github/wheel_smoke.py"
+# imports must resolve from the installed wheel, not the checkout
+test-environment = { PYTHONSAFEPATH = "1" }
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
 manylinux-x86_64-image = "manylinux_2_28"
 # /opt/llvm is staged on the runner by wheels.yml.
-container-engine = { name = "docker", create-args = ["--volume=/opt/llvm:/opt/llvm"] }
+container-engine = { name = "docker", create-args = ["--volume=/opt/llvm:/opt/llvm"], disable-host-mount = true }
 environment = { CMAKE_ARGS = "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm -DClang_DIR=/opt/llvm/lib/cmake/clang" }
 
 [tool.cibuildwheel.macos]
 archs = ["arm64"]
-before-test = "brew install eigen boost"
-test-command = "python -m pip install -r requirements.txt && python .github/wheel_smoke.py && cd test && make -j$(sysctl -n hw.ncpu) PYTHON=python && CPPINTEROP_EXTRA_INTERPRETER_ARGS=-std=c++20 python -m pytest -ra"
+before-test = "brew install eigen boost && python -m pip install -r {project}/requirements.txt"
+test-command = "python .github/wheel_smoke.py && cd test && make -j$(sysctl -n hw.ncpu) PYTHON=python && CPPINTEROP_EXTRA_INTERPRETER_ARGS=-std=c++20 python -m pytest -ra"
 environment = { CMAKE_ARGS = "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm -DClang_DIR=/opt/llvm/lib/cmake/clang", MACOSX_DEPLOYMENT_TARGET = "14.0" }
 
 [tool.pytest.ini_options]

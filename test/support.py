@@ -1,10 +1,12 @@
 from __future__ import print_function
 
 import os
+import shutil
 import subprocess
 import sys
 
 import py
+import pytest
 
 try:
     import fcntl
@@ -13,10 +15,28 @@ except ImportError:  # Windows: no concurrent make workflow to serialize
 
 currpath = py.path.local(__file__).dirpath()
 
+_NO_TOOLCHAIN = "no make and C++ compiler to build the test dictionaries"
+# a build system that supplies the dictionaries itself sets CPPJIT_TEST_SKIP_MAKE
+_PREBUILT = bool(os.getenv("CPPJIT_TEST_SKIP_MAKE", False))
+# otherwise test/Makefile builds them with make and its default $(CXX)
+_HAS_TOOLCHAIN = bool(
+    shutil.which("make") and shutil.which(os.environ.get("CXX") or "g++")
+)
 
-def setup_make(targetname):
-    if os.getenv("CPPJIT_TEST_SKIP_MAKE", False):
+# for a test that loads a dictionary in a module whose other tests need none
+needs_dictionary = pytest.mark.skipif(
+    not (_PREBUILT or _HAS_TOOLCHAIN), reason=_NO_TOOLCHAIN
+)
+
+
+def setup_make(targetname, optional=False):
+    if _PREBUILT:
         return
+
+    if not _HAS_TOOLCHAIN:
+        if optional:
+            return
+        pytest.skip(_NO_TOOLCHAIN, allow_module_level=True)
 
     # several files share a dictionary, so workers race make for it; the lock
     # is per target to keep unrelated builds parallel

@@ -129,6 +129,8 @@ target_compile_definitions(cppjit PRIVATE
     CPPINTEROP_INCLUDE_DIR="interop/include"
     CPPJIT_CLANG_MAJOR="${LLVM_VERSION_MAJOR}"
     CPPJIT_CLANG_INCLUDE_DIR="interop/lib/clang/${LLVM_VERSION_MAJOR}"
+    # cling-only code paths need the flavor at compile time, not just in cmake
+    $<$<BOOL:${CPPJIT_USE_CLING}>:CPPJIT_USE_CLING>
 )
 
 target_include_directories(cppjit PRIVATE

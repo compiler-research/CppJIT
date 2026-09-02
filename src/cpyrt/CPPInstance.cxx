@@ -869,23 +869,30 @@ static PyObject* op_str(CPPInstance* self) {
   }
 
   // 2. Cling's pretty printing (not done through backend for performance
-  // reasons)
+  // reasons). Cling only: clang-repl has no cling namespace to look up, so the
+  // whole path compiles out and str() falls through to the generic repr.
+#ifdef CPPJIT_USE_CLING
   if (!ScopeFlagCheck(self, CPPScope::kNoPrettyPrint)) {
     static PyObject* printValue = nullptr;
     if (!printValue) {
       PyObject* gbl =
           PyDict_GetItemString(PySys_GetObject((char*)"modules"), "cppjit.gbl");
-      PyObject* cl = PyObject_GetAttrString(gbl, (char*)"cling");
-      printValue = PyObject_GetAttrString(cl, (char*)"printValue");
-      Py_DECREF(cl);
+      // no cling namespace exists unless user code declares one
+      PyObject* cl =
+          gbl ? PyObject_GetAttrString(gbl, (char*)"cling") : nullptr;
+      printValue =
+          cl ? PyObject_GetAttrString(cl, (char*)"printValue") : nullptr;
+      Py_XDECREF(cl);
       // gbl is borrowed
       if (printValue) {
         Py_DECREF(printValue); // make borrowed
         if (!PyCallable_Check(printValue))
           printValue = nullptr; // unusable ...
       }
-      if (!printValue) // unlikely
+      if (!printValue) {
+        PyErr_Clear();
         ScopeFlagSet(self, CPPScope::kNoPrettyPrint);
+      }
     }
 
     if (printValue) {
@@ -929,6 +936,7 @@ static PyObject* op_str(CPPInstance* self) {
     // if not available/specialized, don't try again
     ScopeFlagSet(self, CPPScope::kNoPrettyPrint);
   }
+#endif // CPPJIT_USE_CLING
 
   // 3. Generic printing as done in op_repr
   return op_repr(self);

@@ -36,8 +36,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, label: manylinux-x86_64, arch: x86_64 }
-          - { os: macos-26,     label: macosx-arm64,     arch: arm64 }
+          - { os: ubuntu-24.04,     label: manylinux-x86_64,  arch: x86_64 }
+          - { os: ubuntu-24.04-arm, label: manylinux-aarch64, arch: aarch64 }
+          - { os: macos-26,         label: macosx-arm64,      arch: arm64 }
+          - { os: macos-26-intel,   label: macosx-x86_64,     arch: x86_64 }
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -53,7 +55,7 @@ jobs:
           version: '21.1.8'
           os: ${{ matrix.os }}
           arch: ${{ matrix.arch }}
-          ref: b760e4c171961786b7b20e2cc514302df5373eef
+          ref: 02f380b2e46746cd1c948c085894b8594a867fba
 
       - name: Stage the toolchain at /opt/llvm
         env:
@@ -152,7 +154,7 @@ jobs:
           version: '21.1.8'
           os: ubuntu-24.04
           arch: x86_64
-          ref: b760e4c171961786b7b20e2cc514302df5373eef
+          ref: 02f380b2e46746cd1c948c085894b8594a867fba
 
       - uses: actions/download-artifact@v8
         with:

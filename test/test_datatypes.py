@@ -21,10 +21,11 @@ class TestDATATYPES:
         cls.N = 5  # cppjit.gbl.N
 
     @mark.xfail(
-        condition=IS_CPP23,
+        condition=IS_CPP23 and not IS_MAC,
         reason="since C++23 (P1467) the narrowing std::complex<double> to "
         "complex<float> constructor is explicit, breaking the implicit "
-        "conversion of Python complex arguments",
+        "conversion of Python complex arguments; libc++ does not implement "
+        "P1467 yet, so the conversion still succeeds on macOS",
     )
     def test01_instance_data_read_access(self):
         """Read access to instance public data and verify values"""

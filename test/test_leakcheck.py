@@ -2,7 +2,7 @@ import os
 import sys
 
 from pytest import mark, skip
-from support import IS_MAC
+from support import IS_MAC, IS_MAC_X86
 
 nopsutil = False
 try:
@@ -264,6 +264,11 @@ class TestLEAKCHECK:
         obj = ns.Leaker()
         self.check_func(obj, "leak_string", 2048)
 
+    @mark.xfail(
+        condition=IS_MAC_X86,
+        strict=False,
+        reason="RSS threshold intermittently trips on the Intel-mac runners",
+    )
     def test08_list_creation(self):
         """Leak check of creating a python list from an std::list"""
 

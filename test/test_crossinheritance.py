@@ -239,11 +239,13 @@ class TestCROSSINHERITANCE:
         assert CX.IBase4.call_get_value(c1) == 17
         assert CX.IBase4.call_get_value(c2) == 27
 
-    @mark.xfail(condition=IS_LINUX_ARM, reason="Fails with ModuleNotFoundError")
     def test07_templated_base(self):
         """Derive from a base class that is instantiated from a template"""
 
-        from cppjit.gbl.CrossInheritance import TBase1, TBase1_I, TDerived1
+        import cppjit
+
+        CX = cppjit.gbl.CrossInheritance
+        TBase1, TBase1_I, TDerived1 = CX.TBase1, CX.TBase1_I, CX.TDerived1
 
         class TPyDerived1(TBase1_I):
             def __init__(self):

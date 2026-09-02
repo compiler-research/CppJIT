@@ -1675,7 +1675,6 @@ class TestCROSSINHERITANCE:
         c = C()
         assert c.func() == 3
 
-    @mark.xfail(reason="deriving from a ctor-less base does not raise TypeError")
     def test34_no_ctors_in_base(self):
         """Base classes with no constructors"""
 

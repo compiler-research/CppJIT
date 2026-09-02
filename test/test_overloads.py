@@ -435,3 +435,43 @@ class TestOVERLOADS:
         h = ns.make_handle()
         assert ns.kept_value(h)
         assert ns.kept_value(ns.make_handle())
+
+    def test17_func_overloads_types_reports_constness(self):
+        """Verify func_overloads_types carries per-overload const-qualification."""
+
+        import cppjit
+
+        cppjit.cppdef("""
+        namespace OverloadConstness {
+        struct Probe {
+            int v = 0;
+            int get_const() const { return v; }
+            void set_nonconst(int x) { v = x; }
+            int mixed(int x) const { return x + v; }
+            double mixed(double x) { return x; }
+            static int static_fn(int x) { return x; }
+        };
+        }""")
+
+        cls = cppjit.gbl.OverloadConstness.Probe
+
+        def constness(name):
+            return {
+                sig: info["is_const"]
+                for sig, info in cls.__dict__[name].func_overloads_types.items()
+            }
+
+        assert constness("get_const") == {
+            "int OverloadConstness::Probe::get_const()": True
+        }
+        assert constness("set_nonconst") == {
+            "void OverloadConstness::Probe::set_nonconst(int x)": False
+        }
+        # constness is per overload, not per method name
+        assert constness("mixed") == {
+            "int OverloadConstness::Probe::mixed(int x)": True,
+            "double OverloadConstness::Probe::mixed(double x)": False,
+        }
+        assert constness("static_fn") == {
+            "static int OverloadConstness::Probe::static_fn(int x)": False
+        }

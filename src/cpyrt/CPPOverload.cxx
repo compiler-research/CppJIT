@@ -300,6 +300,9 @@ static PyObject* mp_func_overloads_names(CPPOverload* pymeth) {
  * ('float',), 'return_type': 'float'}, 'int ::foo(int a)': {'input_types':
  * ('int',), 'return_type': 'int'}, 'int ::foo(int a, float b)': {'input_types':
  * ('int', 'float'), 'return_type': 'int'}}
+ *
+ * Each overload's value dict also carries 'is_const': the method's own
+ * const-qualification (always False for free functions and static methods).
  */
 static PyObject* mp_func_overloads_types(CPPOverload* pymeth) {
 

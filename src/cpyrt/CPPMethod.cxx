@@ -1165,6 +1165,11 @@ PyObject* cpyrt::CPPMethod::GetSignatureTypes() {
   PyDict_SetItem(signature_types_dict, cpyrt_PyText_FromString("input_types"),
                  parameter_types);
 
+  // Const-qualification of the method itself (always false for free
+  // functions and static methods).
+  PyDict_SetItem(signature_types_dict, cpyrt_PyText_FromString("is_const"),
+                 PyBool_FromLong(IsConst()));
+
   return signature_types_dict;
 }
 

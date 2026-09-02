@@ -52,7 +52,9 @@ struct Initcpyrt_NoneType_t {
     cpyrt_NoneType.tp_repr = Py_TYPE(Py_None)->tp_repr;
     cpyrt_NoneType.tp_richcompare =
         (richcmpfunc)&Initcpyrt_NoneType_t::RichCompare;
-    cpyrt_NoneType.tp_hash = (hashfunc)&Initcpyrt_NoneType_t::PtrHash;
+    
+    // Assigned directly without a cast
+    cpyrt_NoneType.tp_hash = PtrHash;
 
     cpyrt_NoneType.tp_as_mapping = &cpyrt_NoneType_mapping;
 
@@ -60,7 +62,8 @@ struct Initcpyrt_NoneType_t {
   }
 
   static void DeAlloc(PyObject* pyobj) { Py_TYPE(pyobj)->tp_free(pyobj); }
-  static int PtrHash(PyObject* pyobj) { return (int)ptrdiff_t(pyobj); }
+  // Return Py_hash_t instead of int to match hashfunc signature natively
+  static Py_hash_t PtrHash(PyObject* pyobj) { return (Py_hash_t)pyobj; }
 
   static PyObject* RichCompare(PyObject*, PyObject* other, int opid) {
     return PyObject_RichCompare(other, Py_None, opid);

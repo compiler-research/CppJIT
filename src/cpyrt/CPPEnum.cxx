@@ -139,7 +139,7 @@ static PyTypeObject* GetCTypesType(const std::string& cppname) {
   return (PyTypeObject*)PyObject_GetAttrString(ctmod, nn->second.c_str());
 }
 
-static PyObject* enum_ctype(PyObject* cls, PyObject* args, PyObject* kwds) {
+static PyObject* enum_ctype(PyObject* cls, PyObject* args) {
   PyObject* pyres = PyObject_GetAttr(cls, cpyrt::PyStrings::gUnderlying);
   if (!pyres)
     PyErr_Clear();
@@ -149,7 +149,7 @@ static PyObject* enum_ctype(PyObject* cls, PyObject* args, PyObject* kwds) {
   if (!ct)
     return nullptr;
 
-  return PyType_Type.tp_call((PyObject*)ct, args, kwds);
+  return PyType_Type.tp_call((PyObject*)ct, args, nullptr);
 }
 
 //- creation -----------------------------------------------------------------
@@ -213,7 +213,7 @@ cpyrt::CPPEnum* cpyrt::CPPEnum_New(const std::string& name,
 
     // add pythonizations
     Utility::AddToClass((PyObject*)Py_TYPE(pyenum), "__ctype__",
-                        (PyCFunction)enum_ctype, METH_VARARGS | METH_KEYWORDS);
+                        enum_ctype, METH_VARARGS);
     ((PyTypeObject*)pyenum)->tp_repr = enum_repr;
     ((PyTypeObject*)pyenum)->tp_str = ((PyTypeObject*)pyside_type)->tp_repr;
 

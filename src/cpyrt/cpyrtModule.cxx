@@ -593,7 +593,7 @@ static PyObject* addressof(PyObject* /* dummy */, PyObject* args,
 }
 
 //----------------------------------------------------------------------------
-static PyObject* AsCObject(PyObject* /* unused */, PyObject* args,
+static PyObject* AsCObject(PyObject* args,
                            PyObject* kwds) {
   // Return object proxy as an opaque CObject.
   void* addr = GetCPPInstanceAddress("as_cobject", args, kwds);
@@ -603,7 +603,7 @@ static PyObject* AsCObject(PyObject* /* unused */, PyObject* args,
 }
 
 //----------------------------------------------------------------------------
-static PyObject* AsCapsule(PyObject* /* unused */, PyObject* args,
+static PyObject* AsCapsule(PyObject* args,
                            PyObject* kwds) {
   // Return object proxy as an opaque PyCapsule.
   void* addr = GetCPPInstanceAddress("as_capsule", args, kwds);
@@ -613,7 +613,7 @@ static PyObject* AsCapsule(PyObject* /* unused */, PyObject* args,
 }
 
 //----------------------------------------------------------------------------
-static PyObject* AsCTypes(PyObject* /* unused */, PyObject* args,
+static PyObject* AsCTypes(PyObject* args,
                           PyObject* kwds) {
   // Return object proxy as a ctypes c_void_p
   void* addr = GetCPPInstanceAddress("as_ctypes", args, kwds);
@@ -677,7 +677,7 @@ static PyObject* AsMemoryView(PyObject* /* unused */, PyObject* pyobject) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* BindObject(PyObject*, PyObject* args, PyObject* kwds) {
+static PyObject* BindObject(PyObject* args, PyObject* kwds) {
   // From a long representing an address or a PyCapsule/CObject, bind to a
   // class.
   Py_ssize_t argc = PyTuple_GET_SIZE(args);

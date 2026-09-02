@@ -22,11 +22,11 @@ dicts = $(addprefix cpp/,$(addsuffix Dict.so,$(dictnames)))
 all : $(dicts)
 
 PYTHON ?= python3
-cppflags= -std=c++17 -O3 -fPIC -I$(shell $(PYTHON) -c 'import sysconfig as sc; print(sc.get_config_var("INCLUDEPY"))') -Wno-register
+cppflags= -Wall -std=c++17 -O3 -fPIC -I$(shell $(PYTHON) -c 'import sysconfig as sc; print(sc.get_config_var("INCLUDEPY"))') -Wno-register
 
 PLATFORM := $(shell uname -s)
 ifeq ($(PLATFORM),Darwin)
-  cppflags+=-dynamiclib -single_module -undefined dynamic_lookup -Wno-delete-non-virtual-dtor
+  cppflags+=-dynamiclib -undefined dynamic_lookup -Wno-delete-non-virtual-dtor
 endif
 
 # a worker can load the library while another rebuilds it, so publish it whole

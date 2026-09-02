@@ -623,7 +623,8 @@ static PyObject* meta_reflex(CPPScope* klass, PyObject* args) {
 // quite what I'd expected of it, so the following pulls in the internal code
 #include "PyObjectDir27.inc"
 
-static PyObject* meta_dir(CPPScope* klass) {
+static PyObject* meta_dir(PyObject* self, PyObject*) {
+  CPPScope* klass = (CPPScope*)self;
   // Collect a list of everything (currently) available in the namespace.
   // The backend can filter by returning empty strings. Special care is
   // taken for functions, which need not be unique (overloading).
@@ -673,7 +674,7 @@ static PyObject* meta_dir(CPPScope* klass) {
 static PyMethodDef meta_methods[] = {
     {(char*)"__cpp_reflex__", (PyCFunction)meta_reflex, METH_VARARGS,
      (char*)"C++ datamember reflection information"},
-    {(char*)"__dir__", (PyCFunction)meta_dir, METH_NOARGS, nullptr},
+    {(char*)"__dir__", meta_dir, METH_NOARGS, nullptr},
     {(char*)nullptr, nullptr, 0, nullptr}};
 
 //-----------------------------------------------------------------------------

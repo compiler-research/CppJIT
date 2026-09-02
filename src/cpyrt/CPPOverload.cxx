@@ -218,18 +218,20 @@ static inline PyObject* HandleReturn(CPPOverload* pymeth, CPPInstance* im_self,
 }
 
 //= cpyrt method proxy object behaviour ===================================
-static PyObject* mp_name(CPPOverload* pymeth, void*) {
+static PyObject* mp_name(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   return cpyrt_PyText_FromString(pymeth->GetName().c_str());
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_module(CPPOverload* /* pymeth */, void*) {
+static PyObject* mp_module(PyObject*, void*) {
   Py_INCREF(PyStrings::gThisModule);
   return PyStrings::gThisModule;
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_doc(CPPOverload* pymeth, void*) {
+static PyObject* mp_doc(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   if (pymeth->fMethodInfo->fDoc) {
     Py_INCREF(pymeth->fMethodInfo->fDoc);
     return pymeth->fMethodInfo->fDoc;
@@ -259,7 +261,8 @@ static PyObject* mp_doc(CPPOverload* pymeth, void*) {
   return doc;
 }
 
-static int mp_doc_set(CPPOverload* pymeth, PyObject* val, void*) {
+static int mp_doc_set(PyObject* self, PyObject* val, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   Py_XDECREF(pymeth->fMethodInfo->fDoc);
   Py_INCREF(val);
   pymeth->fMethodInfo->fDoc = val;
@@ -276,8 +279,8 @@ static int mp_doc_set(CPPOverload* pymeth, PyObject* val, void*) {
  *  'int ::foo(int a)': ('a',),
  *  'int ::foo(int a, float b)': ('a', 'b')}
  */
-static PyObject* mp_func_overloads_names(CPPOverload* pymeth) {
-
+static PyObject* mp_func_overloads_names(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   const CPPOverload::Methods_t& methods = pymeth->fMethodInfo->fMethods;
 
   PyObject* overloads_names_dict = PyDict_New();
@@ -304,8 +307,8 @@ static PyObject* mp_func_overloads_names(CPPOverload* pymeth) {
  * Each overload's value dict also carries 'is_const': the method's own
  * const-qualification (always False for free functions and static methods).
  */
-static PyObject* mp_func_overloads_types(CPPOverload* pymeth) {
-
+static PyObject* mp_func_overloads_types(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   const CPPOverload::Methods_t& methods = pymeth->fMethodInfo->fMethods;
 
   PyObject* overloads_types_dict = PyDict_New();
@@ -319,7 +322,8 @@ static PyObject* mp_func_overloads_types(CPPOverload* pymeth) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_meth_func(CPPOverload* pymeth, void*) {
+static PyObject* mp_meth_func(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Create a new method proxy to be returned.
   CPPOverload* newPyMeth =
       (CPPOverload*)CPPOverload_Type.tp_alloc(&CPPOverload_Type, 0);
@@ -336,7 +340,8 @@ static PyObject* mp_meth_func(CPPOverload* pymeth, void*) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_meth_self(CPPOverload* pymeth, void*) {
+static PyObject* mp_meth_self(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Return the bound self, if any; in case of pseudo-function role, pretend
   // that the data member im_self does not exist.
   if (IsPseudoFunc(pymeth)) {
@@ -353,7 +358,8 @@ static PyObject* mp_meth_self(CPPOverload* pymeth, void*) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_meth_class(CPPOverload* pymeth, void*) {
+static PyObject* mp_meth_class(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Return scoping class; in case of pseudo-function role, pretend that there
   // is no encompassing class (i.e. global scope).
   if (!IsPseudoFunc(pymeth) && pymeth->fMethodInfo->fMethods.size()) {
@@ -369,13 +375,13 @@ static PyObject* mp_meth_class(CPPOverload* pymeth, void*) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_func_closure(CPPOverload* /* pymeth */, void*) {
+static PyObject* mp_func_closure(PyObject*, void*) {
   // Stub only, to fill out the python function interface.
   Py_RETURN_NONE;
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_func_code(CPPOverload*, void*) {
+static PyObject* mp_func_code(PyObject*, void*) {
   // Code details are used in module inspect to fill out interactive help()
   // not important for functioning of most code, so not implemented for p3 for
   // now (TODO)
@@ -383,7 +389,8 @@ static PyObject* mp_func_code(CPPOverload*, void*) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_func_defaults(CPPOverload* pymeth, void*) {
+static PyObject* mp_func_defaults(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Create a tuple of default values, if there is only one method (otherwise
   // leave undefined: this is only used by inspect for interactive help())
   CPPOverload::Methods_t& methods = pymeth->fMethodInfo->fMethods;
@@ -409,7 +416,7 @@ static PyObject* mp_func_defaults(CPPOverload* pymeth, void*) {
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_func_globals(CPPOverload* /* pymeth */, void*) {
+static PyObject* mp_func_globals(PyObject*, void*) {
   // Return this function's global dict (hard-wired to be the cppjit module);
   // used for lookup of names from co_code indexing into co_names.
   PyObject* pyglobal = PyModule_GetDict(PyImport_AddModule((char*)"cppjit"));
@@ -441,19 +448,22 @@ static inline int set_flag(CPPOverload* pymeth, PyObject* value,
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_getcreates(CPPOverload* pymeth, void*) {
+static PyObject* mp_getcreates(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Get '__creates__' boolean, which determines ownership of return values.
   return PyInt_FromLong((long)IsCreator(pymeth->fMethodInfo->fFlags));
 }
 
 //----------------------------------------------------------------------------
-static int mp_setcreates(CPPOverload* pymeth, PyObject* value, void*) {
+static int mp_setcreates(PyObject* self, PyObject* value, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Set '__creates__' boolean, which determines ownership of return values.
   return set_flag(pymeth, value, CallContext::kIsCreator, "__creates__");
 }
 
 //----------------------------------------------------------------------------
-static PyObject* mp_getmempolicy(CPPOverload* pymeth, void*) {
+static PyObject* mp_getmempolicy(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Get '_mempolicy' enum, which determines ownership of call arguments.
   if (pymeth->fMethodInfo->fFlags & CallContext::kUseHeuristics)
     return PyInt_FromLong(CallContext::kUseHeuristics);
@@ -465,7 +475,8 @@ static PyObject* mp_getmempolicy(CPPOverload* pymeth, void*) {
 }
 
 //----------------------------------------------------------------------------
-static int mp_setmempolicy(CPPOverload* pymeth, PyObject* value, void*) {
+static int mp_setmempolicy(PyObject* self, PyObject* value, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   // Set '_mempolicy' enum, which determines ownership of call arguments.
   long mempolicy = PyLong_AsLong(value);
   if (mempolicy == CallContext::kUseHeuristics) {
@@ -504,7 +515,8 @@ CPPJIT_BOOLEAN_PROPERTY(useffi,   CallContext::kUseFFI,      "__useffi__")
 CPPJIT_BOOLEAN_PROPERTY(sig2exc,  CallContext::kProtected,   "__sig2exc__")
 // clang-format on
 
-static PyObject* mp_getcppname(CPPOverload* pymeth, void*) {
+static PyObject* mp_getcppname(PyObject* self, void*) {
+  CPPOverload* pymeth = (CPPOverload*)self;
   if ((void*)pymeth == (void*)&CPPOverload_Type)
     return cpyrt_PyText_FromString("CPPOverload_Type");
 

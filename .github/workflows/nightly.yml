@@ -1,16 +1,13 @@
 name: Nightly
 
-# Exhaustive run on a schedule: the full matrix with the xfail sweeps and
-# valgrind on every Linux cell, against the pinned CppInterOp (reusable
-# default). On any failure a tracking issue is opened/updated. To track
-# upstream drift, add a cell with `cppinterop-ref: main`; it builds CppJIT
-# against CppInterOp's tip and goes red when that API drifts ahead of the
-# synced forks -- the signal that the next fork re-sync is due.
+# The full test matrix on a schedule; pr-nightly.yml also runs it on
+# PRs labeled test-nightly.
 
 on:
   schedule:
     - cron: '30 2 * * *'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -45,7 +42,11 @@ jobs:
           - { os: ubuntu-24.04,     llvm: '22', flavor: cling,  flavor_version: cling-llvm22, py: '3.13', cxx: '20' }
     uses: compiler-research/ci-workflows/.github/workflows/cppjit.yml@main
     with:
-      # For upstream-drift detection, set cppinterop-ref: main here.
+      # To track CppInterOp drift, add a cell with cppinterop-ref: main;
+      # red on it means the fork re-sync is due.
+      # The reusable's cppjit-ref defaults to main; pin the triggering commit.
+      cppjit-repo: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+      cppjit-ref: ${{ github.event.pull_request.head.sha || github.sha }}
       os: ${{ matrix.os }}
       llvm-version: ${{ matrix.llvm }}
       llvm-flavor: ${{ matrix.flavor }}
@@ -57,7 +58,7 @@ jobs:
 
   drift-issue:
     needs: build-test
-    if: ${{ always() && needs.build-test.result == 'failure' }}
+    if: ${{ always() && needs.build-test.result == 'failure' && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,7 +73,7 @@ jobs:
               marker,
               '## Nightly build/test failed',
               '',
-              `The scheduled nightly run failed (CppJIT \`master\`, pinned CppInterOp).`,
+              `The scheduled nightly run failed (CppJIT \`main\`, pinned CppInterOp).`,
               `Investigate the failing cell; a persistent failure may mean a fork re-sync is due.`,
               '',
               `Run: ${run}`,

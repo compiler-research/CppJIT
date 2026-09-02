@@ -2,15 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [master, main]
+    branches: [main]
   pull_request:
+    paths-ignore:
+      - 'README.md'
 
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  # PR-only: don't cancel an in-flight push validation on master.
+  # PR-only: don't cancel an in-flight push validation on main.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:

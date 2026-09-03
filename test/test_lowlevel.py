@@ -866,6 +866,7 @@ class TestMULTIDIMARRAYS:
         data2c = self._data_m("2c")
         for m, tp in data2c:
             arr = getattr(h, m)
+            arr.reshape((3, 5))  # its own shape, the only one it accepts
             assert arr.shape == (3, 5)
             elem_tp = getattr(cppjit.gbl, tp)
             for i in range(3):
@@ -1101,3 +1102,60 @@ class TestMULTIDIMARRAYS:
             for j in range(gbl.S + 3):
                 for k in range(gbl.S + 7):
                     assert gbl.consume_klass(gbl.klasses[i][j][k], i, j, k)
+
+    def test08_reshape_sets_unknown_dimensions_only(self):
+        """Reshaping fills in the dimensions the type leaves open"""
+
+        import cppjit
+        import cppjit.ll
+
+        h = cppjit.gbl.MultiDimArrays.DataHolder()
+
+        # a fixed-size array accepts only its own shape, and that must leave
+        # its strides intact (a plain reshape used to corrupt them)
+        arr = h.m_int2c
+        assert arr.shape == (3, 5)
+        strides = memoryview(arr).strides
+        arr.reshape((3, 5))
+        assert arr.shape == (3, 5)
+        assert memoryview(arr).strides == strides
+        for i in range(3):
+            for j in range(5):
+                assert arr[i][j] == 3 * i + j
+                assert arr[i, j] == 3 * i + j
+
+        raises(ValueError, arr.reshape, (5, 3))
+        raises(ValueError, arr.reshape, (15,))
+        assert arr.shape == (3, 5)
+        assert arr[2][4] == 3 * 2 + 4
+
+        # unknown dimensions can be set one at a time and, once set, stay
+        arr = h.m_int2a
+        assert len(arr.shape) == 2
+        assert arr.shape[1] == -1
+        raises(ValueError, arr.reshape, (35,))
+        arr.reshape((5, -1))
+        assert arr.shape[0] == 5 and arr.shape[1] == -1
+        raises(ValueError, arr.reshape, (7, -1))
+        arr.reshape((5, 7))
+        assert arr.shape == (5, 7)
+        for i in range(5):
+            for j in range(7):
+                assert arr[i][j] == h.m_int2a[i, j]
+
+        # a rank-1 pointer view cannot become multi-dimensional either
+        buf = cppjit.ll.malloc["int"](6)
+        assert buf.shape == (6,)
+        raises(ValueError, buf.reshape, (2, 3))
+        assert buf.shape == (6,)
+        cppjit.ll.free(buf)
+
+        # a dimension that would overflow the byte size is rejected, too; the
+        # outermost one counts row pointers here, not ints (used to slip by)
+        arr = cppjit.gbl.MultiDimArrays.DataHolder().m_int2a
+        raises(ValueError, arr.reshape, (5, sys.maxsize))
+        raises(ValueError, arr.reshape, (sys.maxsize // 4 - 1, -1))
+
+        # a freshly constructed view has no dimensions to set
+        v = cppjit._backend.LowLevelView()
+        raises(TypeError, v.reshape, ())

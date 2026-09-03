@@ -22,8 +22,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Superset of the PR matrix + breadth (py 3.12/3.13, C++17/23, LLVM 20,
-        # arm) and one cling cell. valgrind only where a supp is vendored: the
+        # Breadth beyond the PR matrix (C++17, LLVM 20, arm) and one cling
+        # cell. valgrind only where a supp is vendored: the
         # LLVM 21 cells (clang21) and the arm LLVM 22 cell (clang22), both under
         # .github/valgrind/.
         include:

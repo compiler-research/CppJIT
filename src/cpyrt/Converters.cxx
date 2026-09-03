@@ -4271,11 +4271,13 @@ public:
     gf["const std::wstring &"] = gf["std::wstring"];
     gf["const " WSTRING1 " &"] = gf["std::wstring"];
     gf["const " WSTRING2 " &"] = gf["std::wstring"];
-    // VoidPtrRefConverter should only be used for const references to pointers
-    gf["const void*&"] = (cf_t) + [](cdims_t) {
+    // void*& is exempt from the T*& ban: the callee updates the proxy's
+    // held pointer through the opaque handle
+    gf["void*&"] = (cf_t) + [](cdims_t) {
       static VoidPtrRefConverter c{};
       return &c;
     };
+    gf["const void*&"] = gf["void*&"];
     gf["void**"] =
         (cf_t) + [](cdims_t d) { return new VoidPtrPtrConverter{d}; };
     gf["void ptr"] = gf["void**"];

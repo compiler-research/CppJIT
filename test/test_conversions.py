@@ -138,3 +138,19 @@ class TestCONVERSIONS:
         assert ns.Test1()
         assert ns.Test2(True)
         assert not ns.Test2(False)
+
+    def test07_mutable_voidp_reference(self):
+        """An object can be passed through a non-const void*& argument"""
+
+        import cppjit
+
+        cppjit.cppdef("""\
+        namespace VoidPtrRef {
+            struct Obj { int v = 5; };
+            bool is_same(void*& p, Obj* o) { return p == (void*)o; }
+        }""")
+
+        ns = cppjit.gbl.VoidPtrRef
+        o = ns.Obj()
+
+        assert ns.is_same(o, o)

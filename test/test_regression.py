@@ -1631,3 +1631,15 @@ class TestREGRESSION:
 
         # ...nor leave the interpreter unable to compile a later call wrapper
         assert ns.probe(41) == 42
+
+    def test52_no_cpp_name_for_template_arg(self):
+        """Template arguments with no C++ equivalent raise TypeError"""
+
+        import cppjit
+
+        # a lambda has a __name__ ("<lambda>") that resolves to no C++ type
+        with raises(TypeError):
+            cppjit.gbl.std.vector[lambda: None]
+
+        with raises(TypeError):
+            cppjit.gbl.std.vector[object()]

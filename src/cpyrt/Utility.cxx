@@ -659,7 +659,7 @@ std::string cpyrt::Utility::ConstructTemplateArgs(PyObject* pyname,
                        (args ? PyTuple_GET_ITEM(args, i) : nullptr), pref,
                        pcnt)) {
         PyErr_SetString(
-            PyExc_SyntaxError,
+            PyExc_TypeError,
             "could not construct C++ name from provided template argument.");
         return "";
       }
@@ -827,6 +827,12 @@ static bool AddTypeName(std::vector<Cpp::TemplateArgInfo>& types, PyObject* tn,
     if (tpName) {
       interop::TCppType_t type = interop::GetType(
           cpyrt_PyText_AsString(tpName), /* enable_slow_lookup */ true);
+      if (!type) {
+        // any Python object has a __name__; one that does not name a C++
+        // type contributes no argument
+        Py_DECREF(tpName);
+        continue;
+      }
       if (interop::IsEnumType(type)) {
         PyObject* value_int = PyNumber_Index(tn);
         if (!value_int) {

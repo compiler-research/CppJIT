@@ -186,7 +186,8 @@ inline PyObject* cpyrt::CPPMethod::ExecuteFast(void* self, ptrdiff_t offset,
 // Windows, so instead leaves the error be
 #ifdef _WIN32
   if (PyErr_Occurred()) {
-    Py_XDECREF(result);
+    if (ResultIsPyObject())
+      Py_XDECREF(result);
     result = nullptr;
   }
 #endif

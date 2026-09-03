@@ -91,6 +91,10 @@ protected:
 
   virtual bool InitExecutor_(Executor*&, CallContext* ctxt = nullptr);
 
+  // whether fExecutor's result is a real PyObject* (ConstructorExecutor
+  // returns the new object's address instead)
+  virtual bool ResultIsPyObject() const { return true; }
+
 private:
   void Copy_(const CPPMethod&);
   void Destroy_();

@@ -2736,3 +2736,567 @@ class TestDATATYPES:
         ns.take_schar("e")
         ns.take_int8(101)
         raises(TypeError, ns.take_int8, "e")
+
+
+class TestBITFIELDS:
+    def setup_class(cls):
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct BitFieldTest {
+            unsigned int a : 1;
+            unsigned int b : 2;
+            unsigned int c : 4;
+            unsigned int g :12;
+            unsigned int d : 1;
+            unsigned int e : 8;
+            unsigned int f :16;
+
+            BitFieldTest()
+                : a(1), b(0x3), c(0xF), g(0xABC), d(0), e(0x33), f(0x5555) {}
+        };
+        """)
+
+    def test01_read_unsigned_bitfields(self):
+        """Read unsigned bitfield values (cppyy issue #57 reproducer).
+
+        `g` is 12 bits wide and, given `a`+`b`+`c` = 7 bits ahead of it,
+        starts at a non-byte-aligned bit offset and spans a byte boundary --
+        exercising the shift+mask+multi-byte path that byte-aligned,
+        byte-multiple-width fields (like `e` and `f`) do not. `b` and `c`
+        are nonzero so a stray fix that is correct only because `nbytes`
+        happens to bound the read cannot pass by accident.
+        """
+
+        import cppjit
+
+        f = cppjit.gbl.BitFieldTest()
+        assert f.a == 1
+        assert f.b == 0x3
+        assert f.c == 0xF
+        assert f.g == 0xABC
+        assert f.d == 0
+        assert f.e == 0x33
+        assert f.f == 0x5555
+
+    def test02_wide_bitfield_raises_cleanly(self):
+        """A bit-field wider than 64 bits must be refused, not masked.
+
+        `Set()` must refuse to mark this as a masked-read bit-field --
+        otherwise dm_get's `unsigned __int128 word` memcpy destination
+        (16 bytes) would be overrun by the 17-byte `nbytes` a 128-bit
+        field computes. It should fall through to the ordinary converter path
+        instead: the base `Converter::FromMemory` has no override for
+        `__int128` and raises `TypeError` -- observed, not assumed -- so
+        the access must fail cleanly rather than crash or return a
+        silently truncated value.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct __attribute__((packed)) WideBitField {
+            unsigned char a : 1;
+            unsigned __int128 x : 128;
+        };
+        """)
+
+        w = cppjit.gbl.WideBitField()
+        raises(TypeError, getattr, w, "x")
+
+    def test03_write_unsigned_bitfields(self):
+        """Write individual bitfield members without corrupting neighbours.
+
+        The fixture's current initialisers are
+        a=1, b=0x3, c=0xF, g=0xABC, d=0, e=0x33, f=0x5555.
+        `c` is written to a value it does not already hold, so the write is
+        not a no-op, and every other field -- including `g`, which starts at
+        bit 7 and crosses a byte boundary -- is asserted unchanged. `g` is
+        the most sensitive neighbour: a read-modify-write that used the
+        declared type's width instead of the field's own byte span would
+        disturb it.
+        """
+
+        import cppjit
+
+        f = cppjit.gbl.BitFieldTest()
+
+        f.c = 0x5
+        assert f.c == 0x5
+        assert f.a == 1
+        assert f.b == 0x3
+        assert f.g == 0xABC
+        assert f.d == 0
+        assert f.e == 0x33
+        assert f.f == 0x5555
+
+    def test04_write_truncation(self):
+        """Writing a value wider than the bitfield truncates to fit.
+
+        This is a deliberate divergence from non-bit-field members, and it
+        has two halves. Truncating a too-wide positive value, and storing a
+        negative as its two's-complement low bits (`bf : 4 = -1` gives 15),
+        is ordinary C++ bit-field behaviour and is what the assertions below
+        codify. The other half is a genuine loss: dm_set converts through
+        PyLong_AsUnsignedLongLongMask, which truncates without raising, so
+        `bf : 4 = 2**100` silently stores 0 where assigning 2**100 to a
+        plain `unsigned` member raises ValueError. Documented, not fixed --
+        range-checking here would have to pick a signedness the declared
+        type does not settle.
+        """
+
+        import cppjit
+
+        f = cppjit.gbl.BitFieldTest()
+        f.a = 0xFF
+        assert f.a == 1       # 1-bit field, 0xFF & 1 == 1
+
+        f.b = 0xFF
+        assert f.b == 3       # 2-bit field, 0xFF & 3 == 3
+
+        f.c = 0xF0
+        assert f.c == 0       # 4-bit field, 0xF0 & 0xF == 0
+
+        # a truncating write must still not spill into neighbours
+        assert f.g == 0xABC
+        assert f.e == 0x33
+        assert f.f == 0x5555
+
+        f.g = 0xFFFF
+        assert f.g == 0xFFF   # 12-bit field, 0xFFFF & 0xFFF == 0xFFF
+        assert f.d == 0
+        assert f.e == 0x33
+
+    def test05_signed_bitfields(self):
+        """Signed bitfields sign-extend on read"""
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct SignedBitFieldTest {
+            int x : 3;
+            int y : 5;
+            int z : 24;
+            SignedBitFieldTest() : x(-1), y(-16), z(-0x555555) {}
+        };
+        """)
+
+        f = cppjit.gbl.SignedBitFieldTest()
+        assert f.x == -1
+        assert f.y == -16
+        # z is the only signed field here wider than a byte: it starts at bit
+        # 8 and spans three bytes, so a sign extension driven by the declared
+        # type's 32 bits rather than the field's 24 would read 0xAAAAAB.
+        assert f.z == -0x555555
+
+        f.x = 3
+        assert f.x == 3
+
+        f.x = -2
+        assert f.x == -2
+        assert f.y == -16
+        assert f.z == -0x555555
+
+        # a wide signed round trip, both signs, with the narrow neighbours
+        # asserted intact: the write masks to 24 bits and the read
+        # sign-extends from bit 23
+        f.z = 0x7FFFFF
+        assert f.z == 0x7FFFFF
+        f.z = -0x800000
+        assert f.z == -0x800000
+        assert f.x == -2
+        assert f.y == -16
+
+    def test06_typedef_unsigned_not_sign_extended(self):
+        """uint32_t/uint64_t bitfields must NOT be treated as signed"""
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        #include <cstdint>
+        struct TypedefBitFields {
+            uint32_t a : 20;
+            uint64_t b : 40;
+            TypedefBitFields() : a(0xFFFFF), b(0xFFFFFFFFFFULL) {}
+        };
+        """)
+
+        f = cppjit.gbl.TypedefBitFields()
+        # the whole point: a name-based signedness guess would return -1 here
+        assert f.a == 0xFFFFF
+        assert f.b == 0xFFFFFFFFFF
+
+    def test07_bool_bitfields(self):
+        """bool bitfields behave like non-bitfield bools, reading AND writing.
+
+        Reads must yield Python bools, and writes must reject non-boolean
+        values exactly as BoolConverter::ToMemory does. Bypassing the
+        converter for masked access must not silently widen the contract to
+        "any truthy value" -- before this was fixed, `p = 2` stored False.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct BoolBitFields {
+            bool p : 1;
+            bool q : 1;
+            unsigned int r : 6;
+            BoolBitFields() : p(true), q(false), r(0x2A) {}
+        };
+        """)
+
+        f = cppjit.gbl.BoolBitFields()
+        assert f.p is True
+        assert f.q is False
+
+        f.q = True
+        assert f.q is True
+        assert f.p is True
+
+        f.q = False
+        assert f.q is False
+
+        # integers 0 and 1 are accepted, like a non-bitfield bool member
+        f.q = 1
+        assert f.q is True
+        f.q = 0
+        assert f.q is False
+
+        # anything else is rejected rather than coerced
+        raises(ValueError, setattr, f, 'q', 2)
+        raises(ValueError, setattr, f, 'q', -1)
+
+        # non-integers are rejected with the same ValueError a non-bitfield
+        # bool member gives, not with the underlying TypeError/OverflowError
+        raises(ValueError, setattr, f, 'q', 2.0)
+        raises(ValueError, setattr, f, 'q', "x")
+        raises(ValueError, setattr, f, 'q', None)
+        raises(ValueError, setattr, f, 'q', 2**100)
+
+        # floats are rejected even when they would convert cleanly
+        raises(ValueError, setattr, f, 'q', 1.0)
+        raises(ValueError, setattr, f, 'q', 0.0)
+
+        # every rejected write left the object untouched
+        assert f.q is False
+        assert f.p is True
+        assert f.r == 0x2A
+
+    def test08_enum_bitfields(self):
+        """enum-typed bitfields resolve to the enum's underlying integer type.
+
+        The underlying type is deliberately signed with a value whose high bit
+        is set inside the field: an unsigned enum reads the same whether
+        resolution happened or was skipped, so it cannot tell a working
+        IsEnumType/ResolveType path from a broken one.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        enum SignedColor   : int          { SC_NEG = -4, SC_POS = 3 };
+        enum UnsignedColor : unsigned int { UC_HIGH = 3 };
+        struct EnumBitFields {
+            SignedColor   s : 3;
+            UnsignedColor u : 2;
+            unsigned int  rest : 6;
+            EnumBitFields() : s(SC_NEG), u(UC_HIGH), rest(0x2A) {}
+        };
+        """)
+
+        f = cppjit.gbl.EnumBitFields()
+        # -4 in a signed 3-bit field is 0b100; failing to resolve the enum to
+        # its signed underlying type would read 4 instead of -4.
+        assert int(f.s) == -4
+        assert int(f.u) == 3
+        assert f.rest == 0x2A
+
+    def test09_multi_unit_bitfields(self):
+        """Bitfields spanning multiple storage units.
+
+        Every one of the five fields here is byte-aligned, so shift == 0
+        throughout despite the "multi-unit" name -- this genuinely catches an
+        unmasked full-width store clobbering a neighbour (the historical bug),
+        but nonzero-shift and byte-crossing behaviour is exercised by `g` in
+        test01/test03/test04, not here.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct MultiBitFieldUnit {
+            unsigned int first  : 16;
+            unsigned int second : 16;
+            unsigned int third  : 8;
+            unsigned int fourth : 8;
+            unsigned int fifth  : 16;
+            MultiBitFieldUnit()
+                : first(0xAAAA), second(0x5555),
+                  third(0xBB), fourth(0xCC), fifth(0xDDDD) {}
+        };
+        """)
+
+        m = cppjit.gbl.MultiBitFieldUnit()
+        assert m.first  == 0xAAAA
+        assert m.second == 0x5555
+        assert m.third  == 0xBB
+        assert m.fourth == 0xCC
+        assert m.fifth  == 0xDDDD
+
+        m.first = 0x1234
+        assert m.first  == 0x1234
+        assert m.second == 0x5555
+
+    def test10_mixed_and_full_width(self):
+        """Non-bitfield neighbours, full-width and zero-width fields.
+
+        The `unsigned int : 0` separator forces `p` and `q` into different
+        storage units, and `plain` never shares a unit with `p` either -- so
+        those neighbour assertions can only catch a grossly wrong `fOffset`,
+        not a masking or `nbytes` defect. Same-storage-unit sibling
+        protection is covered by test09 and test12 instead. What this test
+        does add: the `w : 32` assertion pins `nbytes == 4` at an exact
+        byte-multiple boundary with the mask spanning all 32 bits, where an
+        off-by-one `nbytes` would truncate the high bits and fail.
+
+        `m.lead == 'L'` below also pins the one place a `char` divergence is
+        visible in this file: a plain `char` member reads back as a
+        one-character Python str, whereas a `char` bit-field takes the masked
+        integer path and reads back as an int, sign-extended from its own
+        width: `char bc : 5` holding 0b11101 reads -3, not a str. `signed
+        char` and `unsigned char` bit-fields diverge the same way (int rather
+        than str; `unsigned char` simply does not sign-extend). Only
+        `bool` was given bit-field/non-bit-field parity, via
+        kIsBoolBitField; `char` keeps the integer presentation by design.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct MixedBitFields {
+            char lead;
+            unsigned int w : 32;
+            int          plain;
+            unsigned int p : 3;
+            unsigned int   : 0;   // force next field to a new unit
+            unsigned int q : 3;
+            MixedBitFields() : lead('L'), w(0xDEADBEEF), plain(-7),
+                               p(5), q(6) {}
+        };
+        """)
+
+        m = cppjit.gbl.MixedBitFields()
+        assert m.lead == 'L'
+        assert m.w == 0xDEADBEEF
+        assert m.plain == -7
+        assert m.p == 5
+        assert m.q == 6
+
+        m.p = 2
+        assert m.p == 2
+        assert m.q == 6
+        assert m.w == 0xDEADBEEF
+        assert m.plain == -7
+
+    def test11_packed_last_member(self):
+        """A bitfield as the last member of a packed struct.
+
+        This pins the VALUES: `tail` occupies a 1-byte span at byte offset 1
+        of a 2-byte struct, and reading or writing it must not disturb `head`.
+
+        It does NOT, and cannot, detect the over-read itself. Both fields sit
+        at shift == 0, so reading the declared type's 4 bytes instead of the
+        field's 1 would extract the same masked value -- the out-of-bounds
+        bytes land in bit positions the mask discards -- and a masked
+        read-modify-write writes them back unchanged. An adjacent canary does
+        not help for the same reason. Nothing in this file asserts it.
+
+        The no-over-read property is guarded solely by running the suite
+        under valgrind, in the `vg: true` cells of
+        .github/workflows/ci.yml and .github/workflows/nightly.yml. Any
+        change that narrows or drops those cells silently deletes the only
+        check on this, since the value assertions below cannot fail on an
+        over-read.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct __attribute__((packed)) PackedTail {
+            unsigned int head : 8;
+            unsigned int tail : 4;
+            PackedTail() : head(0x7F), tail(0xD) {}
+        };
+        """)
+
+        p = cppjit.gbl.PackedTail()
+        assert p.head == 0x7F
+        assert p.tail == 0xD
+
+        p.tail = 0x3
+        assert p.tail == 0x3
+        assert p.head == 0x7F
+
+    def test12_inherited_and_anonymous(self):
+        """Bitfields from a base class and inside an anonymous struct"""
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct BFBase { unsigned int bb : 6; BFBase() : bb(0x2A) {} };
+        struct BFDerived : BFBase {
+            unsigned int dd : 6;
+            BFDerived() : dd(0x15) {}
+        };
+        struct AnonHolder {
+            char pad;
+            struct { unsigned int u : 3; unsigned int v : 5; };
+            AnonHolder() : pad('P') { u = 5; v = 20; }
+        };
+        """)
+
+        d = cppjit.gbl.BFDerived()
+        assert d.bb == 0x2A
+        assert d.dd == 0x15
+        d.dd = 0x0A
+        assert d.dd == 0x0A
+        assert d.bb == 0x2A
+
+        a = cppjit.gbl.AnonHolder()
+        assert a.pad == 'P'
+        assert a.u == 5
+        assert a.v == 20
+        a.u = 2
+        assert a.u == 2
+        assert a.v == 20
+        assert a.pad == 'P'
+
+    def test13_const_bitfield_read(self):
+        """A const bitfield reads correctly and rejects assignment"""
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct ConstBitField {
+            const unsigned int cb : 5;
+            unsigned int other : 3;
+            ConstBitField() : cb(0x15), other(0x5) {}
+        };
+        """)
+
+        c = cppjit.gbl.ConstBitField()
+        assert c.cb == 0x15
+        assert c.other == 0x5
+        raises(TypeError, setattr, c, 'cb', 1)
+
+        # the rejected write must not have touched memory: a guard that fired
+        # after the read-modify-write would still raise, yet leave cb changed
+        assert c.cb == 0x15
+        assert c.other == 0x5
+
+    def test14_nine_byte_span(self):
+        """The widest span the implementation admits: nbytes == 9.
+
+        `b` is 64 bits wide starting at bit offset 7, so
+        nbytes = (7 + 64 + 7) / 8 == 9 -- the maximum the [1,64] width gate
+        allows, and the sole reason dm_get/dm_set accumulate into an
+        `unsigned __int128` rather than a `uint64_t`. A 64-bit accumulator
+        would drop `b`'s top 7 bits on read and, worse, write back only 8 of
+        the 9 bytes. Nothing else in this file reaches past nbytes == 8, so
+        without this test that choice is untested.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct __attribute__((packed)) NineByteSpan {
+            unsigned long long a : 7;
+            unsigned long long b : 64;
+            NineByteSpan() : a(0x55), b(0xDEADBEEFCAFEBABEULL) {}
+        };
+        """)
+
+        n = cppjit.gbl.NineByteSpan()
+        assert n.a == 0x55
+        assert n.b == 0xDEADBEEFCAFEBABE
+
+        n.b = 0x1122334455667788
+        assert n.b == 0x1122334455667788
+        assert n.a == 0x55
+
+    def test15_union_bitfields(self):
+        """Bit-fields inside an anonymous union and inside a named union.
+
+        test12 covers an anonymous *struct*; a union member's offset is
+        computed by a different path (all members share byte offset 0 within
+        the union), so the anonymous-union case is not implied by it.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct UnionHolder {
+            char pad;
+            union { unsigned int uu : 5; unsigned int vv : 5; };
+            union Named { unsigned int nn : 6; unsigned int mm : 6; };
+            Named named;
+            unsigned int trailer : 4;
+            UnionHolder() : pad('U'), trailer(0xB) { uu = 21; named.nn = 42; }
+        };
+        """)
+
+        h = cppjit.gbl.UnionHolder()
+        assert h.pad == 'U'
+        # uu and vv alias the same bits, so both read the value written
+        assert h.uu == 21
+        assert h.vv == 21
+        assert h.named.nn == 42
+        assert h.named.mm == 42
+        assert h.trailer == 0xB
+
+        h.vv = 10
+        assert h.vv == 10
+        assert h.uu == 10
+        assert h.pad == 'U'
+        assert h.trailer == 0xB
+
+        h.named.mm = 63
+        assert h.named.nn == 63
+
+    def test16_signed_full_width(self):
+        """A signed bit-field occupying its declared type's full width.
+
+        `int x : 32` is the signed counterpart of test10's `unsigned int
+        w : 32`: mask, nbytes and sign-extension width all sit exactly at the
+        type's boundary, where an off-by-one in any of them shows up as a
+        wrong sign or a truncated magnitude rather than as a crash. INT_MIN
+        is the value that catches a sign extension driven by anything other
+        than the field's own width.
+        """
+
+        import cppjit
+
+        cppjit.cppdef(r"""
+        struct SignedFullWidth {
+            int x : 32;
+            unsigned int tail : 8;
+            SignedFullWidth() : x(-1), tail(0x5A) {}
+        };
+        """)
+
+        s = cppjit.gbl.SignedFullWidth()
+        assert s.x == -1
+        assert s.tail == 0x5A
+
+        s.x = -0x80000000
+        assert s.x == -0x80000000
+        assert s.tail == 0x5A
+
+        s.x = 0x7FFFFFFF
+        assert s.x == 0x7FFFFFFF
+        assert s.tail == 0x5A
+
+        s.x = 0
+        assert s.x == 0
+        assert s.tail == 0x5A

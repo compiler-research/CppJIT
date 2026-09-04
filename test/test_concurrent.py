@@ -15,7 +15,6 @@ class TestCONCURRENT:
 
         cppjit.gbl.Workers.calc.__release_gil__ = True
 
-    @mark.xfail(run=False, reason="Crashes")
     def test01_simple_threads(self):
         """Run basic Python threads"""
 
@@ -35,7 +34,6 @@ class TestCONCURRENT:
         for t in threads:
             t.join()
 
-    @mark.xfail(run=False, reason="Crashes")
     def test02_futures(self):
         """Run with Python futures"""
 
@@ -266,7 +264,6 @@ class TestCONCURRENT:
         for t in threads:
             t.join()
 
-    @mark.xfail(run=False, reason="Crashes")
     def test07_overload_reuse_in_threads_wo_gil(self):
         """Threads reuse overload objects; check for clashes if no GIL"""
 

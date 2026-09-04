@@ -819,7 +819,6 @@ class TestADVANCEDCPP:
 
         assert cppjit.gbl.TypedefToPrivateClass().f().m_val == 42
 
-    @mark.xfail(run=False, reason="Crashes")
     def test25_ostream_printing(self):
         """Mapping of __str__ through operator<<(ostream&)"""
 

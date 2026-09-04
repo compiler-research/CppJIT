@@ -1,0 +1,85 @@
+name: Main failure report
+
+# A failure on a main push lands after the merged PR's own checks
+# passed; tell the PR. Nightly is excluded -- it has its own tracking
+# issue and is not attributable to one PR.
+
+on:
+  workflow_run:
+    workflows: [CI, Wheels]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              ...context.repo, commit_sha: run.head_sha,
+            });
+            const pr = prs.find(p => p.merge_commit_sha === run.head_sha) || prs[0];
+            if (!pr) {
+              core.warning(`No PR associated with ${run.head_sha}; the failure is visible only on the run.`);
+              return;
+            }
+
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              ...context.repo, run_id: run.id, per_page: 100,
+            });
+            const failed = jobs.filter(j => j.conclusion === 'failure');
+            const first = failed[0];
+
+            const where = failed.length
+              ? `at job ${failed.map(j => `"${j.name}"`).join(', ')}`
+              : 'before any job ran';
+            const head = `CppJIT CI has detected a new failure on workflow ${run.name} ` +
+              `running on main while building ${run.head_sha.slice(0, 7)} ${where}.`;
+
+            // The tail of the first failing job's log, LLVM-buildbot style.
+            let excerpt = '';
+            let step;
+            if (first) {
+              step = (first.steps || []).find(s => s.conclusion === 'failure');
+              const { data: log } = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                ...context.repo, job_id: first.id,
+              });
+              excerpt = String(log)
+                .split('\n')
+                .map(l => l.replace(/^\d{4}-\d{2}-\d{2}T\S+ /, ''))
+                .slice(-40)
+                .join('\n')
+                .replaceAll('```', "'''");
+              if (excerpt.length > 6000) excerpt = excerpt.slice(-6000);
+            }
+
+            const body = [
+              head,
+              '',
+              `Full details are available at: ${run.html_url}`,
+              ...(excerpt ? [
+                'Here is the relevant piece of the build log for the reference',
+                '',
+                '```text',
+                ...(step ? [`Step "${step.name}" failure:`] : []),
+                excerpt,
+                '```',
+              ] : []),
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: pr.number, body,
+            });

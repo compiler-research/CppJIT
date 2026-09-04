@@ -3,6 +3,7 @@ import sys
 
 from pytest import mark, raises, skip
 from support import (
+    CAN_JIT_STD_FILESYSTEM,
     IS_CLANG_REPL,
     IS_CLING,
     IS_MAC,
@@ -1052,6 +1053,10 @@ class TestREGRESSION:
         v = cppjit.gbl.std.vector[int]()
         str(v)
 
+    @mark.skipif(
+        not CAN_JIT_STD_FILESYSTEM,
+        reason="std::filesystem is unresolvable in the JIT on libstdc++ < 9",
+    )
     @mark.xfail(condition=IS_CLING, run=False, reason="Crashes on Cling")
     def test35_filesytem(self):
         """Static path object used to crash on destruction"""

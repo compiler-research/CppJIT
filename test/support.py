@@ -115,4 +115,30 @@ IS_CPP23 = (
                                             #endif\n""")
     == 1
 )
+
+
+def _jit_resolves_std_filesystem():
+    # The JIT resolves std::filesystem against the loaded libstdc++.so, not
+    # the compile headers -- a manylinux image (gcc-toolset headers over a
+    # GCC-8 base runtime) compiles the include yet dies resolving the
+    # symbols. That failure is a fatal JIT error, so ask in a child process.
+    probe = (
+        "import cppjit\n"
+        'cppjit.cppdef("""#include <filesystem>\n'
+        "unsigned long fs_probe() { return std::filesystem::temp_directory_path().string().size(); }\n"
+        '""")\n'
+        "assert cppjit.gbl.fs_probe() > 0\n"
+    )
+    try:
+        return (
+            subprocess.run(
+                [sys.executable, "-c", probe], capture_output=True, timeout=300
+            ).returncode
+            == 0
+        )
+    except subprocess.TimeoutExpired:
+        return False
+
+
+CAN_JIT_STD_FILESYSTEM = _jit_resolves_std_filesystem()
 IS_VALGRIND = True if os.getenv("IS_VALGRIND") else False

@@ -2328,13 +2328,25 @@ class TestSTLEXCEPTION:
         assert cppjit.gbl.GetMyErrorCount() == 0
 
 
-def has_cpp_20():
+def has_std_span():
     import cppjit
 
-    return cppjit.evaluate("__cplusplus") >= 202002
+    # The -std flag is not enough: the JIT uses the system libstdc++ headers,
+    # and <span> only exists there from GCC 10 (absent on the manylinux GCC-8
+    # floor). Gate on the header actually being includable.
+    return (
+        cppjit.evaluate("""#if __cplusplus >= 202002L && __has_include(<span>)
+                                            1
+                                            #else
+                                            0
+                                            #endif""")
+        == 1
+    )
 
 
-@mark.skipif(not has_cpp_20(), reason="std::span requires C++20")
+@mark.skipif(
+    not has_std_span(), reason="std::span needs C++20 and <span> (libstdc++ >= 10)"
+)
 class TestSTLSPAN:
     import cppjit
 

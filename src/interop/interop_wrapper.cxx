@@ -81,12 +81,14 @@ static inline bool is_integral(std::string& s) {
 
 struct InterOpPaths {
   std::string Library;
-  std::string IncludeDir;
-  std::string ClangIncludeDir; // empty when the bundled headers are absent
+  std::vector<std::string> IncludeDirs;
+  std::string ClangIncludeDir; // empty when no usable resource dir is known
 };
 
-// One relative layout, two anchors: prefer CppInterOp next to our own load
-// location so wheels relocate; fall back to the build-time install prefix.
+// One set of coordinates, two anchors: prefer CppInterOp next to our own
+// load location so wheels relocate; fall back to the build-time install
+// prefix. An absolute coordinate (an external CppInterOp) replaces the
+// anchor in the join ([fs.path.append]).
 static InterOpPaths cppinterop_paths() {
   std::filesystem::path anchor = CPPINTEROP_INSTALL_PREFIX;
 #ifndef _WIN32
@@ -99,16 +101,24 @@ static InterOpPaths cppinterop_paths() {
       anchor = here;
   }
 #endif
-  InterOpPaths Paths{(anchor / CPPINTEROP_LIBRARY).string(),
-                     (anchor / CPPINTEROP_INCLUDE_DIR).string(),
-                     {}};
-  // The builtin headers of the build clang ship with every installed
-  // package (see the CMake install rule); a raw build tree has none and
-  // falls back to resource-dir detection.
-  const std::filesystem::path bundled = anchor / CPPJIT_CLANG_INCLUDE_DIR;
-  std::error_code ec;
-  if (std::filesystem::exists(bundled / "include", ec))
-    Paths.ClangIncludeDir = bundled.string();
+  InterOpPaths Paths;
+  Paths.Library = (anchor / CPPINTEROP_LIBRARY).string();
+  // The include coordinate may carry several ':'-separated directories (an
+  // external CppInterOp build tree splits source and generated headers).
+  std::istringstream includeSpec{CPPINTEROP_INCLUDE_DIR};
+  for (std::string dir; std::getline(includeSpec, dir, ':');)
+    if (!dir.empty())
+      Paths.IncludeDirs.push_back((anchor / dir).string());
+  // A bundled install ships the build clang's builtin headers (see the
+  // CMake install rule); an empty coordinate or a missing directory falls
+  // back to resource-dir detection.
+  const std::string clangSpec = CPPJIT_CLANG_INCLUDE_DIR;
+  if (!clangSpec.empty()) {
+    const std::filesystem::path bundled = anchor / clangSpec;
+    std::error_code ec;
+    if (std::filesystem::exists(bundled / "include", ec))
+      Paths.ClangIncludeDir = bundled.string();
+  }
   return Paths;
 }
 
@@ -169,7 +179,8 @@ static void configureInterpreter(const InterOpPaths& Paths) {
     Cpp::Process(s.str().c_str());
   }
 
-  Cpp::AddIncludePath(Paths.IncludeDir.c_str());
+  for (const std::string& dir : Paths.IncludeDirs)
+    Cpp::AddIncludePath(dir.c_str());
   Cpp::LoadLibrary("libstdc++", /* lookup= */ true);
 }
 

@@ -225,7 +225,13 @@ function(cppjit_add_cppinterop)
         set(_compile_includes "${CPPINTEROP_STAGE_DIR}/include")
         set(_runtime_includes "interop/include")
         set(_clang_major "${LLVM_VERSION_MAJOR}")
-        set(_clang_dir "interop/lib/clang/${LLVM_VERSION_MAJOR}")
+        # The wheel reads its bundled copy; a raw build tree bundles nothing
+        # and uses the build LLVM's headers where they are.
+        if(SKBUILD)
+            set(_clang_dir "interop/lib/clang/${LLVM_VERSION_MAJOR}")
+        else()
+            set(_clang_dir "${_clang_resource_dir}")
+        endif()
     endif()
 
     set(CPPJIT_INTEROP_LIBRARY "${_library}" PARENT_SCOPE)

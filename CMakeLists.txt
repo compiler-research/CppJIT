@@ -31,22 +31,23 @@ endif()
 set(CPPJIT_LLVM_VERSION_MIN 20)
 set(CPPJIT_LLVM_VERSION_MAX 22)
 
-# CppInterOp is installed at the location cppjit ships at runtime: ask for the
-# site-packages path; fall back to CMAKE_INSTALL_PREFIX for standalone builds.
-execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('platlib'))"
-    OUTPUT_VARIABLE _python_platlib
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if(_python_platlib)
-    set(CPPINTEROP_INSTALL_PREFIX "${_python_platlib}")
+# Runtime fallback anchor for the dispatch (see cppinterop_paths()): the
+# installed package under scikit-build-core, the build tree otherwise --
+# a plain `cmake --build` yields a runnable tree under <build>/python.
+if(SKBUILD)
+    execute_process(
+        COMMAND ${Python_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_path('platlib'))"
+        OUTPUT_VARIABLE _python_platlib
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(CPPINTEROP_INSTALL_PREFIX "${_python_platlib}/cppjit")
 else()
-    set(CPPINTEROP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
+    set(CPPINTEROP_INSTALL_PREFIX "${CMAKE_BINARY_DIR}")
 endif()
 
-# CppInterOp installs here; cppjit's own rules ship a subset, so the wheel
-# owns every installed file.
-set(CPPINTEROP_STAGE_DIR "${CMAKE_BINARY_DIR}/cppinterop-stage")
+# CppInterOp stages into the build tree in the runtime layout; the wheel
+# ships a subset of it.
+set(CPPINTEROP_STAGE_DIR "${CMAKE_BINARY_DIR}/interop")
 
 # Acquire CppInterOp: an external prebuilt one (CppInterOp_DIR /
 # CMAKE_PREFIX_PATH), else the pinned ExternalProject. Exports the
@@ -70,7 +71,7 @@ endif()
 # back to the install prefix (see cppinterop_paths()); the clang major
 # names the versioned compiler probed for the runtime resource dir.
 target_compile_definitions(cppjit PRIVATE
-    CPPINTEROP_INSTALL_PREFIX="${CPPINTEROP_INSTALL_PREFIX}/cppjit"
+    CPPINTEROP_INSTALL_PREFIX="${CPPINTEROP_INSTALL_PREFIX}"
     CPPINTEROP_LIBRARY="${CPPJIT_INTEROP_LIBRARY}"
     CPPINTEROP_INCLUDE_DIR="${CPPJIT_INTEROP_RUNTIME_INCLUDES}"
     CPPJIT_CLANG_MAJOR="${CPPJIT_INTEROP_CLANG_MAJOR}"
@@ -108,10 +109,32 @@ set_target_properties(cppjit PROPERTIES
     PREFIX "lib"
 )
 
+# A plain build yields a runnable tree: the extension and the python
+# sources assemble under <build>/python, beside <build>/interop.
+if(NOT SKBUILD)
+    set_target_properties(cppjit PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/python/cppjit"
+    )
+    add_custom_target(cppjit-python-tree ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/python/cppjit"
+            "${CMAKE_BINARY_DIR}/python/cppjit"
+    )
+endif()
+
 # the extension lives inside the package (import cppjit.libcppjit)
 install(TARGETS cppjit
     LIBRARY DESTINATION cppjit
 )
+
+# scikit-build-core ships the python sources itself (wheel.packages); a
+# plain CMake install lays them out here so PYTHONPATH=<prefix> works.
+if(NOT SKBUILD)
+    install(DIRECTORY python/cppjit
+        DESTINATION .
+        PATTERN "__pycache__" EXCLUDE
+    )
+endif()
 
 # An external CppInterOp is consumed in place and nothing of it ships;
 # the bundled one installs with the builtin headers of the build clang,

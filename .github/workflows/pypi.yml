@@ -1,0 +1,61 @@
+name: PyPI
+
+# Publish a Wheels run to PyPI. The workflow is registered as the
+# project's trusted publisher on pypi.org, so the job mints a short-lived
+# OIDC token and stores no secrets. The release ritual around it is
+# documented in docs/ReleaseProcess.md.
+#
+# Two triggers:
+# - A finished Wheels run for a v* tag push publishes automatically: the
+#   tag is the release act, tag runs always build the full python list,
+#   and the pypi environment carries any reviewer approval configured
+#   for it.
+# - workflow_dispatch with an explicit run id: the manual fallback for
+#   recovery and re-publishing.
+on:
+  workflow_run:
+    workflows: [Wheels]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: Run id of a green full Wheels run
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    # Wheels push runs come only from main and v* tags, so the branch
+    # prefix test selects exactly the tag runs.
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch'
+      || (github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.event == 'push'
+      && startsWith(github.event.workflow_run.head_branch, 'v')) }}
+    runs-on: ubuntu-24.04
+    environment: pypi
+    permissions:
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+          run-id: ${{ inputs.run-id || github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: dist
+          run-id: ${{ inputs.run-id || github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: List the distributions before upload
+        run: ls -l dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1

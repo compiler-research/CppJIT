@@ -100,6 +100,10 @@ xfail_strict = true
 [tool.ruff]
 show-fixes = true
 
+[tool.ruff.format]
+# the README's code fences hand-align their annotation comments
+exclude = ["*.md"]
+
 [tool.ruff.lint]
 # pyflakes/pycodestyle errors plus import sorting; wider rule sets are a
 # post-squash cleanup

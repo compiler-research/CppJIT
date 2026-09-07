@@ -6,7 +6,7 @@ name: Main failure report
 
 on:
   workflow_run:
-    workflows: [CI, Wheels]
+    workflows: [Test, Wheels]
     types: [completed]
 
 permissions:

@@ -30,10 +30,10 @@ concurrency:
 
 jobs:
   wheels:
-    name: wheels ${{ matrix.label }}
-    # A labeled event re-runs the workflow only for build-wheels itself;
-    # jobs without a needs edge to this one repeat the guard by alias.
-    if: &label-guard ${{ github.event.action != 'labeled' || github.event.label.name == 'build-wheels' }}
+    name: ${{ matrix.label }}
+    # Label events run only when the PR carries build-wheels, whichever
+    # label fired; jobs without a needs edge repeat the guard by alias.
+    if: &label-guard ${{ github.event.action != 'labeled' || contains(github.event.pull_request.labels.*.name, 'build-wheels') }}
     strategy:
       fail-fast: false
       matrix:

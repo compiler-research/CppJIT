@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build-test:
-    if: ${{ github.event_name != 'pull_request' || github.event.label.name == 'test-nightly' }}
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'test-nightly') }}
     name: ${{ matrix.os }}/llvm${{ matrix.llvm }}/py${{ matrix.py }}/c++${{ matrix.cxx }}${{ matrix.vg && '/vg' || '' }}${{ matrix.flavor == 'cling' && '/cling' || '' }}
     strategy:
       fail-fast: false

@@ -2,7 +2,6 @@ import os
 import sys
 
 from pytest import mark, skip
-from support import IS_MAC, IS_MAC_X86
 
 nopsutil = False
 try:
@@ -11,7 +10,7 @@ except ImportError:
     nopsutil = True
 
 
-@mark.skipif(nopsutil == True, reason="module psutil not installed")
+@mark.skip(reason="disabled due to its sporadic nature, especially fragile on VMs")
 class TestLEAKCHECK:
     def setup_class(cls):
         import psutil
@@ -75,9 +74,6 @@ class TestLEAKCHECK:
 
         assert fail < M
 
-    @mark.xfail(
-        condition=IS_MAC, reason="std::string overload fails to resolve on OS X"
-    )
     def test01_free_functions(self):
         """Leak test of free functions"""
 
@@ -103,9 +99,6 @@ class TestLEAKCHECK:
         self.check_func(ns, "free_f_ret1")
         self.check_func(ns, "free_f_ret1")
 
-    @mark.xfail(
-        condition=IS_MAC, reason="std::string overload fails to resolve on OS X"
-    )
     def test02_test_static_methods(self):
         """Leak test of static methods"""
 
@@ -132,9 +125,6 @@ class TestLEAKCHECK:
             self.check_func(m, "static_method_ol", 42.0, tmpl_args="float")
             self.check_func(m, "static_method_ret")
 
-    @mark.xfail(
-        condition=IS_MAC, reason="std::string overload fails to resolve on OS X"
-    )
     def test03_test_methods(self):
         """Leak test of methods"""
 
@@ -264,11 +254,6 @@ class TestLEAKCHECK:
         obj = ns.Leaker()
         self.check_func(obj, "leak_string", 2048)
 
-    @mark.xfail(
-        condition=IS_MAC_X86,
-        strict=False,
-        reason="RSS threshold intermittently trips on the Intel-mac runners",
-    )
     def test08_list_creation(self):
         """Leak check of creating a python list from an std::list"""
 

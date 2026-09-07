@@ -191,14 +191,22 @@ function(cppjit_add_cppinterop)
             set(_log_args "")
         endif()
 
+        # Keep the symbol table in debug-info builds; .dynsym alone
+        # suffices for the dlsym-based dispatch everywhere else.
+        string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
+        set(_install_lib_target install-clangCppInterOp)
+        if(NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
+           NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
+            string(APPEND _install_lib_target "-stripped")
+        endif()
+
         # Install only the library and headers, not CppInterOp's full install tree.
         ExternalProject_Add(CppInterOp
             ${_source_args}
             PREFIX         "${CMAKE_BINARY_DIR}/CppInterOp"
             CMAKE_ARGS     ${_args}
-            # -stripped keeps .dynsym, so the dlsym-based dispatch still resolves.
             INSTALL_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR>
-                            --target install-clangCppInterOp-stripped install-cppinterop-headers
+                            --target ${_install_lib_target} install-cppinterop-headers
             BUILD_BYPRODUCTS
                 "${CPPINTEROP_STAGE_DIR}/lib/libclangCppInterOp${CMAKE_SHARED_LIBRARY_SUFFIX}"
             ${_log_args}

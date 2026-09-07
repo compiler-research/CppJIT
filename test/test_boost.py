@@ -35,7 +35,10 @@ class TestBOOSTANY:
         import cppjit
 
         add_boost_include_path()
-        cppjit.include("boost/any.hpp")
+        try:
+            cppjit.include("boost/any.hpp")
+        except ImportError:
+            skip("boost headers not loadable")
 
     @mark.skipif((IS_MAC_ARM or IS_MAC_X86), reason="Fails to include boost on OS X")
     def test01_any_class(self):
@@ -121,8 +124,11 @@ class TestBOOSTVARIANT:
         import cppjit
 
         add_boost_include_path()
-        cppjit.include("boost/variant/variant.hpp")
-        cppjit.include("boost/variant/get.hpp")
+        try:
+            cppjit.include("boost/variant/variant.hpp")
+            cppjit.include("boost/variant/get.hpp")
+        except ImportError:
+            skip("boost headers not loadable")
 
     def test01_variant_usage(self):
         """boost::variant usage"""

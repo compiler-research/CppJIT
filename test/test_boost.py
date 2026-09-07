@@ -1,7 +1,7 @@
 import os
 
 from pytest import mark, raises, skip
-from support import IS_MAC_ARM, IS_MAC_X86
+from support import IS_MAC_ARM, IS_MAC_X86, IS_VALGRIND
 
 # /usr/include and /usr/local/include are on the compiler's default search
 # path; the Homebrew (arm64) and MacPorts prefixes are not, so a hit there
@@ -53,6 +53,11 @@ class TestBOOSTANY:
 
         assert std.list[any]
 
+    @mark.xfail(
+        condition=IS_VALGRIND,
+        run=False,
+        reason="invalid reads in the JITed boost constructors under valgrind",
+    )
     def test02_any_usage(self):
         """boost::any assignment and casting"""
 
@@ -130,6 +135,11 @@ class TestBOOSTVARIANT:
         except ImportError:
             skip("boost headers not loadable")
 
+    @mark.xfail(
+        condition=IS_VALGRIND,
+        run=False,
+        reason="invalid reads in the JITed boost constructors under valgrind",
+    )
     def test01_variant_usage(self):
         """boost::variant usage"""
 

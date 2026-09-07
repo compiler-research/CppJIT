@@ -17,4 +17,7 @@ concurrency:
 jobs:
   nightly:
     if: ${{ github.event.label.name == 'test-nightly' }}
+    permissions:
+      contents: read
+      issues: write
     uses: ./.github/workflows/nightly.yml

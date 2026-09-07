@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "cppjit"
 dynamic = ["version"]
-description = "CppJIT: fast and automatic Python-C++ interoperability"
+description = "Automatic Python-C++ interoperability layer and bindings generator"
 readme = "README.md"
 license = "BSD-3-Clause-LBNL"
 requires-python = ">=3.12"
@@ -25,6 +25,13 @@ classifiers = [
     "Topic :: Software Development :: Compilers",
     "Topic :: Software Development :: Interpreters",
     "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = [
+    "cplusplus",
+    "interoperability",
+    "bindings-generator",
+    "llvm-jit",
+    "scientific-computing",
 ]
 authors = [
     {name = "Wim Lavrijsen"},
@@ -92,6 +99,10 @@ xfail_strict = true
 
 [tool.ruff]
 show-fixes = true
+
+[tool.ruff.format]
+# the README's code fences hand-align their annotation comments
+exclude = ["*.md"]
 
 [tool.ruff.lint]
 # pyflakes/pycodestyle errors plus import sorting; wider rule sets are a

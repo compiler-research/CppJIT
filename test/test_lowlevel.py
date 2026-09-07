@@ -669,7 +669,7 @@ class TestLOWLEVEL:
         try:
             cppjit.include("gmpxx.h")
             cppjit.load_library("gmpxx")
-        except ImportError:
+        except (ImportError, RuntimeError):
             skip("gmpxx not installed")
 
         assert cppjit.gbl.std.vector[cppjit.gbl.mpz_class].value_type

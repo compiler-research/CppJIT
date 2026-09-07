@@ -617,3 +617,32 @@ class TestPYTHONIFY_UI:
         assert proxy.__get__(proxy, None) == 3
 
         cppjit.gbl.ns_example01.gMyGlobalInt = oldval
+
+
+class TestPINNEDCOMPARISON:
+    def test01_pinned_base_compares_equal(self):
+        """Comparison downcasts to the actual class before comparing addresses"""
+
+        import cppjit
+        from cppjit._pythonization import pin_type
+
+        cppjit.cppdef("""\
+        namespace PinnedCmp {
+            struct B1 { virtual ~B1() {} int a = 1; };
+            struct B2 { virtual ~B2() {} int b = 2; };
+            struct D : B1, B2 {};
+            D  g_d;
+            D*  get_d()  { return &g_d; }
+            B2* get_b2() { return static_cast<B2*>(&g_d); }
+        }""")
+
+        ns = cppjit.gbl.PinnedCmp
+
+        # pinning keeps the B2 proxy from being downcast on creation, so the
+        # B2 subobject address is what reaches the comparison
+        pin_type(ns.B2)
+        d, b2 = ns.get_d(), ns.get_b2()
+        assert type(b2).__cpp_name__ == "PinnedCmp::B2"
+
+        assert d == b2
+        assert not (d != b2)
